@@ -247,7 +247,7 @@ Const No = False
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "WQ_SDI12"
+Const WqSonde = "WQ_SERIAL_BURST"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
@@ -264,13 +264,13 @@ Const IsVmMax232 = False
 Const IsSpecStudy = False
 'value = True
 'value = False
-Const GetNoiseFloor = True
+Const GetNoiseFloor = False
 'value = True
 'value = False
 Const HasSlave = False
 'value = True
 'value = False
-Const HasVM = True
+Const HasVM = False
 'value = True
 'value = False
 Const UseAutoRange = False
@@ -284,13 +284,13 @@ Const VMDeadCntMax = 20
 'Min = 5
 'Max = 120
 'Inc = 5
-Const StoreAllToCard = True
+Const StoreAllToCard = False
 'value = True
 'value = False
 Const Debugging = True
 'Value = True
 'Value = False
-Const SeeAllVel = True
+Const SeeAllVel = False
 'Value = True
 'Value = False
 Const SeeRawWQ = True
@@ -4459,7 +4459,8 @@ Sub SubCalcQ 'calculate discharge
 EndSub
 
 '____________________________________Zero all Velocity Meter Arrays__________________________
-Sub ZeroVMArrays
+#If HasVM = True Then
+  Sub ZeroVMArrays
   Dim ZeroCounter As Long
   'Zero The raw data array
   Erase (Longarray())
@@ -4493,7 +4494,7 @@ Sub ZeroVMArrays
   Erase RSSIspike()
   Erase Corrspike()
 EndSub
-
+#EndIf
 '----------------------------------------------------
 'Read variables in from USR file (preserved variables)
 Sub ReadVariables
@@ -4609,6 +4610,7 @@ Sub StoreVariables
 EndSub
 
 '_______________________________________________________Calculate a Checksum for the ensemble and extract ensemble checksum ____________________________________
+#If HasVM = True Then
 Sub ChecksumCheck
   'Get ensemble length (from the header)
   Dim CkSumCount As Long
@@ -4626,6 +4628,7 @@ Sub ChecksumCheck
   TempL = Longarray(CkSumCount + 1)
   EnsChecksum = EnsChecksum + TempL * 256
 EndSub
+#EndIf
 
 '_____________________________________Zero Counters___________________________________________________________
 Sub ZeroErrCounters
@@ -5290,6 +5293,7 @@ Sub KeypadMenu
       CDMACheckEnd = Timer(2,msec,4)
       CDMACheckEnd = CDMACheckEnd/1000
       CDMACheckTotTime = CDMACheckEnd-CDMACheckStart
+      #If HasVM = True Then
       ZeroVMTimeStart = Timer(2,msec,4)
       ZeroVMTimeStart = ZeroVMTimeStart/1000
       If NumbytesZero > 7 Then
@@ -5323,6 +5327,7 @@ Sub KeypadMenu
       Else
         VMdataIn = Yes
       EndIf
+      #EndIf
       #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
         If (Mod15Minutes > 770) AND (Mod15Minutes < 790) Then 'wipe 13mins +- 10s into a 15 min period when not collecting burst, set a disable variable
           Wipeflag = True
