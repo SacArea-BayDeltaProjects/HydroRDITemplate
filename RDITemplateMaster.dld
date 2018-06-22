@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20180509
+Const ProgramVersionDate = 20180622
 'Last Modified by: Michael Simpson
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -216,6 +216,7 @@ Const ProgramVersionDate = 20180509
 '20180406 - TAV Made a user-selectable variable when using the AutoRange function. Now, a user can decide how many bins to cut off at the surface based on their beamchecks. *ONCE IT HAS BEEN RATED, THIS VALUE SHOULD NOT CHANGE!*
 '20180509 - TAV Increased WQ "SerialIn" instruction's Max Characters to account for a full suite of sensors/more than 1 parameter per sensor. Set the "GetVariablesFlag" to True in the "Initialize" Sub. Otherwise
 '               it wouldn't get called if the system went down and rebooted.
+'20180622 - TAV Fixed bug that was disallowing modem to cycle properly. Syntax around Conditional Compile statements regarding SW12 ports was not correct.
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 
 SequentialMode 'must not use pipeline mode or averages are missed
@@ -2044,54 +2045,78 @@ Sub CdmaCheck
   Select Case IsCDMANClosed
   Case Yes'if relay exists
     If KeepCDMAon = Yes Then 'if want CDMA on
-      #If LoggerType = CR1000 Then SW12(0) 'turn on CDMA
-      #ElseIf LoggerType = CR6 Then SW12(1,0)
-      #EndIf
+      #If LoggerType = CR1000 Then
+        SW12(0) 
+      #EndIf'turn on CDMA
+      #If LoggerType = CR6 Then 
+       SW12(1,0)
+       #EndIf
       IsCDMAOn = Yes
     Else 'If want CDMA off except for window
       If TimeIntoInterval(0,60,min) Then
-        #If LoggerType = CR1000 Then SW12(0)'turn on CDMA
-        #ElseIf LoggerType = CR6 Then SW12(1,0)
-        #EndIf
+        #If LoggerType = CR1000 Then
+          SW12(0)
+          #EndIf'turn on CDMA
+        #If LoggerType = CR6 Then
+          SW12(1,0)
+          #EndIf
         IsCDMAOn = Yes
       EndIf
       If TimeIntoInterval(10,60,min) Then
-        #If LoggerType = CR1000 Then SW12(1)'turn off CDMA
-        #ElseIf LoggerType = CR6 Then SW12(1,1)
-        #EndIf
+        #If LoggerType = CR1000 Then
+          SW12(1)
+          #EndIf'turn off CDMA
+        #If LoggerType = CR6 Then
+          SW12(1,1)
+          #EndIf
         IsCDMAOn = No
       EndIf
     EndIf
   Case No 'if relay does not exist
     If KeepCDMAon = Yes Then 'want CDMA to stay on
-      #If LoggerType = CR1000 Then SW12(1) 'turn on CDMA
-      #ElseIf LoggerType = CR6 Then SW12(1,1)
-      #EndIf
+      #If LoggerType = CR1000 Then
+        SW12(1)
+        #EndIf 'turn on CDMA
+      #If LoggerType = CR6 Then
+        SW12(1,1)
+        #EndIf
       IsCDMAOn = Yes
     Else 'want CDMA to turn off except for window
       If TimeIntoInterval(0,60,min) Then
-        #If LoggerType = CR1000 Then SW12(1)'turn on CDMA
-        #ElseIf LoggerType = CR6 Then SW12(1,1)
-        #EndIf
+        #If LoggerType = CR1000 Then
+          SW12(1)
+          #EndIf'turn on CDMA
+        #If LoggerType = CR6 Then
+          SW12(1,1)
+          #EndIf
         IsCDMAOn = Yes
       EndIf
       If TimeIntoInterval(10,60,min) Then
-        #If LoggerType = CR1000 Then SW12(0)'turn off CDMA
-        #ElseIf LoggerType = CR6 Then SW12(1,0)
-        #EndIf
+        #If LoggerType = CR1000 Then
+          SW12(0)
+          #EndIf'turn off CDMA
+        #If LoggerType = CR6 Then
+          SW12(1,0)
+          #EndIf
         IsCDMAOn = No
       EndIf
     EndIf
   EndSelect
   If CycleCdmaPwr = Yes Then
     If IsCDMANClosed Then
-      #If LoggerType = CR1000 Then SW12(1) 'turn off telemetery if a normally closed relay is present
-      #ElseIf LoggerType = CR6 Then SW12(1,1)
-      #EndIf
+      #If LoggerType = CR1000 Then
+        SW12(1)
+        #EndIf'turn off telemetery if a normally closed relay is present
+      #If LoggerType = CR6 Then
+        SW12(1,1)
+        #EndIf
     Else
-      #If LoggerType = CR1000 Then SW12(0) 'turn off telemetery if NC relay is not present
-      #ElseIf LoggerType = CR6 Then SW12(1,0)
-      #EndIf
+      #If LoggerType = CR1000 Then
+        SW12(0)
+        #EndIf 'turn off telemetery if NC relay is not present
+      #If LoggerType = CR6 Then
+        SW12(1,0)
+        #EndIf
     EndIf  'manual cycle power Open the circuit to the CDMA
     IsCDMAOn = No
     CycleCdmaPwr = No
@@ -2106,14 +2131,20 @@ Sub CdmaCheck
     CdmaScans = CdmaScans + 1
     If (CdmaScans >= HrsCdmaOff * (FastLoopInterval * 4)) AND (EventCDMAFlag = No) Then 'Fastloop interval is no of Subscans per 15 min so * 4 is scans per hour
       If IsCDMANClosed Then
-        #If LoggerType = CR1000 Then SW12(1) 'turn off telemetery if a normally closed relay is present
-        #ElseIf LoggerType = CR6 Then SW12(1,1)
-        #EndIf
+        #If LoggerType = CR1000 Then
+          SW12(1)
+          #EndIf'turn off telemetery if a normally closed relay is present
+        #If LoggerType = CR6 Then
+          SW12(1,1)
+          #EndIf
       Else
-        #If LoggerType = CR1000 Then SW12(0) 'turn off telemetery if NC relay is not present
-        #ElseIf LoggerType = CR6 Then SW12(1,0)
-        #EndIf
-      EndIf  'cySW12cle cdma off after 4 hours (Open the Circuit to the CDMA)
+        #If LoggerType = CR1000 Then
+          SW12(0)
+          #EndIf 'turn off telemetery if NC relay is not present
+        #If LoggerType = CR6 Then
+          SW12(1,0)
+          #EndIf
+      EndIf  'cycle cdma off after 4 hours (Open the Circuit to the CDMA)
       IsCDMAOn = No
       CDMAFailure = Yes
       CdmaScans = 0
