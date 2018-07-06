@@ -1,0 +1,106 @@
+$L
+$B
+$p THIS SCRIPT FILE IS FOR USE WITH VADCP AND NEW DL PROGRAM (20171101 or later)
+$p THIS IS FOR INITIAL SET UP ONLY AND MEANT FOR A 1MIN SCAN INTERVAL.
+$p !!!WARNING!!! THIS SCRIPT FILE ERASES THE INTERNAL RECORDER AND
+$p RESET ALL PREVIOUS USER DEFINED SETTINGS TO FACTORY DEFAULT. PRESS F2 TO ABORT
+$D5
+$p DiSPLAYING PREVIOUS V-ADCP SETUP COMMANDS:
+wf?
+ws?
+wn?
+mn?
+cb?
+$D1
+$p Baud rate settings are as follows:
+$p cb411 = 9600
+$p cb511 = 19200
+$p cb611 = 38400 (typical deployment setting for serial to datalogger)
+$p cb711 = 57600
+$p cb811 = 115200
+$D3
+$p RESETTING TO FACTORY DEFAULTS AND STARTING SYSTEM TESTS
+$D1
+cr1
+$D3
+PS0
+$D3
+PS3
+$D3
+PT3
+$D3
+$p SYSTEM TESTS COMPLETED. PLEASE CHECK FOR ISSUES!
+$p
+$p DISPLAYING REAL-TIME SENSOR DATA:
+$p Make sure temperature and depth are changing appropriately.
+$p Hit "Enter" to continue
+$D2
+pc2
+$D2
+$W62,100
+$D1
+$p ERASING LOOP RECORDER NOW
+$D1
+me ErAsE
+$W62,100
+$D1
+$p SENDING NEW COMMANDS
+$D2
+MS0
+MR1
+PD0
+ES0
+TE00010000
+TP000050
+WP50
+WD111110000
+VP1
+#VR11
+#VS3
+CK
+$D1
+$p NOW ENTER USER SETUP COMMANDS
+$p Please hit "Enter" after each command
+$p You have 20 seconds to enter each command
+$p
+$D3
+$p Set Blanking Distance: wf? (in cm. ex: wf0010 for 10cm, 3cm minimum.)
+ck
+$D20
+$p Set Bin Size: ws? (in cm. ex: ws0010 for 10cm, 3cm minimum)
+ck
+$D20
+$p Set Number of Bins: wn? (ex: wn027 for 27 bins, (use for typical programming))
+ck
+$D20
+$p Set deployment file name: mn? (up to 32 characters, "mnSDC" for example)
+ck
+$D20
+ck
+$p DISPLAYING ENTERED COMMANDS NOW:
+wf?
+ws?
+wn?
+mn?
+cb?
+$D2
+$p Please check settings for errors.
+$p If necessary, make corrections now, you have 30 seconds.
+ck
+$D30
+ck
+$D1
+$p All V-ADCP commands have been saved.
+$p
+$p Type your intials and hit "Enter" to save to log file.
+$D10
+$p Current V-ADCP date and time is:
+ts?
+$D2
+$p Make sure PC time is correct and set to PST not PDT.
+$D2
+$p Now press "Ctrl+T" to set V-ADCP clock to PS clock.
+$D2
+$p Type "cs" and press "Enter" to deploy.
+$D1
+$p Press F3 to stop log file. Review file and archive in site documentation folder.
