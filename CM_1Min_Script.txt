@@ -1,0 +1,112 @@
+$L
+$B
+$p THIS SCRIPT FILE IS FOR NEW CHANNEL MASTER PROGRAM (Binary Data Only)
+$p THIS SCRIPT IS FOR INITIAL CHANNEL MASTER SETUP ONLY!!!
+$P 1 MIN SCAN INTERVAL   
+$p !!!WARNING!!! THIS SCRIPT FILE ERASES THE LOOP RECORDER (Hit F3 to Abort)
+$D5
+$p DISPLAYING PREVIOUS CM SETUP COMMANDS...  
+wf?
+ws?
+wn?
+mn?
+cb?
+$D1
+$p Baud settings are as follows...  
+$p CB411=9600  
+$p CB511=19200  
+$p CB611=38400 (required for CM serial to datalogger) 
+$p CB711=57600 
+$p CB811=115200  
+$D3
+$p STARTING SYSTEM TESTS...  
+$D1
+cr1
+$D3
+PS0
+$D3
+PS4
+$D3
+PA
+$D3
+PC4
+$D3
+$p SYSTEM TESTS COMPLETED. PLEASE CHECK FOR FAILURES!  
+$p
+$p DISPLAYING REAL-TIME SENSOR DATA...  
+$P Make sure Pitch and Roll are correct and  
+$p unchanged from previous log file results  
+$P Make sure the Ambient Temp is correct  
+$p Hit "Enter" to continue  
+$D2
+PC2
+$D2
+$W62,10000
+$D1
+$p ERASING LOOP RECORDER NOW...  
+$D1
+me ErAsE
+$W62,1000
+$D1
+$p SENDING NEW COMMANDS...  
+$D2
+mr1
+wp50
+tp00:00.50
+te00:01:00.00
+es00
+ed00000
+ez1101101
+ex01000
+CL0
+cf11111
+cj 0,0,0
+ct1
+vd111000000
+vp3
+#vr500
+#vc 0 0 25
+ck
+$D1
+$p NOW ENTER CM SETUP COMMANDS...  
+$p You must hit "Enter" after each command  
+$p You have about 20 seconds to enter each command  
+$p
+$d3
+$p Set blank distance wf??? (example wf100, for 1 meter, minimum)  
+ck
+$D20
+$p Set cell size ws??? (example ws200, for 2 meters)  
+ck
+$D20
+$p Set number of cells wn??? (example wn27, for 27 cells)  
+ck
+$D20
+$p Set deployment name mn???. ("mnWGA" for example)  
+ck
+$D20
+ck
+$p DISPLAYING ENTERED COMMANDS NOW...  
+wf?
+ws?
+wn?
+mn?
+cb?
+$D2
+$p Please make sure above settings are correct!  
+$p Make corrections or changes now! You have 30 Seconds...  
+ck
+$D30
+ck
+$D1
+$p All CM SETUP COMMANDS HAVE BEEN SAVED!  
+$p
+$p Type your initials now and hit "Enter"
+$D10
+$p Current date and time is... 
+TS?
+$D2
+$p Make sure laptop time is correct and set to PST NOT DST
+$P Now hold down "Ctrl" & "T" (Sets ADCP Time)
+$p Now type "cs" to deploy
+$P Hit F3 to stop log file (REVIEW SAVED LOG FILE!)
