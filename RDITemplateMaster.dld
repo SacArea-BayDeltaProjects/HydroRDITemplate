@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20180622
+Const ProgramVersionDate = 20180706
 'Last Modified by: Michael Simpson
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -217,6 +217,7 @@ Const ProgramVersionDate = 20180622
 '20180509 - TAV Increased WQ "SerialIn" instruction's Max Characters to account for a full suite of sensors/more than 1 parameter per sensor. Set the "GetVariablesFlag" to True in the "Initialize" Sub. Otherwise
 '               it wouldn't get called if the system went down and rebooted.
 '20180622 - TAV Fixed bug that was disallowing modem to cycle properly. Syntax around Conditional Compile statements regarding SW12 ports was not correct.
+'20180706 - TAV Added code to detect "No Sonde" being returned from the SOA. This will put logger into Redeploy mode until a sonde is found.
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 
 SequentialMode 'must not use pipeline mode or averages are missed
@@ -229,7 +230,7 @@ Const No = False
 'Customize constants explanation:
 'WQSonde has the following choices"
 ' "NONE" is if there is no WQ Sonde installed at the station
-' "WQ_SDI12" Choose if the WQ Sonde is SDI21
+' "WQ_SDI12" Choose if the WQ Sonde is SDI12
 ' WQ_Serial" Choose if the WQ Sonde is connected to the Serial port and No Burst is required
 ' "WQ_SERIAL_BURST" Choose if the WQ sonde is serial connected and Burst data is required
 '"WQBaude" is the Sonde buadrate. 38400 or 9600.  38400 is preferred if Burst data is required
@@ -767,6 +768,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
   Public WqNparams = 23
   Public Redeploy As Boolean
+  Public NoSondeTrig
   Public GetBurst As Boolean
   Public OldEXOTime As Long
   'Exo Parameter Codes from EXO manual. These are used to determine where to put the EXO sensor data.
@@ -1868,7 +1870,7 @@ Sub GetStartup
   RangedBin = 0 'starting point for range calculation
   CutOffBins = 1 'Starting point for number of bins to discard when using AutoRange feature
   VMPower = Yes
-  IsSubmersed = False
+  IsSubmersed = True
   VMBaudRateHi = Yes 'if yes baudrate is set to 38400, if not then baudrate is set to 9600
   IsCDMANClosed = Yes 'Default setting is for the existance of a normally closed cdma power relay
   isVMNClosed = Yes 'Default setting for the existance of a normally Closed VM power Relay
@@ -2683,6 +2685,8 @@ EndSub
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     WqIn = Trim(WqIn)
     SplitStr (WqParamOrder,WqIn,CHR(32),WqNparams,0)
+    NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+    Delay (1,200,mSec)
     SerialFlush(WqSerialPort)
     SerialClose(WqSerialPort)
   EndSub
@@ -2708,6 +2712,8 @@ EndSub
     SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
     Delay (1,300,mSec)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
+    NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+    Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
     SerialClose(WqSerialPort)
   EndSub
@@ -2736,6 +2742,8 @@ EndSub
     Erase WqData()
     WqIn = Trim(WqIn)
     SplitStr (WqData,WqIn,",",WqNparams,0)
+    NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+    Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
     SerialClose(WqSerialPort)
   EndSub
@@ -5371,7 +5379,7 @@ Sub KeypadMenu
       #If WqSonde = "WQ_SDI12" Then
         Call GetWq_SDI12 'get YSI data
       #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-        If WqParamOrder(1) = BadDataIndicator Then Redeploy = True
+        If WqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True
         If Redeploy = True Then 'EXO not setup yet
           Call ParamCheck
           Delay (1,1,Sec)
