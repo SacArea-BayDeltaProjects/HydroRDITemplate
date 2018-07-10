@@ -221,6 +221,7 @@ Const ProgramVersionDate = 20180710
 '20180710 - TAV Added the TrueStage values to the keypad menu.
 '               Fixed another Conditional Compile Syntax error regarding the Modem
 '               Added SVMaq Table to allow techs to get field visit readings easier without having to scroll through the public table. SVMaq table only stores 1 record.
+'               Added IsNClosed to USR variables.
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 
 SequentialMode 'must not use pipeline mode or averages are missed
@@ -4606,8 +4607,8 @@ EndTable
       '    'set error txt
       ExitSub
     EndIf
-    Dim InVar(36) As String
-    SplitStr(InVar,PreserveFile,",",36,0)
+    Dim InVar(38) As String
+    SplitStr(InVar,PreserveFile,",",38,0)
     StartBin = InVar(1)
     EndBin = InVar(2)
     StartEbbBin = InVar(3)
@@ -4644,13 +4645,15 @@ EndTable
     RangeSource = InVar(34)
     DucerDepthOffset = InVar(35)
     IsSubmersed = InVar(36)
+    IsWQNClosed = InVar(37)
+    isVMNClosed = InVar(38)
   EndSub
 
   'Store Variables to USR File (preserve variables)
   '--------------------------------------------------
   Sub StoreVariables
     'store variables out
-    Dim Var(36) As String
+    Dim Var(38) As String
     Public SendVarString As String * 500
     Public VarStringLen As Long
     Public VarHandle = Long
@@ -4693,9 +4696,11 @@ EndTable
     Var(34) = RangeSource
     Var(35) = DucerDepthOffset
     Var(36) = IsSubmersed
+    Var(37) = IsWQNClosed
+    Var(38) = isVMNClosed
     'build send string
     SendVarString = Var(1)
-    For VarCnt = 2 To 36
+    For VarCnt = 2 To 38
       SendVarString = SendVarString + "," + Var(VarCnt)
     Next VarCnt
     VarStringLen = Len(SendVarString)
