@@ -254,7 +254,7 @@ Const No = False
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "WQ_SERIAL_BURST"
+Const WqSonde = "NONE"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
@@ -262,7 +262,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const WqBaud = 38400
 'value = 9600
 'value = 38400
-Const IsWqMax232 = True
+Const IsWqMax232 = False
 'value = True
 'value = False
 Const IsVmMax232 = False
@@ -294,13 +294,13 @@ Const VMDeadCntMax = 20
 Const StoreAllToCard = True
 'value = True
 'value = False
-Const Debugging = True
+Const Debugging = False
 'Value = True
 'Value = False
 Const SeeAllVel = True
 'Value = True
 'Value = False
-Const SeeRawWQ = True
+Const SeeRawWQ = False
 'Value = True
 'Value = False
 'End of Constants Customization Section
@@ -954,8 +954,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public WqErrCount As Long
   Public WqPwrCycleCnt As Long
   Public WqManualCycle As Boolean
-  Public IsWQNClosed As Boolean
 #EndIf
+  Public IsWQNClosed As Boolean 'Keep this outside conditional compile until we take time to actually fix it. Works like this though.
 'variables for aquarius table
 Public AvgIndexVel As Float
 Public AvgVMTemp As Float
