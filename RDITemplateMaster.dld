@@ -222,6 +222,7 @@ Const ProgramVersionDate = 20180710
 '               Fixed another Conditional Compile Syntax error regarding the Modem
 '               Added SVMaq Table to allow techs to get field visit readings easier without having to scroll through the public table. SVMaq table only stores 1 record.
 '               Added IsNClosed to USR variables.
+'               Updated BiRating code to allow for use with 3-beam systems that aren't uplookers.
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 
 SequentialMode 'must not use pipeline mode or averages are missed
@@ -3487,8 +3488,14 @@ EndTable
         BiRatOK = True 'sets flag indication that this is a channel master in instrument coordinates and it's ok to use a bi-directional rating if needed
       Case 3
         Decode = "Instrument Coordinates - V1=X V2=Y disregard V3 V4=Error"
+        If IsVADCP = False Then 
+          BiRatOK = True 'It's ok to use the bi-rating if it is a 3-beam system and NOT an uplooker
+        Else
+          BiRatOK = False
+        EndIf
       Case 4
         Decode = "Instrument Coordinates - V1=X V2=Y V3=Z and V4=Error"
+        BiRatOK = False 'Don't allow use of bi-rating with uplookers.
       Case Else
         Decode = "System could not be decoded"
       End Select
