@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20180710
+Const ProgramVersionDate = 20180823
 'Last Modified by: Michael Simpson
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -223,8 +223,12 @@ Const ProgramVersionDate = 20180710
 '               Added SVMaq Table to allow techs to get field visit readings easier without having to scroll through the public table. SVMaq table only stores 1 record.
 '               Added IsNClosed to USR variables.
 '               Updated BiRating code to allow for use with 3-beam systems that aren't uplookers.
+'20180823 - MRS Fixed bug for warning if U ports are used for VM or Sonde on the CR6 using the comms mode 0 option. Put Serialopen commands in subroutines.
+'20180824 - MRS Eliminated "baudratehi" and VMbaud is now set in constant menu
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
-
+'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
+'IMPORTANT - For EXO2 serial operation, A MAX232 adapter must be used on CR6 "U" ports or CR1000 Com1.Com2,Com3 or Com4. An ADCP can run on all ports, but
+'            a MAX232 adapter should probably be used if using CR6 "U" ports or for long RS232 cables. 
 SequentialMode 'must not use pipeline mode or averages are missed
 
 '_____________________________Declare Public Variables___________________________________
@@ -254,7 +258,7 @@ Const No = False
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "NONE"
+Const WqSonde = "WQ_SERIAL_BURST"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
@@ -262,7 +266,13 @@ Const WqSonde = "NONE"
 Const WqBaud = 38400
 'value = 9600
 'value = 38400
-Const IsWqMax232 = False
+Const VmBaud = 38400
+'value = 9600
+'value = 19200
+'value = 38400
+'value = 57600
+'value = 115200
+Const IsWqMax232 = True
 'value = True
 'value = False
 Const IsVmMax232 = False
@@ -294,13 +304,13 @@ Const VMDeadCntMax = 20
 Const StoreAllToCard = True
 'value = True
 'value = False
-Const Debugging = False
+Const Debugging = True
 'Value = True
 'Value = False
-Const SeeAllVel = True
+Const SeeAllVel = False
 'Value = True
 'Value = False
-Const SeeRawWQ = False
+Const SeeRawWQ = True
 'Value = True
 'Value = False
 'End of Constants Customization Section
@@ -328,7 +338,7 @@ Const SeeRawWQ = False
   Const ExtSolarCom = 2
 #ElseIf LoggerType = CR6 Then
   Const AdcpPort = ComU1
-  Const WqSerialPort = ComC1
+  Const WqSerialPort = ComC3
   Const WqSwitchPort = U6
   Const UseSW12_2_forWQ = False
   Const VMSwitchPort = U4
@@ -404,11 +414,16 @@ Public LowMeas As Boolean 'flag indicating low flow measurement needed
 Public HighMeas As Boolean 'flag indicating high flow measurement needed
 Dim LowCount As Long 'counter for number of times velocity is below the Lower limit
 Dim HighCount As Long 'Counter for number of times velocity is above the upper limit
-Public VMBaudRateHi As Boolean 'Selects high and low baud rates for AdcpPort (ADCP communications)
 Public VMPower As Boolean 'flag to turn VM on and Off manually
 Public isVMNClosed As Boolean 'is the VM powered using a Normally clo9sed relay
 Public VmDeadCount As Long 'number of times VM has bad data
-
+#If Debugging = True Then
+Public UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
+Public UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+#Else
+Dim UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
+Dim UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+#EndIf  
 'Declare variables to hold time values
 Dim rTime(9) As Float 'this array holds time values returned from the realtime statement
 Alias rTime(3) = DOM 'FOR BEAM CHECK
@@ -1925,7 +1940,6 @@ EndTable
     CutOffBins = 1 'Starting point for number of bins to discard when using AutoRange feature
     VMPower = Yes
     IsSubmersed = False
-    VMBaudRateHi = Yes 'if yes baudrate is set to 38400, if not then baudrate is set to 9600
     IsCDMANClosed = Yes 'Default setting is for the existance of a normally closed cdma power relay
     isVMNClosed = Yes 'Default setting for the existance of a normally Closed VM power Relay
     KeepCDMAon = Yes 'CDMA is initially setup to stay on
@@ -2241,35 +2255,7 @@ EndTable
       SerialFlush (AdcpPort)
       'Turn Power on and off to ADCP
       Call CycleVMPower
-      If VMBaudRateHi = True Then
-        If (IsVmMax232 = True) AND (AdcpPort <> ComMe) Then
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,38400,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,38400,19,0,2000)
-          #EndIf
-        Else
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,38400,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,38400,3,0,2000)
-          #EndIf
-        EndIf
-      Else
-        If (IsVmMax232 = True) AND (AdcpPort <> ComMe) Then
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,9600,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,9600,19,0,2000)
-          #EndIf
-        Else
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,9600,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,9600,3,0,2000)
-          #EndIf
-        EndIf
-      EndIf
+      Call OpenADCPPort
       ''SerialOut (COMRS232,"+++","",0,100)'send alt break command
       Delay (1,1,Sec)'wait for reply
       SerialIn (Banner,AdcpPort,500,">",200)'get banner from ADCP
@@ -2296,7 +2282,58 @@ EndTable
       #EndIf
     EndIf
   EndSub
+'Open ADCP port
+'----------------------------------------------
+Sub OpenADCPPort
+ #If LoggerType = CR6 Then 
+        If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
+          If UseCommsZeroForADCP Then
+            SerialOpen (AdcpPort,VmBaud,19,0,2000,0)'open ADCP PORT with 2000 byte buffer using format 19
+          Else
+            SerialOpen (AdcpPort,VmBaud,19,0,2000)
+          EndIf
+        Else
+          If UseCommsZeroForADCP Then
+            SerialOpen (AdcpPort,VmBaud,3,0,2000,0)'open ADCP PORT with 2000 byte buffer using format 3
+          Else
+            SerialOpen (AdcpPort,VmBaud,3,0,2000)
+          EndIf
+        EndIf
+ #Else
+        If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
+          SerialOpen (AdcpPort,VmBaud,19,0,2000)'open with 2000 byte buffer using format 19
+        Else
+          SerialOpen (AdcpPort,VmBaud,3,0,2000) 'open ADCP PORT with 2000 byte buffer using format 3
+        EndIf
+ #EndIf 
+EndSub 
 
+#If WqSonde <> "NONE"
+ Sub OpenWQPort
+   #If LoggerType = CR6
+      If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
+        If UseCommsZeroForSonde Then
+          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
+        Else
+          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
+        EndIf
+      Else
+        If UseCommsZeroForSonde Then
+          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
+        Else
+          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+        EndIf
+      EndIf
+   #Else
+        If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
+          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
+        Else
+          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+        EndIf
+   #EndIf
+ 
+  EndSub
+ #EndIf     
   '_________________________Erase WH Recorder___________________________________
   Sub EraseWH
     If CMD = "RE ErAsE" Then 'If command to erase WH recorder is sent then...
@@ -2374,35 +2411,7 @@ EndTable
       Banner = ""
       CSCmd = ""
       Call CycleVmPower 'give it a jolt and then send a CS command
-      If VMBaudRateHi = True Then
-        If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,38400,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,38400,19,0,2000)
-          #EndIf
-        Else
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,38400,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,38400,3,0,2000)
-          #EndIf
-        EndIf
-      Else
-        If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,9600,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,9600,19,0,2000)
-          #EndIf
-        Else
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,9600,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,9600,3,0,2000)
-          #EndIf
-        EndIf
-      EndIf
+      Call OpenAdcpPort
       If IsVADCP = True Then
         SerialOut (AdcpPort,"+++","",0,100)'send alt break command
         Delay (1,1,Sec)'wait for reply
@@ -2481,35 +2490,7 @@ EndTable
     SendVmYear = Right(SplitTime(3),2)
     VMTimeString = "TS" + SendVmYear + "/" + SendVMMonth + "/" + SendVMDay + "," + SendVmHour + ":" + SendVmMin + ":" + SendVmSec 'Reconstruct time string
 
-    If VMBaudRateHi = True Then
-      If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (AdcpPort,38400,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-        #Else
-          SerialOpen (AdcpPort,38400,19,0,2000)
-        #EndIf
-      Else
-        #If LoggerType = CR6 Then
-          SerialOpen (AdcpPort,38400,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-        #Else
-          SerialOpen (AdcpPort,38400,3,0,2000)
-        #EndIf
-      EndIf
-    Else
-      If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (AdcpPort,9600,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-        #Else
-          SerialOpen (AdcpPort,9600,19,0,2000)
-        #EndIf
-      Else
-        #If LoggerType = CR6 Then
-          SerialOpen (AdcpPort,9600,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-        #Else
-          SerialOpen (AdcpPort,9600,3,0,2000)
-        #EndIf
-      EndIf
-    EndIf
+    Call OpenADCPPort
     If IsVADCP = True Then 'the VADCP needs a CSTOP command to get into command mode
       SerialOut (AdcpPort,"+++","",0,100)'send alt break command
       Delay (1,1,Sec)'wait for reply
@@ -2571,19 +2552,7 @@ EndTable
         SendEXOSec = Round(SplitTime(6),0)
       EndIf
       EXOTimeString = SendEXOHour + ":" + SendEXOMin + ":" + SendEXOSec 'Reconstruct UTC time string to send to EXO
-      #If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        #EndIf
-      #Else
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        #EndIf
-      #EndIf
+      Call OpenWQPort
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay (1,10,mSec)
       SerialOut (WqSerialPort,"time " + EXOTimeString + CHR(13) + CHR(10),"OK",3,50)
@@ -2725,19 +2694,7 @@ EndTable
   '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
   #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
     Sub ParamCheck 'gets the parameter codes from the EXO in whichever order they are being output
-      #If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        #EndIf
-      #Else
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        #EndIf
-      #EndIf
+      Call OpenWQPort
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay (1,10,mSec)
       SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
@@ -2754,19 +2711,7 @@ EndTable
   ' SetDilim -----------Sets the serial connected EXO to comma delimited output----
   #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
     Sub SetDelim 'sets the EXO to comma delimited output
-      #If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        #EndIf
-      #Else
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        #EndIf
-      #EndIf
+      Call OpenWQPort
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay (1,10,mSec)
       SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
@@ -2781,19 +2726,7 @@ EndTable
   '----------GetWQ_Serial------Gets a single set of data from the serial connected EXO
   #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
     Sub GetWQ_Serial 'gets single data point from EXO
-      #If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        #EndIf
-      #Else
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        #EndIf
-      #EndIf
+      Call OpenWQPort
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay (1,10,mSec)
       SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
@@ -2881,19 +2814,7 @@ EndTable
   ' -------------------SetBurst-------if collecting burst then Setup EXO for burst-----
   #If WqSonde = "WQ_SERIAL_BURST" Then
     Sub SetBurst 'sets to run and receives string
-      #If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        #EndIf
-      #Else
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        #EndIf
-      #EndIf
+      Call OpenWQPort
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay (1,20,mSec)
       #If WqBaud = 9600 Then
@@ -2973,19 +2894,7 @@ EndTable
   '-------WipWQ-----Wipe the serial connected EXO sensors----------------------------------------
   #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
     Sub WipeWq 'tells Wq to wipe
-      #If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        #EndIf
-      #Else
-        #If LoggerType = CR6 Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
-        #Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        #EndIf
-      #EndIf
+      Call OpenWQPort
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay(1,10,mSec)
       SerialOut (WqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
@@ -4486,7 +4395,7 @@ EndTable
   #EndIf
 
   '--------------Store all 1 minute data to Card ----------------------------------------------
-  #If StoreAllToCard = true Then
+  #If (StoreAllToCard = true) AND HasVM Then
     Sub StoreAllData
       Dim CorrDataLine As String * 1000
       Dim VelDataLine As String * 1000
@@ -5108,6 +5017,17 @@ EndTable
       SpikeCounter = 0
       SendHeader = True
     #EndIf
+    'Set comms mode to Zero and include in open commands if using c1,c3 on cr6
+    UseCommsZeroForADCP = False
+    UseCommsZeroForSonde = False
+    #If LoggerType = CR6 Then
+      If (AdcpPort = ComC1) OR (AdcpPort = ComC3) Then
+        UseCommsZeroForADCP = True
+      EndIf 
+      If (WqSerialPort = ComC1) OR (WqSerialPort = ComC3) Then
+        UseCommsZeroForSonde = True
+      EndIf
+    #EndIf
     PanelTemp(PTempC,250)
     PTempF = PTempC * 9/5 + 32
     Call GetStartup 'setup all the statup\default info
@@ -5137,35 +5057,7 @@ EndTable
       Subscans = 0
       ScanNo = ScanNo + 1
       'Set the baudrates and open the serial ports
-      If VMBaudRateHi = True Then
-        If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,38400,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 19
-          #Else
-            SerialOpen (AdcpPort,38400,19,0,2000)
-          #EndIf
-        Else
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,38400,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,38400,3,0,2000)
-          #EndIf
-        EndIf
-      Else
-        If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,9600,19,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 19
-          #Else
-            SerialOpen (AdcpPort,9600,19,0,2000)
-          #EndIf
-        Else
-          #If LoggerType = CR6 Then
-            SerialOpen (AdcpPort,9600,3,0,2000,0)'open ADCP PORT at 38400 baud with 2000 byte buffer using format 3
-          #Else
-            SerialOpen (AdcpPort,9600,3,0,2000)
-          #EndIf
-        EndIf
-      EndIf
+      Call OpenADCPPort
       '              'IMPORTANT Comment out the following code between dashed lines if this program is used at Freeport or if SlaveCom (C7 & C8)is being used by another porcess
       '              ----------------------------------------------------------------------------------------------------------------------------------
       #If HasSlave = Yes Then
