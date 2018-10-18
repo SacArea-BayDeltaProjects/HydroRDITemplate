@@ -986,7 +986,7 @@ Public AvgVMRoll As Float
 Public AvgPS1Stg As Float
 Public AvgPS2Stg As Float
 Public AvgUpBeamStg As Float
-Public AvgLoggerQcfs As Float
+'Public AvgLoggerQcfs As Float
 'Public AvgLoggerMeanVel As Float  Maybe bring this into Aquarius for internal use if we deem it necessary?
 'Public AvgStagePrime As Float
 'Public AvgStageSec As Float
@@ -1396,7 +1396,7 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
-    Sample (1,AvgLoggerQcfs,IEEE4)
+'    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then
   'regular aquarius table with instantaneous values
@@ -1429,7 +1429,7 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
-    Sample (1,AvgLoggerQcfs,IEEE4)
+'    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #EndIf
 
@@ -1448,7 +1448,7 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
-    Sample (1,AvgLoggerQcfs,IEEE4)
+'    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #EndIf
 
@@ -5592,8 +5592,8 @@ EndSub
       AvgVMRoll = DataOut.VMroll_Avg
       AvgPS1Stg = DataOut.PS1Stg_Avg
       AvgPS2Stg = DataOut.PS2Stg_Avg
-      AvgUpBeamStg = DataOut.UpbeamStg_Avg
-      AvgLoggerQcfs = DataOut.Qcfs_Avg
+      AvgUpBeamStg = DataOut.UpBeamStg_Avg
+'      AvgLoggerQcfs = DataOut.Qcfs_Avg
 '      AvgStagePrime = Dataout.StagePrime_Avg
 '      AvgStageSec = Dataout.StageSecnd_Avg
       CallTable Aquarius
