@@ -225,7 +225,7 @@ Const ProgramVersionDate = 20181018
 '               Updated BiRating code to allow for use with 3-beam systems that aren't uplookers.
 '20180823 - MRS Fixed bug for warning if U ports are used for VM or Sonde on the CR6 using the comms mode 0 option. Put Serialopen commands in subroutines.
 '20180824 - MRS Eliminated "baudratehi" and VMbaud is now set in constant menu
-'20181018 - TAV added battery voltages (Station and VM) to Aquarius data tables. Added individual sensor stage values to AQ table and removed "StagePrime" and "StageSec". This selection will be done within Aquarius
+'20181018 - TAV added battery voltages (Station, VM, and Wq Sonde) to Aquarius data tables. Added individual sensor stage values to AQ table and removed "StagePrime" and "StageSec". This selection will be done within Aquarius
 '               so the changes can be tracked and managed more easily.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
@@ -1373,6 +1373,7 @@ SetStatus ("USRDriveSize",16384)
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,BurstMedDate,IEEE4)
     Sample (1,BurstMedTime,IEEE4)
+    Minimum (1,WqBattV,FP2,False,False)
     Median (1,BurstTempC,30,IEEE4,WqBadData)
     Median (1,BurstSpCond,30,IEEE4,WqBadData)
     Median (1,BurstTurbFNU,30,IEEE4,WqBadData)
@@ -1405,6 +1406,7 @@ SetStatus ("USRDriveSize",16384)
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,WqDate,IEEE4)
     Sample (1,WqTime,IEEE4)
+    Minimum (1,WqBattV,FP2,False,False)
     Sample (1,WqTempC,IEEE4)
     Sample (1,WqSpCond,IEEE4)
     Sample (1,WqTurbFNU,IEEE4)
