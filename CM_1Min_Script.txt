@@ -51,7 +51,7 @@ $D1
 $p SENDING NEW COMMANDS...  
 $D2
 mr1
-wp50
+wp60
 tp00:00.50
 te00:01:00.00
 es00
