@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20180823
+Const ProgramVersionDate = 20181018
 'Last Modified by: Michael Simpson
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -225,6 +225,9 @@ Const ProgramVersionDate = 20180823
 '               Updated BiRating code to allow for use with 3-beam systems that aren't uplookers.
 '20180823 - MRS Fixed bug for warning if U ports are used for VM or Sonde on the CR6 using the comms mode 0 option. Put Serialopen commands in subroutines.
 '20180824 - MRS Eliminated "baudratehi" and VMbaud is now set in constant menu
+'20181018 - TAV added battery voltages (Station and VM) to Aquarius data tables. Added individual sensor stage values to AQ table and removed "StagePrime" and "StageSec". This selection will be done within Aquarius
+'               so the changes can be tracked and managed more easily.
+
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
 'IMPORTANT - For EXO2 serial operation, A MAX232 adapter must be used on CR6 "U" ports or CR1000 Com1.Com2,Com3 or Com4. An ADCP can run on all ports, but
@@ -734,7 +737,11 @@ Public PSPressPort As Long 'port Pressure sensor 1 is plugged into (3 or 5)
 Public PSPressAddr As Long 'SDI12 address for Pressure sensor 1
 Public PSPressDataIn As Boolean 'are there data from Pressure sensor 1?
 Public PsPress1Stg(2) As Float 'array to hold the values pressure sensor 1 is outputting (temp and feet)
+Alias PsPress1Stg(1) = PS1RawDepthFt 'Label array as easy-to-read values for techs
+Alias PsPress1Stg(2) = PS1TempC
 Public PSpress2Stg(2) As Float 'array to hold values pressure sensor 2 is outputting
+Alias PSpress2Stg(1) = PS2RawDepthFt 'Label array as easy-to-read values for techs
+Alias PSpress2Stg(2) = PS2TempC
 Public PSpress2Port As Long 'port pressure sensor 2 is plugged into (3 or 5)
 Public PSpress2Addr As Long 'SDI12 address for pressure sensor 2
 Public PSpress2DataIn As Boolean 'are there data from pressure sensor 2?
@@ -758,7 +765,7 @@ Public VMPressOffset As Float'offset applied to raw data to get stage value
 Public PS1Offset As Float'offset applied to raw data to get stage value
 Public PS2Offset As Float'offset applied to raw data to get stage value
 Public SondeOffset As Float'offset applied to raw data to get stage value
-Public StgSelect As String 'numerical indicator of which instrument is being used to calculate discharge
+Public StgSelect As String 'numerical indicator of which instrument is being used to calculate discharge within the datalogger
 Public Area As Float 'calculated channel area based on stage-area rating
 Public BadStgFlag As Boolean 'indicates bad stage value
 Public BadStgCount As Long 'indicates number of times bad stage values have occured
@@ -976,8 +983,13 @@ Public AvgIndexVel As Float
 Public AvgVMTemp As Float
 Public AvgVMPitch As Float
 Public AvgVMRoll As Float
-Public AvgStagePrime As Float
-Public AvgStageSec As Float
+Public AvgPS1Stg As Float
+Public AvgPS2Stg As Float
+Public AvgUpBeamStg As Float
+Public AvgLoggerQcfs As Float
+'Public AvgLoggerMeanVel As Float  Maybe bring this into Aquarius for internal use if we deem it necessary?
+'Public AvgStagePrime As Float
+'Public AvgStageSec As Float
 
 'Public WqSondeDead As Boolean 'indicator that the YSI is flatlined or out
 'Public WqSondeDeadCnt As Long 'how long has it been flatlined or out?
@@ -1358,6 +1370,7 @@ SetStatus ("USRDriveSize",16384)
     CardOut (0,17280)
     OpenInterval
     ' aquarius table for burst
+    Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,BurstMedDate,IEEE4)
     Sample (1,BurstMedTime,IEEE4)
     Median (1,BurstTempC,30,IEEE4,WqBadData)
@@ -1372,18 +1385,24 @@ SetStatus ("USRDriveSize",16384)
     Median (1,BurstChlRFU,30,IEEE4,WqBadData)
     Median (1,BurstFdomRFU,30,IEEE4,WqBadData)
     Median (1,BurstFDomQSU,30,IEEE4,WqBadData)
-    Sample (1,AvgStagePrime,IEEE4)
-    Sample (1,AvgStageSec,IEEE4)
+    Sample (1,AvgPS1Stg,IEEE4)
+    Sample (1,AvgPS2Stg,IEEE4)
+    Sample (1,AvgUpBeamStg,IEEE4)
+'    Sample (1,AvgStagePrime,IEEE4)
+'    Sample (1,AvgStageSec,IEEE4)
     Sample (1,AvgIndexVel,IEEE4)
+    Minimum (1,VMVolts,FP2,False,False)  
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
+    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then
   'regular aquarius table with instantaneous values
   DataTable (Aquarius,Rec15minFlag,-1)
     CardOut (0,17280)
     OpenInterval
+    Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,WqDate,IEEE4)
     Sample (1,WqTime,IEEE4)
     Sample (1,WqTempC,IEEE4)
@@ -1398,12 +1417,17 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,WqChlRFU,IEEE4)
     Sample (1,WqFDOMrfu,IEEE4)
     Sample (1,WqFDOMqsu,IEEE4)
-    Sample (1,AvgStagePrime,IEEE4)
-    Sample (1,AvgStageSec,IEEE4)
+    Sample (1,AvgPS1Stg,IEEE4)
+    Sample (1,AvgPS2Stg,IEEE4)
+    Sample (1,AvgUpBeamStg,IEEE4)
+'    Sample (1,AvgStagePrime,IEEE4)
+'    Sample (1,AvgStageSec,IEEE4)
     Sample (1,AvgIndexVel,IEEE4)
+    Minimum (1,VMVolts,FP2,False,False)  
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
+    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #EndIf
 
@@ -1411,12 +1435,18 @@ SetStatus ("USRDriveSize",16384)
   DataTable (Aquarius,Rec15minFlag,-1)
     CardOut (0,17280)
     OpenInterval
-    Sample (1,AvgStagePrime,IEEE4)
-    Sample (1,AvgStageSec,IEEE4)
+    Minimum (1,CR1Volts,FP2,False,False)
+    Sample (1,AvgPS1Stg,IEEE4)
+    Sample (1,AvgPS2Stg,IEEE4)
+    Sample (1,AvgUpBeamStg,IEEE4)
+'    Sample (1,AvgStagePrime,IEEE4)
+'    Sample (1,AvgStageSec,IEEE4)
     Sample (1,AvgIndexVel,IEEE4)
+    Minimum (1,VMVolts,FP2,False,False)  
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
+    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #EndIf
 
@@ -5558,8 +5588,12 @@ EndSub
       AvgVMTemp = DataOut.VMtempC_Avg
       AvgVMPitch = DataOut.VMpitch_Avg
       AvgVMRoll = DataOut.VMroll_Avg
-      AvgStagePrime = Dataout.StagePrime_Avg
-      AvgStageSec = Dataout.StageSecnd_Avg
+      AvgPS1Stg = DataOut.PS1Stg_Avg
+      AvgPS2Stg = DataOut.PS2Stg_Avg
+      AvgUpBeamStg = DataOut.UpbeamStg_Avg
+      AvgLoggerQcfs = DataOut.Qcfs_Avg
+'      AvgStagePrime = Dataout.StagePrime_Avg
+'      AvgStageSec = Dataout.StageSecnd_Avg
       CallTable Aquarius
       AQcount = AQcount + 1
       AQTabEnd = Timer (2,msec,4)
