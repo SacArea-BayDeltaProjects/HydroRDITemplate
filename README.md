@@ -1,9 +1,9 @@
 # RDITemplate
 # [CR1000 and CR6 Datalogger template for RDI ADCPs]
 
-This is a test
-
 *This program is designed for use with the updated station electronics board only.*
+
+USE THE SCRIPT FILES FOR THE ADCPs THAT ARE IN THIS FOLDER FOR THIS PROGRAM ONLY!
 
 Update datalogger operating system to most current version. UPDATING OPERATING SYSTEM WIPES ALL MEMORY FROM DATALOGGER! DO NOT ATTEMPT REMOTE OS UPDATE UNLESS YOU'VE DISCUSSED WITH TV.
 
