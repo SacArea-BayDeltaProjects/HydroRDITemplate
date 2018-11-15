@@ -20,6 +20,7 @@ Before Compiling/Sending to Datalogger:
     VmBaud: Select baud rate for velocity meter. Typical setup: 38400.
     IsWqMax232: Is there a Max232 chip present in the communication system for the sonde? <ONLY FOR SERIAL COMMUNICATION
       *Max232 board is necessary for sondes on CR1000 C-ports and CR6 U-ports*
+    MaxBurstCnt:If WqSonde = WQ_Serial_Burst select the number of individual samples taken during each burst up to a maximum of 30. Each sample gives an instantaneous value for all parameters with one second between samples. 30 samples (taking 30 seconds) should be used unless otherwise discussed. 
     IsVmMax232: Is there a Max232 chip present in the communication system for the velocity meter?
       *Not necessary on either set of ports, but should probably be used for CR6 U-ports or long RS232 cable runs.*
     IsSpecStudy: Do we need the "VelData" table active? (This table contains more velocity data than our normal tables)
