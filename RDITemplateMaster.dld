@@ -227,6 +227,7 @@ Const ProgramVersionDate = 20181018
 '20180824 - MRS Eliminated "baudratehi" and VMbaud is now set in constant menu
 '20181018 - TAV added battery voltages (Station, VM, and Wq Sonde) to Aquarius data tables. Added individual sensor stage values to AQ table and removed "StagePrime" and "StageSec". This selection will be done within Aquarius
 '               so the changes can be tracked and managed more easily.
+'20181114 - MRI created MaxBurstCnt constant, added into constant table so it can be changed more easily. Call burst table when MaxBurstCnt is met and write to Aqurius table.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -278,6 +279,10 @@ Const VmBaud = 38400
 Const IsWqMax232 = True
 'value = True
 'value = False
+Const MaxBurstCnt = 30
+'Min = 1
+'Max = 30
+'Inc = 1
 Const IsVmMax232 = False
 'value = True
 'value = False
@@ -1342,27 +1347,27 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstTime,IEEE4)
     Sample (1,BurstMedDate,IEEE4)
     Sample (1,BurstMedTime,IEEE4)
-    Median (1,BurstTempC,30,IEEE4,WqBadData)
-    Median (1,BurstTempF,30,IEEE4,WqBadData)
-    Median (1,BurstSpCond,30,IEEE4,WqBadData)
-    Median (1,BurstTurbFNU,30,IEEE4,WqBadData)
-    Median (1,BurstDOSat,30,IEEE4,WqBadData)
-    Median (1,BurstDOmgL,30,IEEE4,WqBadData)
-    Median (1,BurstORP,30,IEEE4,WqBadData)
-    Median (1,BurstDepthFt,30,IEEE4,WqBadData)
-    Median (1,BurstBattV,30,FP2,WqBadData)
-    Median (1,BurstpH,30,FP2,WqBadData)
-    Median (1,BurstpHmV,30,FP2,WqBadData))
-    Median (1,BurstChlugL,30,IEEE4,WqBadData)
-    Median (1,BurstChlRFU,30,IEEE4,WqBadData)
-    Median (1,BurstBGApcRFU,30,IEEE4,WqBadData)
-    Median (1,BurstBGApcugL,30,IEEE4,WqBadData)
-    Median (1,BurstFdomRFU,30,IEEE4,WqBadData)
-    Median (1,BurstFDomQSU,30,IEEE4,WqBadData)
-    Median (1,BurstNH4Amgl,30,IEEE4,WqBadData)
-    Median (1,BurstNO3Nmgl,30,IEEE4,WqBadData)
-    Median (1,BurstCLmgl,30,IEEE4,WqBadData)
-    Median (1,BurstWiperPos,30,FP2,WqBadData)
+    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstTempF,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstDOSat, MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstORP,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstBattV,MaxBurstCnt,FP2,WqBadData)
+    Median (1,BurstpH,MaxBurstCnt,FP2,WqBadData)
+    Median (1,BurstpHmV,MaxBurstCnt,FP2,WqBadData))
+    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstBGApcRFU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstBGApcugL,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstNH4Amgl,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstNO3Nmgl,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstWiperPos,MaxBurstCnt,FP2,WqBadData)
     Maximum (1,BurstCount,Long,WqBadData,False)
   EndTable
 
@@ -1374,18 +1379,18 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstMedDate,IEEE4)
     Sample (1,BurstMedTime,IEEE4)
     Minimum (1,WqBattV,FP2,False,False)
-    Median (1,BurstTempC,30,IEEE4,WqBadData)
-    Median (1,BurstSpCond,30,IEEE4,WqBadData)
-    Median (1,BurstTurbFNU,30,IEEE4,WqBadData)
-    Median (1,BurstDOSat,30,IEEE4,WqBadData)
-    Median (1,BurstDOmgL,30,IEEE4,WqBadData)
-    Median (1,BurstDepthFt,30,IEEE4,WqBadData)
-    Median (1,BurstBattV,30,FP2,WqBadData)
-    Median (1,BurstpH,30,FP2,WqBadData)
-    Median (1,BurstChlugL,30,IEEE4,WqBadData)
-    Median (1,BurstChlRFU,30,IEEE4,WqBadData)
-    Median (1,BurstFdomRFU,30,IEEE4,WqBadData)
-    Median (1,BurstFDomQSU,30,IEEE4,WqBadData)
+    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstDOSat,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstBattV,MaxBurstCnt,FP2,WqBadData)
+    Median (1,BurstpH,MaxBurstCnt,FP2,WqBadData)
+    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,WqBadData)
     Sample (1,AvgPS1Stg,IEEE4)
     Sample (1,AvgPS2Stg,IEEE4)
     Sample (1,AvgUpBeamStg,IEEE4)
@@ -5402,7 +5407,7 @@ EndSub
                 BurstMedDate = ""
                 BurstMedTime = ""
                 BurstCount = 0
-                For jCount = 1 To 30 'de-construct BurstArray and send to table.  too slow to do in get loop
+                For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
                   For kCount = 1 To 23
                     BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
                   Next kCount
@@ -5413,13 +5418,13 @@ EndSub
                     WqBadData = false
                   EndIf
                   Delay(1,30,msec)
-                  'TO DO set these maximums in the constant table so they can be changed all at once
+                  
                   BurstCount = BurstCount+1
                   If BurstCount = 15 Then
                     BurstMedDate = BurstDate 'get median Date and time of burst sample
                     BurstMedTime = BurstTime ' "   "      "        "       "     "
                   EndIf
-                  If BurstCount >= 30 Then 'output the table on the last burst string after all variables are collected
+                  If BurstCount >= MaxBurstCnt Then 'output the table on the last burst string after all variables are collected
                     RecBurstFlag = True
                     CallTable Burst 'Record median burst value to table
                   Else
