@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20181018
+Const ProgramVersionDate = 20181206
 'Last Modified by: Michael Simpson
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -228,6 +228,7 @@ Const ProgramVersionDate = 20181018
 '20181018 - TAV added battery voltages (Station, VM, and Wq Sonde) to Aquarius data tables. Added individual sensor stage values to AQ table and removed "StagePrime" and "StageSec". This selection will be done within Aquarius
 '               so the changes can be tracked and managed more easily.
 '20181114 - MRI created MaxBurstCnt constant, added into constant table so it can be changed more easily. Call burst table when MaxBurstCnt is met and write to Aqurius table.
+'20181206 - TAV added Bi-directional rating variables into QAQC Table.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -1551,6 +1552,12 @@ DataTable  (QAQCInfo,Rec24HrFlag,-1)
   Sample (1,BlankDist,FP2)
   Sample (1,StartBin,FP2)
   Sample (1,EndBin,FP2)
+  Sample (1,StartEbbBin,FP2)
+  Sample (1,EndEbbBin,FP2)
+  Sample (1,StartFldBin,FP2)
+  Sample (1,EndFldBin,FP2)
+  Sample (1,BiRatTran,FP2)
+  Sample (1,UseBiRat,Boolean)
   Sample (1,CutOffBins,FP2)
   Sample (1,VMHeading,FP2)
   Sample (1,UseV2,Boolean)
