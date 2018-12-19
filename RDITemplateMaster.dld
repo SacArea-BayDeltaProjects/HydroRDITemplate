@@ -1688,7 +1688,6 @@ DataTable (Data1m,Rec1MinFlag,-1)
   Sample (1,HighRatVel,FP2)
   Sample (1,SelStgPrime,FP2)
   Sample (1,StageSecnd,IEEE4)
-  
   Sample (1,SelStgSecnd,FP2)
 EndTable
 
