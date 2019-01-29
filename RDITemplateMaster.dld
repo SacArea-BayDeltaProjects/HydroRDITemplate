@@ -229,6 +229,7 @@ Const ProgramVersionDate = 20181206
 '               so the changes can be tracked and managed more easily.
 '20181114 - MRI created MaxBurstCnt constant, added into constant table so it can be changed more easily. Call burst table when MaxBurstCnt is met and write to Aqurius table.
 '20181206 - TAV added Bi-directional rating variables into QAQC Table.
+'20181219 - MRI added stagesecnd and selstgsecnd to 1min data table
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -1686,6 +1687,8 @@ DataTable (Data1m,Rec1MinFlag,-1)
   Sample (1,LowRatVel,FP2)
   Sample (1,HighRatVel,FP2)
   Sample (1,SelStgPrime,FP2)
+  Sample (1,StageSecnd,IEEE4)
+  Sample (1,SelStgSecnd,FP2)
 EndTable
 
 'BEAMCHECK DATA OUTPUT TABLE
