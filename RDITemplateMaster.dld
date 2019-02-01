@@ -1373,7 +1373,7 @@ SetStatus ("USRDriveSize",16384)
     Maximum (1,BurstCount,Long,WqBadData,False)
   EndTable
 
-  DataTable (Aquarius,RecBurstFlag OR RecAQFlag,-1)
+  DataTable (Aquarius,Rec15minFlag,-1) 'garuntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
     OpenInterval
     ' aquarius table for burst
