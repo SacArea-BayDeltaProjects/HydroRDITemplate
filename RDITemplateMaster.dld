@@ -429,10 +429,10 @@ Public isVMNClosed As Boolean 'is the VM powered using a Normally clo9sed relay
 Public VmDeadCount As Long 'number of times VM has bad data
 #If Debugging = True Then
 Public UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
-Public UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+Public UseCommsOneForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
 #Else
 Dim UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
-Dim UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+Dim UseCommsOneForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
 #EndIf  
 'Declare variables to hold time values
 Dim rTime(9) As Float 'this array holds time values returned from the realtime statement
@@ -1373,7 +1373,7 @@ SetStatus ("USRDriveSize",16384)
     Maximum (1,BurstCount,Long,WqBadData,False)
   EndTable
 
-  DataTable (Aquarius,RecBurstFlag OR RecAQFlag,-1)
+  DataTable (Aquarius,Rec15minFlag,-1) 'garuntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
     OpenInterval
     ' aquarius table for burst
@@ -2359,14 +2359,14 @@ EndSub
  Sub OpenWQPort
    #If LoggerType = CR6
       If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        If UseCommsZeroForSonde Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,0)
+        If UseCommsOneForSonde Then
+          SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)
         Else
           SerialOpen (WqSerialPort,WqBaud,19,0,2000)
         EndIf
       Else
-        If UseCommsZeroForSonde Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
+        If UseCommsOneForSonde Then
+          SerialOpen (WqSerialPort,WqBaud,0,0,2000,1)
         Else
           SerialOpen (WqSerialPort,WqBaud,0,0,2000)
         EndIf
@@ -5066,13 +5066,13 @@ EndSub
     #EndIf
     'Set comms mode to Zero and include in open commands if using c1,c3 on cr6
     UseCommsZeroForADCP = False
-    UseCommsZeroForSonde = False
+    UseCommsOneForSonde = False
     #If LoggerType = CR6 Then
       If (AdcpPort = ComC1) OR (AdcpPort = ComC3) Then
         UseCommsZeroForADCP = True
       EndIf 
       If (WqSerialPort = ComC1) OR (WqSerialPort = ComC3) Then
-        UseCommsZeroForSonde = True
+        UseCommsOneForSonde = True
       EndIf
     #EndIf
     PanelTemp(PTempC,250)
