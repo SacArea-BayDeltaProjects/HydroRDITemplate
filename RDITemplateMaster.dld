@@ -5279,7 +5279,7 @@ EndSub
         'SetVMTimeFlg = No
       EndIf
       #If WqSonde = "WQ_SERIAL_BURST" Then
-      If Mod15Minutes > 840 AND Mod15Minutes < 860 Then 'if time is within 15sec of the 14th minute of the scan
+      If Mod15Minutes > 840 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
         GetBurst = True 'set the burst flag to true
         Else
         GetBurst = False 'outside the 15sec of the 14th minute, don't burst
