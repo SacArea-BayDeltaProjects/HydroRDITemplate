@@ -2938,6 +2938,38 @@ EndSub
     EndSub
   #EndIf
 
+'------------------Set Burst Variables to NAN-------------------------------
+'Prevent duplicate values from being populated in case new values don't get read in in time. Set all values to NAN until they're actually populated by the burst
+#If (WqSonde = "WQ_SERIAL_BURST") Then
+  Sub ClearBurstVars
+    BurstDate = BadDataIndicator
+    BurstTime = BadDataIndicator
+    BurstMedDate = BadDataIndicator
+    BurstMedTime = BadDataIndicator
+    BurstTempC = BadDataIndicator
+    BurstTempF = BadDataIndicator
+    BurstSpCond = BadDataIndicator
+    BurstTurbFNU = BadDataIndicator
+    BurstDOSat = BadDataIndicator
+    BurstDOmgL = BadDataIndicator
+    BurstORP = BadDataIndicator
+    BurstDepthFt = BadDataIndicator
+    BurstBattV = BadDataIndicator
+    BurstpH = BadDataIndicator
+    BurstpHmV = BadDataIndicator
+    BurstChlugL = BadDataIndicator
+    BurstChlRFU = BadDataIndicator
+    BurstBGApcRFU = BadDataIndicator
+    BurstBGApcugL = BadDataIndicator
+    BurstFdomRFU = BadDataIndicator
+    BurstFDomQSU = BadDataIndicator
+    BurstNH4Amgl = BadDataIndicator
+    BurstNO3Nmgl = BadDataIndicator
+    BurstCLmgl = BadDataIndicator
+    BurstWiperPos = BadDataIndicator
+  EndSub
+#EndIf
+
   '-------WipWQ-----Wipe the serial connected EXO sensors----------------------------------------
   #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
     Sub WipeWq 'tells Wq to wipe
@@ -5246,6 +5278,13 @@ EndSub
         Rec24HrFlag = No  'otherwise keep it turned off
         'SetVMTimeFlg = No
       EndIf
+      #If WqSonde = "WQ_SERIAL_BURST" Then
+      If Mod15Minutes > 840 AND Mod15Minutes < 860 Then 'if time is within 15sec of the 14th minute of the scan
+        GetBurst = True 'set the burst flag to true
+        Else
+        GetBurst = False 'outside the 15sec of the 14th minute, don't burst
+      EndIf
+      #EndIf
       If Mod15Minutes < 15 Then 'when time to output data...within 14 seconds of 15 minute period
         If RecordAll = Yes Then RecAllVelFlag = Yes
         #If WqSonde <> "NONE" Then
@@ -5254,13 +5293,13 @@ EndSub
         Rec15minFlag = Yes 'always set record data flag to yes every fifteen minutes
         RecDataFlag = Yes 'let next statement know that it was done
         RecBeamCheckFlag = Yes
-        #If WqSonde = "WQ_SERIAL_BURST" Then
-          GetBurst = Yes 'set the burst flag
-        #EndIf
+'        #If WqSonde = "WQ_SERIAL_BURST" Then
+'          GetBurst = Yes 'set the burst flag
+'        #EndIf
       Else
-        #If WqSonde = "WQ_SERIAL_BURST" Then
-          GetBurst = No 'set the burst flag
-        #EndIf
+'        #If WqSonde = "WQ_SERIAL_BURST" Then
+'          GetBurst = No 'set the burst flag
+'        #EndIf
         Rec15minFlag = No 'turn off when not on 15min interval
         RecAllVelFlag = No
         RecBeamCheckFlag = No
@@ -5382,7 +5421,7 @@ EndSub
         EndIf
       #EndIf
       #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-        If (Mod15Minutes > 770) AND (Mod15Minutes < 790) Then 'wipe 13mins +- 10s into a 15 min period when not collecting burst, set a disable variable
+        If (Mod15Minutes > 710) AND (Mod15Minutes < 730) Then 'wipe 12mins +- 10s into a 15 min period when not collecting burst, set a disable variable
           Wipeflag = True
         Else
           Wipeflag = false
@@ -5625,6 +5664,7 @@ EndSub
       Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
       #If WqSonde = "WQ_SERIAL_BURST" Then
         RecBurstFlag = False
+        Call ClearBurstVars
       #EndIf
       RecAQFlag = False
       If StoreVariablesFlg = true Then Call StoreVariables
