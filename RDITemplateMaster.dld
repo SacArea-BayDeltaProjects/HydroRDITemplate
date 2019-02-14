@@ -804,6 +804,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public Redeploy As Boolean
   Public NoSondeTrig
   Public GetBurst As Boolean
+  Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
+  Public BurstReachedMod As Float
   Public OldEXOTime As Long
   'Exo Parameter Codes from EXO manual. These are used to determine where to put the EXO sensor data.
   Dim DateCode = 52
@@ -5127,6 +5129,7 @@ EndSub
     'The Scan starts here and we initialize variables that are changed during every scan
     '-----------------------------------------------------------------------------------
     Scan (ScanRate,ScanUnit,5,0)'set to scan every 60 seconds
+      Timer(5,mSec,2)
       RealTime DebugTime()
       CallTable DebugTimer
       Dim InCount As Long
@@ -5279,7 +5282,9 @@ EndSub
         'SetVMTimeFlg = No
       EndIf
       #If WqSonde = "WQ_SERIAL_BURST" Then
-      If Mod15Minutes > 840 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
+      BurstTimeReached = Timer(5,mSec,4)
+      BurstReachedMod = Mod15Minutes
+      If Mod15Minutes > 830 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
         GetBurst = True 'set the burst flag to true
         Else
         GetBurst = False 'outside the 15sec of the 14th minute, don't burst
@@ -5662,10 +5667,10 @@ EndSub
       CallBmChkEnd = CallBmChkEnd/1000
       CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
       Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
-      #If WqSonde = "WQ_SERIAL_BURST" Then
-        RecBurstFlag = False
-        Call ClearBurstVars
-      #EndIf
+'      #If WqSonde = "WQ_SERIAL_BURST" Then
+      RecBurstFlag = False
+'        Call ClearBurstVars
+'      #EndIf
       RecAQFlag = False
       If StoreVariablesFlg = true Then Call StoreVariables
       ScanEnd = Timer(2,mSec,4)
