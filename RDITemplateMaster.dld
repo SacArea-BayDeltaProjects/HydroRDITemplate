@@ -5550,7 +5550,8 @@ BeginProg
                 Else
                   
                   RecBurstFlag = false 'if we didn't reach 30+ seconds of data, don't set the flag to record burst data
-                                    If MedBurstTime = Burst.BurstMedTime(1,2) Then
+                                    TestMedBurstTime = Burst.BurstMedTime(1,2)
+                                    If TestMedBurstTime = Burst.BurstMedTime(1,2) Then
                     Call ResetBurstVars
                   EndIf                  
 CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
