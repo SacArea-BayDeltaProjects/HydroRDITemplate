@@ -842,13 +842,13 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public jCount As Long 'Counter
     Public kCount As Long 'Counter
     Public BurstCount As Long 'number of burst measurements collected
-    Public BurstCount_Mid
+'    Public BurstCount_Mid
     Public GotToBurst
     Public BurstDebugCount As Long 'Debugging EXO burst!----------------------------------------------
     Public BurstDate
     Public BurstTime
-    Public BurstMedDate
-    Public BurstMedTime
+'    Public BurstMedDate
+'    Public BurstMedTime
     Public BurstTempC
     Public BurstTempF
     Public BurstSpCond
@@ -1381,8 +1381,8 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,SiteNum,String)
     Sample (1,BurstDate,IEEE4)
     Sample (1,BurstTime,IEEE4)
-    Sample (1,BurstMedDate,IEEE4)
-    Sample (1,BurstMedTime,IEEE4)
+'    Sample (1,BurstMedDate,IEEE4)
+'    Sample (1,BurstMedTime,IEEE4)
     Median (1,BurstDate,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstTime,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
@@ -5505,8 +5505,8 @@ BeginProg
               Call setburst
               Call GetBurstArray
               BurstDebugCount = BurstDebugCount+1
-              BurstMedDate = ""
-              BurstMedTime = ""
+'              BurstMedDate = ""
+'              BurstMedTime = ""
               BurstCount = 0
               For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
                 For kCount = 1 To 23
