@@ -806,9 +806,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public GetBurst As Boolean
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
-  Public TestMedBurstTime
-  Public OldBurstTime
-  Public NewBurstTime
+'  Public TestMedBurstTime
+'  Public OldBurstTime
+'  Public NewBurstTime
   Public OldEXOTime As Long
   'Exo Parameter Codes from EXO manual. These are used to determine where to put the EXO sensor data.
   Dim DateCode = 52
@@ -5472,7 +5472,7 @@ BeginProg
       EndIf
     #EndIf
     #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-      If (Mod15Minutes > 710) AND (Mod15Minutes < 730) Then 'wipe 12mins +- 10s into a 15 min period when not collecting burst, set a disable variable
+      If (Mod15Minutes > 770) AND (Mod15Minutes < 790) Then 'wipe 13mins +- 10s into a 15 min period when not collecting burst, set a disable variable
         Wipeflag = True
       Else
         Wipeflag = false
