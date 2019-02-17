@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190214
-'Last Modified by: Michael Simpson
+Const ProgramVersionDate = 20190217
+'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -807,6 +807,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
   Public TestMedBurstTime
+  Public OldBurstTime
+  Public NewBurstTime
   Public OldEXOTime As Long
   'Exo Parameter Codes from EXO manual. These are used to determine where to put the EXO sensor data.
   Dim DateCode = 52
@@ -840,6 +842,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public jCount As Long 'Counter
     Public kCount As Long 'Counter
     Public BurstCount As Long 'number of burst measurements collected
+    Public BurstCount_Mid
+    Public GotToBurst
     Public BurstDebugCount As Long 'Debugging EXO burst!----------------------------------------------
     Public BurstDate
     Public BurstTime
@@ -1379,6 +1383,8 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstTime,IEEE4)
     Sample (1,BurstMedDate,IEEE4)
     Sample (1,BurstMedTime,IEEE4)
+    Median (1,BurstDate,MaxBurstCnt,IEEE4,WqBadData)
+    Median (1,BurstTime,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstTempF,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
@@ -2939,6 +2945,8 @@ EndSub
         Delay (1,930,mSec)
       #EndIf
     Next Lcount
+    Delay (1,20,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50)
     SerialClose(WqSerialPort)
   End Sub
 #EndIf
@@ -5487,6 +5495,7 @@ BeginProg
         Delay (1,1,Sec)
         Redeploy = False
       Else
+        GotToBurst = GotToBurst + 1
         Call GetWQ_Serial 'get a single data point
         Delay (1,30,mSec)
         Call ParseData
@@ -5512,16 +5521,17 @@ BeginProg
                 Delay(1,30,msec)
 
                 BurstCount = BurstCount+1
-                If BurstCount = 15 Then
-                  BurstMedDate = BurstDate 'get median Date and time of burst sample
-                  BurstMedTime = BurstTime ' "   "      "        "       "     "
+'                If BurstCount = 15 Then
+'                  BurstCount_Mid = BurstCount_Mid + 1
+'                  BurstMedDate = BurstDate 'get median Date and time of burst sample
+'                  BurstMedTime = BurstTime ' "   "      "        "       "     "
                 EndIf
                 If BurstCount >= MaxBurstCnt Then 'output the table on the last burst string after all variables are collected
                   RecBurstFlag = True
                   CallTable Burst 'Record median burst value to table
-                  MedBurstDate = Burst.BurstMedDate
-                  MedBurstTime = Burst.BurstMedTime
-
+                  MedBurstDate = Burst.BurstDate_Med
+                  MedBurstTime = Burst.BurstTime_Med
+                  MedBurstTime = Round(MedBurstTime,0)
                   MedTempC = Burst.BurstTempC_Med
                   MedTempF = Burst.BurstTempF_Med
                   MedSpCond = Burst.BurstSpCond_Med
@@ -5543,18 +5553,19 @@ BeginProg
                   MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
                   MedCLmgl= Burst.BurstCLmgl_Med
                   MedWiperPos= Burst.BurstWiperPos_Med
-                  TestMedBurstTime = Burst.BurstMedTime(1,2)
-                  If MedBurstTime = Burst.BurstMedTime(1,2) Then
-                    Call ResetBurstVars
-                  EndIf
+'                  OldBurstTime = Burst.BurstTime(1,2)
+'                  NewBurstTime = Burst.BurstTime(1,1)
+'                  If NewBurstTime = OldBurstTime Then
+'                    Call ResetBurstVars
+'                  EndIf
                 Else
-                  
                   RecBurstFlag = false 'if we didn't reach 30+ seconds of data, don't set the flag to record burst data
-                                    TestMedBurstTime = Burst.BurstMedTime(1,2)
-                                    If TestMedBurstTime = Burst.BurstMedTime(1,2) Then
-                    Call ResetBurstVars
-                  EndIf                  
-CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
+'                  OldBurstTime = Burst.BurstMedTime(1,2)
+'                  NewBurstTime = Burst.BurstMedTime(1,1)
+'                  If NewBurstTime = OldBurstTime Then
+'                    Call ResetBurstVars
+'                  EndIf                 
+                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
                 EndIf
 
                 Delay(1,1,msec)
@@ -5565,7 +5576,7 @@ CallTable Burst 'call the table anyway, to cover our bases. (Should not be writt
             EndIf 'if no wqerror
           #EndIf 'burst
         EndIf 'getburst and not redeploy
-      EndIf 'Redeploy = true
+'      EndIf 'Redeploy = true
 
       If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True)'unable to initialize or bad data
         Call WQ_Mark_Bad
@@ -5727,6 +5738,9 @@ CallTable Burst 'call the table anyway, to cover our bases. (Should not be writt
     '      AvgStagePrime = Dataout.StagePrime_Avg
     '      AvgStageSec = Dataout.StageSecnd_Avg
     CallTable Aquarius
+    If Rec15minFlag = True Then
+       Call ResetBurstVars
+    EndIf
     AQcount = AQcount + 1
     AQTabEnd = Timer (2,msec,4)
     AQTabEnd = AQTabEnd/1000
