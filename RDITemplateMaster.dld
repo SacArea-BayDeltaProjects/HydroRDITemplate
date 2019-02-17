@@ -1414,8 +1414,8 @@ SetStatus ("USRDriveSize",16384)
     OpenInterval
     ' aquarius table for burst
     Minimum (1,CR1Volts,FP2,False,False)
-    Sample (1,BurstMedDate,IEEE4)
-    Sample (1,BurstMedTime,IEEE4)
+    Sample (1,MedBurstDate,IEEE4)
+    Sample (1,MedBurstTime,IEEE4)
     Minimum (1,WqBattV,FP2,False,False)
     Sample (1,MedTempC,IEEE4)
     Sample (1,MedSpCond,IEEE4)
@@ -2992,8 +2992,8 @@ EndSub
 'Prevent duplicate values from being populated in case new values don't get read in in time. Set all values to NAN until they're actually populated by the burst
 #If (WqSonde = "WQ_SERIAL_BURST") Then
   Sub ResetBurstVars
-                  BurstMedDate = BadDataIndicator
-                  BurstMedTime = BadDataIndicator
+                  MedBurstDate = BadDataIndicator
+                  MedBurstTime = BadDataIndicator
                   MedTempC = BadDataIndicator
                   MedTempF = BadDataIndicator
                   MedSpCond = BadDataIndicator
