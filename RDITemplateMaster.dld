@@ -897,6 +897,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MedNO3Nmgl
     Public MedCLmgl
     Public MedWiperPos
+    Public StdTurbFNU
   #EndIf 'EXO data that's been parsed
   #If SeeRawWQ = True OR Debugging = True Then
     Public t(23)
@@ -1407,6 +1408,8 @@ SetStatus ("USRDriveSize",16384)
     Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstWiperPos,MaxBurstCnt,FP2,WqBadData)
     Maximum (1,BurstCount,Long,WqBadData,False)
+    StdDev (1,BurstTurbFNU,IEEE4,False)
+    Sample (1,StdTurbFNU,IEEE4)
   EndTable
 
   DataTable (Aquarius,Rec15minFlag,-1) 'garuntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
@@ -5518,6 +5521,7 @@ BeginProg
                 Else
                   WqBadData = false
                 EndIf
+                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
                 Delay(1,30,msec)
 
                 BurstCount = BurstCount+1
@@ -5572,7 +5576,7 @@ BeginProg
               Next jCount
               kCount = 0
               jCount = 0
-              'RecBurstFlag = false
+              RecBurstFlag = false
             EndIf 'if no wqerror
           #EndIf 'burst
         EndIf 'getburst and not redeploy
