@@ -807,9 +807,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
   Public BurstComs As String * 10000
-'  Public TestMedBurstTime
-'  Public OldBurstTime
-'  Public NewBurstTime
+  '  Public TestMedBurstTime
+  '  Public OldBurstTime
+  '  Public NewBurstTime
   Public OldEXOTime As Long
   'Exo Parameter Codes from EXO manual. These are used to determine where to put the EXO sensor data.
   Dim DateCode = 52
@@ -843,13 +843,13 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public jCount As Long 'Counter
     Public kCount As Long 'Counter
     Public BurstCount As Long 'number of burst measurements collected
-'    Public BurstCount_Mid
+    '    Public BurstCount_Mid
     Public GotToBurst
     Public BurstDebugCount As Long 'Debugging EXO burst!----------------------------------------------
     Public BurstDate
     Public BurstTime
-'    Public BurstMedDate
-'    Public BurstMedTime
+    '    Public BurstMedDate
+    '    Public BurstMedTime
     Public BurstTempC
     Public BurstTempF
     Public BurstSpCond
@@ -1383,8 +1383,8 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,SiteNum,String)
     Sample (1,BurstDate,IEEE4)
     Sample (1,BurstTime,IEEE4)
-'    Sample (1,BurstMedDate,IEEE4)
-'    Sample (1,BurstMedTime,IEEE4)
+    '    Sample (1,BurstMedDate,IEEE4)
+    '    Sample (1,BurstMedTime,IEEE4)
     Median (1,BurstDate,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstTime,MaxBurstCnt,IEEE4,WqBadData)
     Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
@@ -1432,18 +1432,18 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,MedChlRFU,IEEE4)
     Sample (1,MedFdomRFU,IEEE4)
     Sample (1,MedFDomQSU,IEEE4)
-'    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstDOSat,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstBattV,MaxBurstCnt,FP2,WqBadData)
-'    Median (1,BurstpH,MaxBurstCnt,FP2,WqBadData)
-'    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,WqBadData)
-'    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstDOSat,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstBattV,MaxBurstCnt,FP2,WqBadData)
+    '    Median (1,BurstpH,MaxBurstCnt,FP2,WqBadData)
+    '    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,WqBadData)
+    '    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,WqBadData)
     Sample (1,AvgPS1Stg,IEEE4)
     Sample (1,AvgPS2Stg,IEEE4)
     Sample (1,AvgUpBeamStg,IEEE4)
@@ -2996,29 +2996,29 @@ EndSub
 'Prevent duplicate values from being populated in case new values don't get read in in time. Set all values to NAN until they're actually populated by the burst
 #If (WqSonde = "WQ_SERIAL_BURST") Then
   Sub ResetBurstVars
-                  MedBurstDate = BadDataIndicator
-                  MedBurstTime = BadDataIndicator
-                  MedTempC = BadDataIndicator
-                  MedTempF = BadDataIndicator
-                  MedSpCond = BadDataIndicator
-                  MedTurbFNU = BadDataIndicator
-                  MedDOSat = BadDataIndicator
-                  MedDOmgL= BadDataIndicator
-                  MedORP= BadDataIndicator
-                  MedDepthFt = BadDataIndicator
-                  MedBattV= BadDataIndicator
-                  MedpH= BadDataIndicator
-                  MedpHmV= BadDataIndicator
-                  MedChlugL= BadDataIndicator
-                  MedChlRFU= BadDataIndicator
-                  MedBGApcRFU= BadDataIndicator
-                  MedBGApcugL= BadDataIndicator
-                  MedFdomRFU= BadDataIndicator
-                  MedFDomQSU= BadDataIndicator
-                  MedNH4Amgl= BadDataIndicator
-                  MedNO3Nmgl= BadDataIndicator
-                  MedCLmgl= BadDataIndicator
-                  MedWiperPos= BadDataIndicator
+    MedBurstDate = BadDataIndicator
+    MedBurstTime = BadDataIndicator
+    MedTempC = BadDataIndicator
+    MedTempF = BadDataIndicator
+    MedSpCond = BadDataIndicator
+    MedTurbFNU = BadDataIndicator
+    MedDOSat = BadDataIndicator
+    MedDOmgL= BadDataIndicator
+    MedORP= BadDataIndicator
+    MedDepthFt = BadDataIndicator
+    MedBattV= BadDataIndicator
+    MedpH= BadDataIndicator
+    MedpHmV= BadDataIndicator
+    MedChlugL= BadDataIndicator
+    MedChlRFU= BadDataIndicator
+    MedBGApcRFU= BadDataIndicator
+    MedBGApcugL= BadDataIndicator
+    MedFdomRFU= BadDataIndicator
+    MedFDomQSU= BadDataIndicator
+    MedNH4Amgl= BadDataIndicator
+    MedNO3Nmgl= BadDataIndicator
+    MedCLmgl= BadDataIndicator
+    MedWiperPos= BadDataIndicator
   EndSub
 #EndIf
 
@@ -5336,8 +5336,10 @@ BeginProg
       BurstReachedMod = Mod15Minutes
       If Mod15Minutes > 830 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
         GetBurst = True 'set the burst flag to true
+        RecBurstFlag = True
       Else
         GetBurst = False 'outside the 15sec of the 14th minute, don't burst
+        RecBurstFlag = False
       EndIf
     #EndIf
     If Mod15Minutes < 15 Then 'when time to output data...within 14 seconds of 15 minute period
@@ -5498,21 +5500,25 @@ BeginProg
         Call SetDelim
         Delay (1,1,Sec)
         Redeploy = False
-      Else
-        GotToBurst = GotToBurst + 1
+      Else 'if not redeploy Get single data point
         Call GetWQ_Serial 'get a single data point
         Delay (1,30,mSec)
         Call ParseData
+      EndIf '
+      Delay (1,50,mSec)
         If GetBurst AND NOT Redeploy Then 'ok we need a burst
           #If WqSonde = "WQ_SERIAL_BURST" Then
-            If WqError = False Then 'If sonde is having probs then don't burst
+            If WqError = False  Then 'If sonde is having probs then don't burst
               Call setburst
               Call GetBurstArray
               BurstDebugCount = BurstDebugCount+1
-'              BurstMedDate = ""
-'              BurstMedTime = ""
+              '              BurstMedDate = ""
+              '              BurstMedTime = ""
               BurstCount = 0
-              MonitorComms(BurstComs,WqSerialPort,1)
+              TotalBurstVals = 0
+              GotToBurst = GotToBurst + 1
+              jCount = 0
+              kCount = 0
               For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
                 For kCount = 1 To 23
                   BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
@@ -5523,65 +5529,75 @@ BeginProg
                 Else
                   WqBadData = false
                 EndIf
-'                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
-'                Delay(1,30,msec)
+                '                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
+                '                Delay(1,30,msec)
                 BurstCount = BurstCount+1
-'                If BurstCount = 15 Then
-'                  BurstCount_Mid = BurstCount_Mid + 1
-'                  BurstMedDate = BurstDate 'get median Date and time of burst sample
-'                  BurstMedTime = BurstTime ' "   "      "        "       "     "
+                If WqError Then 'an error occured while trying to read a burst value (in "ParseBurst" sub)
+                  BurstErrCnt = BurstErrCnt + 1 'count up if the error occurs
                 EndIf
-                If BurstCount >= MaxBurstCnt Then 'output the table on the last burst string after all variables are collected
-                  RecBurstFlag = True
-                  CallTable Burst 'Record median burst value to table
-                  MedBurstDate = Burst.BurstDate_Med
-                  MedBurstTime = Burst.BurstTime_Med
-                  MedBurstTime = Round(MedBurstTime,0)
-                  MedTempC = Burst.BurstTempC_Med
-                  MedTempF = Burst.BurstTempF_Med
-                  MedSpCond = Burst.BurstSpCond_Med
-                  MedTurbFNU = Burst.BurstTurbFNU_Med
-                  MedDOSat = Burst.BurstDOSat_Med
-                  MedDOmgL= Burst.BurstDOmgL_Med
-                  MedORP= Burst.BurstORP_Med
-                  MedDepthFt = Burst.BurstDepthFt_Med
-                  MedBattV= Burst.BurstBattV_Med
-                  MedpH= Burst.BurstpH_Med
-                  MedpHmV= Burst.BurstpHmV_Med
-                  MedChlugL= Burst.BurstChlugL_Med
-                  MedChlRFU= Burst.BurstChlRFU_Med
-                  MedBGApcRFU= Burst.BurstBGApcRFU_Med
-                  MedBGApcugL= Burst.BurstBGApcugL_Med
-                  MedFdomRFU= Burst.BurstFdomRFU_Med
-                  MedFDomQSU= Burst.BurstFDomQSU_Med
-                  MedNH4Amgl= Burst.BurstNH4Amgl_Med
-                  MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
-                  MedCLmgl= Burst.BurstCLmgl_Med
-                  MedWiperPos= Burst.BurstWiperPos_Med
-'                  OldBurstTime = Burst.BurstTime(1,2)
-'                  NewBurstTime = Burst.BurstTime(1,1)
-'                  If NewBurstTime = OldBurstTime Then
-'                    Call ResetBurstVars
-'                  EndIf
-                Else
-                  RecBurstFlag = false 'if we didn't reach 30+ seconds of data, don't set the flag to record burst data
-'                  OldBurstTime = Burst.BurstMedTime(1,2)
-'                  NewBurstTime = Burst.BurstMedTime(1,1)
-'                  If NewBurstTime = OldBurstTime Then
-'                    Call ResetBurstVars
-'                  EndIf                 
-'                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
+                If BurstErrCnt > BurstMaxErrCnt Then
+                  TotalBurstVals = jCount - BurstMaxErrCnt
+                  ExitFor 'if error occurs more than a threshold, exit the loop
                 EndIf
-
+                '                If BurstCount = 15 Then
+                '                  BurstCount_Mid = BurstCount_Mid + 1
+                '                  BurstMedDate = BurstDate 'get median Date and time of burst sample
+                '                  BurstMedTime = BurstTime ' "   "      "        "       "     "
                 Delay(1,1,msec)
-              Next jCount
-              kCount = 0
-              jCount = 0
-              RecBurstFlag = false
-            EndIf 'if no wqerror
-          #EndIf 'burst
-        EndIf 'getburst and not redeploy
-'      EndIf 'Redeploy = true
+               Next jCount
+             TotalBurstVals = jCount
+             kCount = 0
+             jCount = 0
+              EndIf
+              If BurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's "BadDataIndicator" All "Burst..." Values
+                MedBurstDate = Burst.BurstDate_Med
+                MedBurstTime = Burst.BurstTime_Med
+                MedBurstTime = Round(MedBurstTime,0)
+                MedTempC = Burst.BurstTempC_Med
+                MedTempF = Burst.BurstTempF_Med
+                MedSpCond = Burst.BurstSpCond_Med
+                MedTurbFNU = Burst.BurstTurbFNU_Med
+                MedDOSat = Burst.BurstDOSat_Med
+                MedDOmgL= Burst.BurstDOmgL_Med
+                MedORP= Burst.BurstORP_Med
+                MedDepthFt = Burst.BurstDepthFt_Med
+                MedBattV= Burst.BurstBattV_Med
+                MedpH= Burst.BurstpH_Med
+                MedpHmV= Burst.BurstpHmV_Med
+                MedChlugL= Burst.BurstChlugL_Med
+                MedChlRFU= Burst.BurstChlRFU_Med
+                MedBGApcRFU= Burst.BurstBGApcRFU_Med
+                MedBGApcugL= Burst.BurstBGApcugL_Med
+                MedFdomRFU= Burst.BurstFdomRFU_Med
+                MedFDomQSU= Burst.BurstFDomQSU_Med
+                MedNH4Amgl= Burst.BurstNH4Amgl_Med
+                MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+                MedCLmgl= Burst.BurstCLmgl_Med
+                MedWiperPos= Burst.BurstWiperPos_Med
+                '                  OldBurstTime = Burst.BurstTime(1,2)
+                '                  NewBurstTime = Burst.BurstTime(1,1)
+                '                  If NewBurstTime = OldBurstTime Then
+                '                    Call ResetBurstVars
+                '                  EndIf
+              Else
+                RecBurstFlag = false 'if we didn't reach 30+ seconds of data, don't set the flag to record burst data
+                '                  OldBurstTime = Burst.BurstMedTime(1,2)
+                '                  NewBurstTime = Burst.BurstMedTime(1,1)
+                '                  If NewBurstTime = OldBurstTime Then
+                '                    Call ResetBurstVars
+                '                  EndIf
+                '                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
+              EndIf
+
+
+
+            RecBurstFlag = false
+            Else
+              BurstCount = 0
+          EndIf 'if no wqerror
+        #EndIf 'burst
+      EndIf 'getburst and not redeploy
+      '      EndIf 'Redeploy = true
 
       If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True)'unable to initialize or bad data
         Call WQ_Mark_Bad
@@ -5744,7 +5760,7 @@ BeginProg
     '      AvgStageSec = Dataout.StageSecnd_Avg
     CallTable Aquarius
     If Rec15minFlag = True Then
-       Call ResetBurstVars
+      Call ResetBurstVars
     EndIf
     AQcount = AQcount + 1
     AQTabEnd = Timer (2,msec,4)
