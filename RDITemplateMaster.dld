@@ -845,6 +845,10 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BurstCount As Long 'number of burst measurements collected
     '    Public BurstCount_Mid
     Public GotToBurst
+    Public TotalBurstVals
+    Public BurstErrCnt
+    Public BurstMaxErrCnt = 3
+    Public BurstMissed As Boolean
     Public BurstDebugCount As Long 'Debugging EXO burst!----------------------------------------------
     Public BurstDate
     Public BurstTime
@@ -1385,30 +1389,32 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstTime,IEEE4)
     '    Sample (1,BurstMedDate,IEEE4)
     '    Sample (1,BurstMedTime,IEEE4)
-    Median (1,BurstDate,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstTime,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstTempF,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstDOSat, MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstORP,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstBattV,MaxBurstCnt,FP2,WqBadData)
-    Median (1,BurstpH,MaxBurstCnt,FP2,WqBadData)
-    Median (1,BurstpHmV,MaxBurstCnt,FP2,WqBadData))
-    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstBGApcRFU,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstBGApcugL,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstNH4Amgl,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstNO3Nmgl,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,WqBadData)
-    Median (1,BurstWiperPos,MaxBurstCnt,FP2,WqBadData)
-    Maximum (1,BurstCount,Long,WqBadData,False)
+    Median (1,BurstDate,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTime,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstORP,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstBattV,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BurstpH,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BurstpHmV,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
+    Sample (1,TotalBurstVals,FP2)
+    Sample (1,BurstMissed,Boolean)
+    Sample (1,BurstErrCnt,FP2)
     StdDev (1,BurstTurbFNU,IEEE4,False)
   EndTable
 
@@ -5506,283 +5512,282 @@ BeginProg
         Call ParseData
       EndIf '
       Delay (1,50,mSec)
-        If GetBurst AND NOT Redeploy Then 'ok we need a burst
-          #If WqSonde = "WQ_SERIAL_BURST" Then
-            If WqError = False  Then 'If sonde is having probs then don't burst
-              Call setburst
-              Call GetBurstArray
-              BurstDebugCount = BurstDebugCount+1
-              '              BurstMedDate = ""
-              '              BurstMedTime = ""
-              BurstCount = 0
-              TotalBurstVals = 0
-              GotToBurst = GotToBurst + 1
-              jCount = 0
-              kCount = 0
-              For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
-                For kCount = 1 To 23
-                  BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
-                Next kCount
-                Call parseburst
-                If WqError Then
-                  WqBadData = true
-                Else
-                  WqBadData = false
-                EndIf
-                '                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
-                '                Delay(1,30,msec)
-                BurstCount = BurstCount+1
-                If WqError Then 'an error occured while trying to read a burst value (in "ParseBurst" sub)
-                  BurstErrCnt = BurstErrCnt + 1 'count up if the error occurs
-                EndIf
-                If BurstErrCnt > BurstMaxErrCnt Then
-                  TotalBurstVals = jCount - BurstMaxErrCnt
-                  ExitFor 'if error occurs more than a threshold, exit the loop
-                EndIf
-                '                If BurstCount = 15 Then
-                '                  BurstCount_Mid = BurstCount_Mid + 1
-                '                  BurstMedDate = BurstDate 'get median Date and time of burst sample
-                '                  BurstMedTime = BurstTime ' "   "      "        "       "     "
-                Delay(1,1,msec)
-               Next jCount
-             TotalBurstVals = jCount
-             kCount = 0
-             jCount = 0
-              EndIf
-              If BurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's "BadDataIndicator" All "Burst..." Values
-                MedBurstDate = Burst.BurstDate_Med
-                MedBurstTime = Burst.BurstTime_Med
-                MedBurstTime = Round(MedBurstTime,0)
-                MedTempC = Burst.BurstTempC_Med
-                MedTempF = Burst.BurstTempF_Med
-                MedSpCond = Burst.BurstSpCond_Med
-                MedTurbFNU = Burst.BurstTurbFNU_Med
-                MedDOSat = Burst.BurstDOSat_Med
-                MedDOmgL= Burst.BurstDOmgL_Med
-                MedORP= Burst.BurstORP_Med
-                MedDepthFt = Burst.BurstDepthFt_Med
-                MedBattV= Burst.BurstBattV_Med
-                MedpH= Burst.BurstpH_Med
-                MedpHmV= Burst.BurstpHmV_Med
-                MedChlugL= Burst.BurstChlugL_Med
-                MedChlRFU= Burst.BurstChlRFU_Med
-                MedBGApcRFU= Burst.BurstBGApcRFU_Med
-                MedBGApcugL= Burst.BurstBGApcugL_Med
-                MedFdomRFU= Burst.BurstFdomRFU_Med
-                MedFDomQSU= Burst.BurstFDomQSU_Med
-                MedNH4Amgl= Burst.BurstNH4Amgl_Med
-                MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
-                MedCLmgl= Burst.BurstCLmgl_Med
-                MedWiperPos= Burst.BurstWiperPos_Med
-                '                  OldBurstTime = Burst.BurstTime(1,2)
-                '                  NewBurstTime = Burst.BurstTime(1,1)
-                '                  If NewBurstTime = OldBurstTime Then
-                '                    Call ResetBurstVars
-                '                  EndIf
+      If GetBurst AND NOT Redeploy Then 'ok we need a burst
+        #If WqSonde = "WQ_SERIAL_BURST" Then
+          If WqError = False  Then 'If sonde is having probs then don't burst
+            Call setburst
+            Call GetBurstArray
+            BurstDebugCount = BurstDebugCount+1
+            '              BurstMedDate = ""
+            '              BurstMedTime = ""
+            BurstCount = 0
+            TotalBurstVals = 0
+            GotToBurst = GotToBurst + 1
+            jCount = 0
+            kCount = 0
+            For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
+              For kCount = 1 To 23
+                BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
+              Next kCount
+              Call parseburst
+              If WqError Then
+                WqBadData = true
               Else
-                RecBurstFlag = false 'if we didn't reach 30+ seconds of data, don't set the flag to record burst data
-                '                  OldBurstTime = Burst.BurstMedTime(1,2)
-                '                  NewBurstTime = Burst.BurstMedTime(1,1)
-                '                  If NewBurstTime = OldBurstTime Then
-                '                    Call ResetBurstVars
-                '                  EndIf
-                '                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
+                WqBadData = false
               EndIf
+              '                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
+              '                Delay(1,30,msec)
+              BurstCount = BurstCount+1
+              If WqError Then 'an error occured while trying to read a burst value (in "ParseBurst" sub)
+                BurstErrCnt = BurstErrCnt + 1 'count up if the error occurs
+              EndIf
+              If BurstErrCnt > BurstMaxErrCnt Then
+                TotalBurstVals = jCount - BurstMaxErrCnt
+                ExitFor 'if error occurs more than a threshold, exit the loop
+              EndIf
+              '                If BurstCount = 15 Then
+              '                  BurstCount_Mid = BurstCount_Mid + 1
+              '                  BurstMedDate = BurstDate 'get median Date and time of burst sample
+              '                  BurstMedTime = BurstTime ' "   "      "        "       "     "
+              Delay(1,5,msec)
+            Next jCount 'restart the loop until we reach max burst count
+            TotalBurstVals = jCount 'provided we made it through the full burst, total values = jCount (max burst count)
+            kCount = 0
+            jCount = 0
+          EndIf
+          If BurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's "BadDataIndicator" All "Burst..." Values
+            BurstMissed = True 'Disable processing of Median values in burst table
+          Else 'reached our threshold, process Median value when Burst table is called
+            BurstMissed = False
+          EndIf
+          CallTable Burst
+          MedBurstDate = Burst.BurstDate_Med
+          MedBurstTime = Burst.BurstTime_Med
+          MedBurstTime = Round(MedBurstTime,0)
+          MedTempC = Burst.BurstTempC_Med
+          MedTempF = Burst.BurstTempF_Med
+          MedSpCond = Burst.BurstSpCond_Med
+          MedTurbFNU = Burst.BurstTurbFNU_Med
+          MedDOSat = Burst.BurstDOSat_Med
+          MedDOmgL= Burst.BurstDOmgL_Med
+          MedORP= Burst.BurstORP_Med
+          MedDepthFt = Burst.BurstDepthFt_Med
+          MedBattV= Burst.BurstBattV_Med
+          MedpH= Burst.BurstpH_Med
+          MedpHmV= Burst.BurstpHmV_Med
+          MedChlugL= Burst.BurstChlugL_Med
+          MedChlRFU= Burst.BurstChlRFU_Med
+          MedBGApcRFU= Burst.BurstBGApcRFU_Med
+          MedBGApcugL= Burst.BurstBGApcugL_Med
+          MedFdomRFU= Burst.BurstFdomRFU_Med
+          MedFDomQSU= Burst.BurstFDomQSU_Med
+          MedNH4Amgl= Burst.BurstNH4Amgl_Med
+          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+          MedCLmgl= Burst.BurstCLmgl_Med
+          MedWiperPos= Burst.BurstWiperPos_Med
+          '                  OldBurstTime = Burst.BurstTime(1,2)
+          '                  NewBurstTime = Burst.BurstTime(1,1)
+          '                  If NewBurstTime = OldBurstTime Then
+          '                    Call ResetBurstVars
+          '                  EndIf
+          'if we didn't reach 30+ seconds of data, don't set the flag to record burst data
+          '                  OldBurstTime = Burst.BurstMedTime(1,2)
+          '                  NewBurstTime = Burst.BurstMedTime(1,1)
+          '                  If NewBurstTime = OldBurstTime Then
+          '                    Call ResetBurstVars
+          '                  EndIf
+          '                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
+   
+        RecBurstFlag = false
+        BurstCount = 0
+      #EndIf 'burst
+    EndIf 'getburst and not redeploy
+    '      EndIf 'Redeploy = true
 
+    If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True)'unable to initialize or bad data
+      Call WQ_Mark_Bad
+      Erase WqData()
+      If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the Sonde
+        Call CycleWQPower
+      EndIf
+      WqErrCount = WqErrCount + 1
+      WqPwrCycleCnt = WqPwrCycleCnt + 1
+      If WqErrCount >= WQDeadCntMax Then
+        WqDead = True
+        'WqDeadCnt = WqDeadCnt + 1
+      EndIf
+    EndIf 'error
+  #EndIf
+  AfterBurst = Timer(2,msec,4)
+  AfterBurst = AfterBurst/1000
 
-
-            RecBurstFlag = false
-            Else
-              BurstCount = 0
-          EndIf 'if no wqerror
-        #EndIf 'burst
-      EndIf 'getburst and not redeploy
-      '      EndIf 'Redeploy = true
-
-      If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True)'unable to initialize or bad data
-        Call WQ_Mark_Bad
-        Erase WqData()
-        If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the Sonde
-          Call CycleWQPower
-        EndIf
-        WqErrCount = WqErrCount + 1
-        WqPwrCycleCnt = WqPwrCycleCnt + 1
-        If WqErrCount >= WQDeadCntMax Then
-          WqDead = True
-          'WqDeadCnt = WqDeadCnt + 1
-        EndIf
-      EndIf 'error
+  If VMdataIn = Yes Then 'only process data if we have it
+    VmDeadCount = 0
+    MainDecodeStart = Timer(2,msec,4)
+    MainDecodeStart = MainDecodeStart/1000
+    Call MainDecode
+    MainDecodeEnd = Timer(2,msec,4)
+    MainDecodeEnd = MainDecodeEnd/1000
+    MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
+    #If WqSonde <>"NONE" Then
+      TempDiff = WqTempC - VMtempC
     #EndIf
-    AfterBurst = Timer(2,msec,4)
-    AfterBurst = AfterBurst/1000
+    #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+      If WqError = true Then
+        WqBadData = True
+      Else
+        WqBadData = False
+      EndIf
+    #ElseIf WqSonde = "WQ_SDI12" Then
+      If WqError = true Then
+        WqBadData = True
+      Else
+        WqBadData = False
+      EndIf
+    #EndIf
 
-    If VMdataIn = Yes Then 'only process data if we have it
-      VmDeadCount = 0
-      MainDecodeStart = Timer(2,msec,4)
-      MainDecodeStart = MainDecodeStart/1000
-      Call MainDecode
-      MainDecodeEnd = Timer(2,msec,4)
-      MainDecodeEnd = MainDecodeEnd/1000
-      MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
-      #If WqSonde <>"NONE" Then
-        TempDiff = WqTempC - VMtempC
-      #EndIf
-      #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-        If WqError = true Then
-          WqBadData = True
-        Else
-          WqBadData = False
-        EndIf
-      #ElseIf WqSonde = "WQ_SDI12" Then
-        If WqError = true Then
-          WqBadData = True
-        Else
-          WqBadData = False
-        EndIf
-      #EndIf
+    #If UseAutoRange = true
+      CalcRangeStart = Timer(2,msec,4)
+      CalcRangeStart = CalcRangeStart/1000
+      Call CalcRangebin
+      EndBin = RangedBin
+      CalcRangeEnd = Timer(2,msec,4)
+      CalcRangeEnd = CalcRangeEnd/1000
+      CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
+    #EndIf
+    '      Call LastGoodBinCheck
+    OneMinCalcStart = Timer(2,msec,4)
+    OneMinCalcStart = OneMinCalcStart/1000
+    Call OneMinuteCalcs
+    OneMinCalcEnd = Timer(2,msec,4)
+    OneMinCalcEnd = OneMinCalcEnd/1000
+    OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
+    CalcQStart = Timer(2,msec,4)
+    CalcQStart = CalcQStart/1000
+    Call SubCalcQ
+    CalcQEnd = Timer(2,msec,4)
+    CalcQEnd = CalcQEnd/1000
+    CalcQTotTime = CalcQEnd-CalcQStart
+    GetVMMemStart = Timer(2,msec,4)
+    GetVMMemStart = GetVMMemStart/1000
+    Call GetVMFreeMem
+    GetVMMemEnd = Timer(2,msec,4)
+    GetVMMemEnd = GetVMMemEnd/1000
+    GetVMMemTotTime = GetVMMemEnd-GetVMMemStart
 
-      #If UseAutoRange = true
-        CalcRangeStart = Timer(2,msec,4)
-        CalcRangeStart = CalcRangeStart/1000
-        Call CalcRangebin
-        EndBin = RangedBin
-        CalcRangeEnd = Timer(2,msec,4)
-        CalcRangeEnd = CalcRangeEnd/1000
-        CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
+    'now call the DataOut tables (need to be seen on every scan)
+    'if hasVM = False and we're getting vm data we need to disable these two tables because they are called later
+    #If HasVM Then
+      #If IsSpecStudy = Yes Then 'although the table is called, it will not record anything unless
+        'vm is 3-4 beams and set to beam or earth coords or the RecordAll boolean is toggled
+        CallTable VelData
       #EndIf
-      '      Call LastGoodBinCheck
-      OneMinCalcStart = Timer(2,msec,4)
-      OneMinCalcStart = OneMinCalcStart/1000
-      Call OneMinuteCalcs
-      OneMinCalcEnd = Timer(2,msec,4)
-      OneMinCalcEnd = OneMinCalcEnd/1000
-      OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
-      CalcQStart = Timer(2,msec,4)
-      CalcQStart = CalcQStart/1000
-      Call SubCalcQ
-      CalcQEnd = Timer(2,msec,4)
-      CalcQEnd = CalcQEnd/1000
-      CalcQTotTime = CalcQEnd-CalcQStart
-      GetVMMemStart = Timer(2,msec,4)
-      GetVMMemStart = GetVMMemStart/1000
-      Call GetVMFreeMem
-      GetVMMemEnd = Timer(2,msec,4)
-      GetVMMemEnd = GetVMMemEnd/1000
-      GetVMMemTotTime = GetVMMemEnd-GetVMMemStart
-
-      'now call the DataOut tables (need to be seen on every scan)
-      'if hasVM = False and we're getting vm data we need to disable these two tables because they are called later
-      #If HasVM Then
-        #If IsSpecStudy = Yes Then 'although the table is called, it will not record anything unless
-          'vm is 3-4 beams and set to beam or earth coords or the RecordAll boolean is toggled
-          CallTable VelData
+      RecAllVelFlag = false
+      'Rec15minFlag = false 'turn data table flag back off
+      'make sure spike stuff is not called if hasvm is false
+      If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
+        ChkSpikeStart = Timer(2,msec,4)
+        ChkSpikeStart = ChkSpikeStart/1000
+        Call CheckSpikes
+        ChkSpikeEnd = Timer(2,msec,4)
+        ChkSpikeEnd = ChkSpikeEnd/1000
+        ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
+        #If StoreAllToCard Then
+          StoreToCrdStart = Timer(2,msec,4)
+          StoreToCrdStart = StoreToCrdStart/1000
+          Call StoreAllData
+          StoreToCrdEnd = Timer(2,msec,4)
+          StoreToCrdEnd = StoreToCrdEnd/1000
+          StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
         #EndIf
-        RecAllVelFlag = false
-        'Rec15minFlag = false 'turn data table flag back off
-        'make sure spike stuff is not called if hasvm is false
-        If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
-          ChkSpikeStart = Timer(2,msec,4)
-          ChkSpikeStart = ChkSpikeStart/1000
-          Call CheckSpikes
-          ChkSpikeEnd = Timer(2,msec,4)
-          ChkSpikeEnd = ChkSpikeEnd/1000
-          ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
-          #If StoreAllToCard Then
-            StoreToCrdStart = Timer(2,msec,4)
-            StoreToCrdStart = StoreToCrdStart/1000
-            Call StoreAllData
-            StoreToCrdEnd = Timer(2,msec,4)
-            StoreToCrdEnd = StoreToCrdEnd/1000
-            StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
-          #EndIf
-        EndIf
-        AddSpikeStart = Timer(2,msec,4)
-        AddSpikeStart = AddSpikeStart/1000
-        Call AddSpikes 'make sure buffer is full before checking
-        AddSpikeEnd = Timer(2,msec,4)
-        AddSpikeEnd = AddSpikeEnd/1000
-        AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
-      #EndIf
-    Else 'if no vm data in
-      VmDeadCount = VmDeadCount + 1
-    EndIf 'if vm data in
-    If VmDeadCount >= VMDeadCntMax Then
-      WakeUpVM = True
-    EndIf
-    DataTabsEnd = Timer(2,msec,4)
-    DataTabsEnd = DataTabsEnd/1000
-    DataTabsTotTime = DataTabsEnd - DataTabsStart
-    Call StageDiff
-    Call ResetMeasFlags
-    Call GetSN
-    If SetVMTimeFlg Then
-      Call SetVMTime
-    EndIf
-    #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then ' Check WQ flags and do things!!
-      If Wipeflag = true Then
-        Call WipeWQ
-        Delay (1,1,Sec)
-        WipeTime = Status.TimeStamp(0,1)
       EndIf
-      If SetEXOTimeFlg = True Then
-        Call SetEXOTime
-      EndIf
-      If WqManualCycle = true Then
-        Call CycleWQpower
-      EndIf
+      AddSpikeStart = Timer(2,msec,4)
+      AddSpikeStart = AddSpikeStart/1000
+      Call AddSpikes 'make sure buffer is full before checking
+      AddSpikeEnd = Timer(2,msec,4)
+      AddSpikeEnd = AddSpikeEnd/1000
+      AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
     #EndIf
-    'Call All Data Tables (time them to make sure nothing is being hung up.
-    DataTabsStart = Timer(2,msec,4)
-    DataTabsStart = DataTabsStart/1000
-    CallTable DataOut
-    DataOutCount = DataOutCount + 1
-    DataOutEnd = Timer (2,msec,4)
-    DataOutEnd = DataOutEnd/1000
-    DataOutTotTime = DataOutEnd - DataOutStart
-    Data1mStart = Timer (2,msec,4)
-    Data1mStart = Data1mStart/1000
-    CallTable Data1m
-    Data1mCount = Data1mCount + 1
-    Data1mEnd = Timer(2,msec,4)
-    Data1mEnd = Data1mEnd/1000
-    Data1mTotTime = Data1mEnd - Data1mStart
-    AQTabStart = Timer(2,msec,4)
-    AQTabStart = AQTabStart/1000
-    AvgIndexVel = DataOut.IndexVel_Avg
-    AvgVMTemp = DataOut.VMtempC_Avg
-    AvgVMPitch = DataOut.VMpitch_Avg
-    AvgVMRoll = DataOut.VMroll_Avg
-    AvgPS1Stg = DataOut.PS1Stg_Avg
-    AvgPS2Stg = DataOut.PS2Stg_Avg
-    AvgUpBeamStg = DataOut.UpBeamStg_Avg
-    '      AvgLoggerQcfs = DataOut.Qcfs_Avg
-    '      AvgStagePrime = Dataout.StagePrime_Avg
-    '      AvgStageSec = Dataout.StageSecnd_Avg
-    CallTable Aquarius
-    If Rec15minFlag = True Then
-      Call ResetBurstVars
+  Else 'if no vm data in
+    VmDeadCount = VmDeadCount + 1
+  EndIf 'if vm data in
+  If VmDeadCount >= VMDeadCntMax Then
+    WakeUpVM = True
+  EndIf
+  DataTabsEnd = Timer(2,msec,4)
+  DataTabsEnd = DataTabsEnd/1000
+  DataTabsTotTime = DataTabsEnd - DataTabsStart
+  Call StageDiff
+  Call ResetMeasFlags
+  Call GetSN
+  If SetVMTimeFlg Then
+    Call SetVMTime
+  EndIf
+  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then ' Check WQ flags and do things!!
+    If Wipeflag = true Then
+      Call WipeWQ
+      Delay (1,1,Sec)
+      WipeTime = Status.TimeStamp(0,1)
     EndIf
-    AQcount = AQcount + 1
-    AQTabEnd = Timer (2,msec,4)
-    AQTabEnd = AQTabEnd/1000
-    AQTabTotTime = AQTabEnd - AQTabStart   'store the instantaneous variables to the aquarius table
-    CallBmChkStart = Timer(2,msec,4)
-    CallBmChkStart = CallBmChkStart/1000
-    CallTable BeamCheck
-    CallBmChkEnd = Timer(2,msec,4)
-    CallBmChkEnd = CallBmChkEnd/1000
-    CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
-    Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
-    '      #If WqSonde = "WQ_SERIAL_BURST" Then
-    RecBurstFlag = False
-    '        Call ClearBurstVars
-    '      #EndIf
-    RecAQFlag = False
-    If StoreVariablesFlg = true Then Call StoreVariables
-    ScanEnd = Timer(2,mSec,4)
-    ScanEnd = ScanEnd/1000
-    ProcessTime = ScanEnd - ScanStart
-    CallTable Debugger
-    CallTable SVMaq
-  NextScan
+    If SetEXOTimeFlg = True Then
+      Call SetEXOTime
+    EndIf
+    If WqManualCycle = true Then
+      Call CycleWQpower
+    EndIf
+  #EndIf
+  'Call All Data Tables (time them to make sure nothing is being hung up.
+  DataTabsStart = Timer(2,msec,4)
+  DataTabsStart = DataTabsStart/1000
+  CallTable DataOut
+  DataOutCount = DataOutCount + 1
+  DataOutEnd = Timer (2,msec,4)
+  DataOutEnd = DataOutEnd/1000
+  DataOutTotTime = DataOutEnd - DataOutStart
+  Data1mStart = Timer (2,msec,4)
+  Data1mStart = Data1mStart/1000
+  CallTable Data1m
+  Data1mCount = Data1mCount + 1
+  Data1mEnd = Timer(2,msec,4)
+  Data1mEnd = Data1mEnd/1000
+  Data1mTotTime = Data1mEnd - Data1mStart
+  AQTabStart = Timer(2,msec,4)
+  AQTabStart = AQTabStart/1000
+  AvgIndexVel = DataOut.IndexVel_Avg
+  AvgVMTemp = DataOut.VMtempC_Avg
+  AvgVMPitch = DataOut.VMpitch_Avg
+  AvgVMRoll = DataOut.VMroll_Avg
+  AvgPS1Stg = DataOut.PS1Stg_Avg
+  AvgPS2Stg = DataOut.PS2Stg_Avg
+  AvgUpBeamStg = DataOut.UpBeamStg_Avg
+  '      AvgLoggerQcfs = DataOut.Qcfs_Avg
+  '      AvgStagePrime = Dataout.StagePrime_Avg
+  '      AvgStageSec = Dataout.StageSecnd_Avg
+  CallTable Aquarius
+  If Rec15minFlag = True Then
+    Call ResetBurstVars
+  EndIf
+  AQcount = AQcount + 1
+  AQTabEnd = Timer (2,msec,4)
+  AQTabEnd = AQTabEnd/1000
+  AQTabTotTime = AQTabEnd - AQTabStart   'store the instantaneous variables to the aquarius table
+  CallBmChkStart = Timer(2,msec,4)
+  CallBmChkStart = CallBmChkStart/1000
+  CallTable BeamCheck
+  CallBmChkEnd = Timer(2,msec,4)
+  CallBmChkEnd = CallBmChkEnd/1000
+  CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
+  Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
+  '      #If WqSonde = "WQ_SERIAL_BURST" Then
+  RecBurstFlag = False
+  '        Call ClearBurstVars
+  '      #EndIf
+  RecAQFlag = False
+  If StoreVariablesFlg = true Then Call StoreVariables
+  ScanEnd = Timer(2,mSec,4)
+  ScanEnd = ScanEnd/1000
+  ProcessTime = ScanEnd - ScanStart
+  CallTable Debugger
+  CallTable SVMaq
+NextScan
 EndProg
