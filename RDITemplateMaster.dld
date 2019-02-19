@@ -806,6 +806,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public GetBurst As Boolean
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
+  Public BurstComs As String * 10000
 '  Public TestMedBurstTime
 '  Public OldBurstTime
 '  Public NewBurstTime
@@ -1409,7 +1410,6 @@ SetStatus ("USRDriveSize",16384)
     Median (1,BurstWiperPos,MaxBurstCnt,FP2,WqBadData)
     Maximum (1,BurstCount,Long,WqBadData,False)
     StdDev (1,BurstTurbFNU,IEEE4,False)
-    Sample (1,StdTurbFNU,IEEE4)
   EndTable
 
   DataTable (Aquarius,Rec15minFlag,-1) 'garuntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
@@ -1914,6 +1914,7 @@ DataTable (Debugger,True,-1)
   Sample (1,CardBadCount,FP2)
   Sample (1,CardOkCount,FP2)
   Sample (1,OneMinCount,FP2)
+  Sample (1,BurstComs,String)
 EndTable
 
 DataTable (DebugTimer,True,2880)
@@ -5511,6 +5512,7 @@ BeginProg
 '              BurstMedDate = ""
 '              BurstMedTime = ""
               BurstCount = 0
+              MonitorComms(BurstComs,WqSerialPort,1)
               For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
                 For kCount = 1 To 23
                   BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
@@ -5521,9 +5523,8 @@ BeginProg
                 Else
                   WqBadData = false
                 EndIf
-                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
-                Delay(1,30,msec)
-
+'                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
+'                Delay(1,30,msec)
                 BurstCount = BurstCount+1
 '                If BurstCount = 15 Then
 '                  BurstCount_Mid = BurstCount_Mid + 1
@@ -5569,7 +5570,7 @@ BeginProg
 '                  If NewBurstTime = OldBurstTime Then
 '                    Call ResetBurstVars
 '                  EndIf                 
-                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
+'                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
                 EndIf
 
                 Delay(1,1,msec)
