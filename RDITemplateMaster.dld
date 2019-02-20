@@ -906,7 +906,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MedNO3Nmgl
     Public MedCLmgl
     Public MedWiperPos
-    Public StdTurbFNU
+'    Public StdTurbFNU
   #EndIf 'EXO data that's been parsed
   #If SeeRawWQ = True OR Debugging = True Then
     Public t(23)
@@ -1424,6 +1424,7 @@ SetStatus ("USRDriveSize",16384)
   
   DataTable(SecBurst,True,-1)
     'DataInterval(0,1,Min,-1)
+    CardOut (0,350000)
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
