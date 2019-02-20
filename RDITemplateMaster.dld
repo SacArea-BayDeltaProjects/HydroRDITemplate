@@ -1421,6 +1421,40 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstErrCnt,FP2)
     StdDev (1,BurstTurbFNU,IEEE4,False)
   EndTable
+  
+  DataTable(SecBurst,True,-1)
+    'DataInterval(0,1,Min,-1)
+    OpenInterval
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,BurstDate,IEEE4)
+    Sample (1,BurstTime,IEEE4)
+    Sample (1,BurstTempC,IEEE4)
+    Sample (1,BurstTempF,IEEE4)
+    Sample (1,BurstSpCond,IEEE4)
+    Sample (1,BurstTurbFNU,IEEE4)
+    Sample (1,BurstDOSat,IEEE4)
+    Sample (1,BurstDOmgL,IEEE4)
+    Sample (1,BurstORP,IEEE4)
+    Sample (1,BurstDepthFt,IEEE4)
+    Sample (1,BurstBattV,FP2)
+    Sample (1,BurstpH,FP2)
+    Sample (1,BurstpHmV,FP2)
+    Sample (1,BurstChlugL,IEEE4)
+    Sample (1,BurstChlRFU,IEEE4)
+    Sample (1,BurstBGApcRFU,IEEE4)
+    Sample (1,BurstBGApcugL,IEEE4)
+    Sample (1,BurstFdomRFU,IEEE4)
+    Sample (1,BurstFDomQSU,IEEE4)
+    Sample (1,BurstNH4Amgl,IEEE4)
+    Sample (1,BurstNO3Nmgl,IEEE4)
+    Sample (1,BurstCLmgl,IEEE4)
+    Sample (1,BurstWiperPos,FP2)
+    Sample (1,TotalBurstVals,FP2)
+    Sample (1,jCount,FP2)
+    Sample (1,BurstMissed,Boolean)
+    Sample (1,BurstErrCnt,FP2)
+  EndTable
 
   DataTable (Aquarius,Rec15minFlag,-1) 'garuntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
@@ -5583,10 +5617,12 @@ BeginProg
                TotalBurstVals = jCount - BurstErrCnt 'if there's an interuption during the burst but it comes back online, we need to subtract how many times error happened to calculate a total number of values
                BurstMissed = False 'we had good values coming in, so Make sure disable variable is set to false so the values get processed
                RecBurstFlag = True
+               CallTable SecBurst
              CallTable Burst
              Else
                BurstMissed = False
                RecBurstFlag = False
+               CallTable SecBurst
                CallTable Burst 'Need to call table to store the values in the table memory until the output flag (RecBurstFlag) is true
              EndIf
               '                If BurstCount = 15 Then
@@ -5602,6 +5638,7 @@ BeginProg
           If BurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's "BadDataIndicator" All "Burst..." Values
             BurstMissed = True 'Disable processing of Median values in burst table
             RecBurstFlag = True
+            CallTable SecBurst
             CallTable Burst 'Call the burst table with Disable Variable True to NAN all burst values
             EndIf
             'Set all values that are going to be stored into AQ table to NANs
