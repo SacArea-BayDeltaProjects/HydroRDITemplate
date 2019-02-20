@@ -5342,10 +5342,8 @@ BeginProg
       BurstReachedMod = Mod15Minutes
       If Mod15Minutes > 830 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
         GetBurst = True 'set the burst flag to true
-        RecBurstFlag = True
       Else
         GetBurst = False 'outside the 15sec of the 14th minute, don't burst
-        RecBurstFlag = False
       EndIf
     #EndIf
     If Mod15Minutes < 15 Then 'when time to output data...within 14 seconds of 15 minute period
@@ -5514,7 +5512,8 @@ BeginProg
       Delay (1,50,mSec)
       If GetBurst AND NOT Redeploy Then 'ok we need a burst
         #If WqSonde = "WQ_SERIAL_BURST" Then
-          If WqError = False  Then 'If sonde is having probs then don't burst
+          'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
+          ' if it didn't respond to the previous "data" attempt
             Call setburst
             Call GetBurstArray
             BurstDebugCount = BurstDebugCount+1
@@ -5545,20 +5544,55 @@ BeginProg
                 TotalBurstVals = jCount - BurstMaxErrCnt
                 ExitFor 'if error occurs more than a threshold, exit the loop
               EndIf
+
+             If BurstCount >= MaxBurstCnt Then
+               BurstMissed = False 'we had good values coming in, so Make sure disable variable is set to false so the values get processed
+               RecBurstFlag = True
+             CallTable Burst
+             Else
+               BurstMissed = False
+               RecBurstFlag = False
+               CallTable Burst 'Need to call table to store the values in the table memory until the output flag (RecBurstFlag) is true
+             EndIf
               '                If BurstCount = 15 Then
               '                  BurstCount_Mid = BurstCount_Mid + 1
               '                  BurstMedDate = BurstDate 'get median Date and time of burst sample
               '                  BurstMedTime = BurstTime ' "   "      "        "       "     "
-              Delay(1,5,msec)
+              Delay(1,1,msec)
             Next jCount 'restart the loop until we reach max burst count
-            TotalBurstVals = jCount 'provided we made it through the full burst, total values = jCount (max burst count)
+            TotalBurstVals = jCount - 1 'provided we made it through the full burst, total values = jCount (max burst count) (subtract 1 because the loop checks the value, if = max, it processes, if > than max, it skips loop but still records Max + 1)
             kCount = 0
             jCount = 0
-          EndIf
+'          EndIf
           If BurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's "BadDataIndicator" All "Burst..." Values
             BurstMissed = True 'Disable processing of Median values in burst table
-          Else 'reached our threshold, process Median value when Burst table is called
-            BurstMissed = False
+            RecBurstFlag = True
+            CallTable Burst 'Call the burst table with Disable Variable True to NAN all burst values
+            'Set all values that are going to be stored into AQ table to NANs
+          MedBurstDate = Burst.BurstDate_Med
+          MedBurstTime = Burst.BurstTime_Med
+          MedBurstTime = Round(MedBurstTime,0)
+          MedTempC = Burst.BurstTempC_Med
+          MedTempF = Burst.BurstTempF_Med
+          MedSpCond = Burst.BurstSpCond_Med
+          MedTurbFNU = Burst.BurstTurbFNU_Med
+          MedDOSat = Burst.BurstDOSat_Med
+          MedDOmgL= Burst.BurstDOmgL_Med
+          MedORP= Burst.BurstORP_Med
+          MedDepthFt = Burst.BurstDepthFt_Med
+          MedBattV= Burst.BurstBattV_Med
+          MedpH= Burst.BurstpH_Med
+          MedpHmV= Burst.BurstpHmV_Med
+          MedChlugL= Burst.BurstChlugL_Med
+          MedChlRFU= Burst.BurstChlRFU_Med
+          MedBGApcRFU= Burst.BurstBGApcRFU_Med
+          MedBGApcugL= Burst.BurstBGApcugL_Med
+          MedFdomRFU= Burst.BurstFdomRFU_Med
+          MedFDomQSU= Burst.BurstFDomQSU_Med
+          MedNH4Amgl= Burst.BurstNH4Amgl_Med
+          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+          MedCLmgl= Burst.BurstCLmgl_Med
+          MedWiperPos= Burst.BurstWiperPos_Med
           EndIf
 '          CallTable Burst
 '          MedBurstDate = Burst.BurstDate_Med
@@ -5761,8 +5795,8 @@ BeginProg
   '      AvgLoggerQcfs = DataOut.Qcfs_Avg
   '      AvgStagePrime = Dataout.StagePrime_Avg
   '      AvgStageSec = Dataout.StageSecnd_Avg
-            CallTable Burst
-            Delay (1,5,mSec)
+  #If WqSonde = "WQ_SERIAL_BURST" Then
+  'Set all Med Values to be stored in AQ to the Burst table values
           MedBurstDate = Burst.BurstDate_Med
           MedBurstTime = Burst.BurstTime_Med
           MedBurstTime = Round(MedBurstTime,0)
@@ -5787,7 +5821,8 @@ BeginProg
           MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
           MedCLmgl= Burst.BurstCLmgl_Med
           MedWiperPos= Burst.BurstWiperPos_Med
-          Delay (1,5,mSec)
+  #EndIf
+  Delay (1,3,mSec)
   CallTable Aquarius
   If Rec15minFlag = True Then
     Call ResetBurstVars
