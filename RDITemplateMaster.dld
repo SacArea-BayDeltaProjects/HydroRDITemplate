@@ -5560,31 +5560,31 @@ BeginProg
           Else 'reached our threshold, process Median value when Burst table is called
             BurstMissed = False
           EndIf
-          CallTable Burst
-          MedBurstDate = Burst.BurstDate_Med
-          MedBurstTime = Burst.BurstTime_Med
-          MedBurstTime = Round(MedBurstTime,0)
-          MedTempC = Burst.BurstTempC_Med
-          MedTempF = Burst.BurstTempF_Med
-          MedSpCond = Burst.BurstSpCond_Med
-          MedTurbFNU = Burst.BurstTurbFNU_Med
-          MedDOSat = Burst.BurstDOSat_Med
-          MedDOmgL= Burst.BurstDOmgL_Med
-          MedORP= Burst.BurstORP_Med
-          MedDepthFt = Burst.BurstDepthFt_Med
-          MedBattV= Burst.BurstBattV_Med
-          MedpH= Burst.BurstpH_Med
-          MedpHmV= Burst.BurstpHmV_Med
-          MedChlugL= Burst.BurstChlugL_Med
-          MedChlRFU= Burst.BurstChlRFU_Med
-          MedBGApcRFU= Burst.BurstBGApcRFU_Med
-          MedBGApcugL= Burst.BurstBGApcugL_Med
-          MedFdomRFU= Burst.BurstFdomRFU_Med
-          MedFDomQSU= Burst.BurstFDomQSU_Med
-          MedNH4Amgl= Burst.BurstNH4Amgl_Med
-          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
-          MedCLmgl= Burst.BurstCLmgl_Med
-          MedWiperPos= Burst.BurstWiperPos_Med
+'          CallTable Burst
+'          MedBurstDate = Burst.BurstDate_Med
+'          MedBurstTime = Burst.BurstTime_Med
+'          MedBurstTime = Round(MedBurstTime,0)
+'          MedTempC = Burst.BurstTempC_Med
+'          MedTempF = Burst.BurstTempF_Med
+'          MedSpCond = Burst.BurstSpCond_Med
+'          MedTurbFNU = Burst.BurstTurbFNU_Med
+'          MedDOSat = Burst.BurstDOSat_Med
+'          MedDOmgL= Burst.BurstDOmgL_Med
+'          MedORP= Burst.BurstORP_Med
+'          MedDepthFt = Burst.BurstDepthFt_Med
+'          MedBattV= Burst.BurstBattV_Med
+'          MedpH= Burst.BurstpH_Med
+'          MedpHmV= Burst.BurstpHmV_Med
+'          MedChlugL= Burst.BurstChlugL_Med
+'          MedChlRFU= Burst.BurstChlRFU_Med
+'          MedBGApcRFU= Burst.BurstBGApcRFU_Med
+'          MedBGApcugL= Burst.BurstBGApcugL_Med
+'          MedFdomRFU= Burst.BurstFdomRFU_Med
+'          MedFDomQSU= Burst.BurstFDomQSU_Med
+'          MedNH4Amgl= Burst.BurstNH4Amgl_Med
+'          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+'          MedCLmgl= Burst.BurstCLmgl_Med
+'          MedWiperPos= Burst.BurstWiperPos_Med
           '                  OldBurstTime = Burst.BurstTime(1,2)
           '                  NewBurstTime = Burst.BurstTime(1,1)
           '                  If NewBurstTime = OldBurstTime Then
@@ -5597,8 +5597,6 @@ BeginProg
           '                    Call ResetBurstVars
           '                  EndIf
           '                  CallTable Burst 'call the table anyway, to cover our bases. (Should not be written to, because the trigger flag is set to false).
-   
-        RecBurstFlag = false
         BurstCount = 0
       #EndIf 'burst
     EndIf 'getburst and not redeploy
@@ -5763,6 +5761,33 @@ BeginProg
   '      AvgLoggerQcfs = DataOut.Qcfs_Avg
   '      AvgStagePrime = Dataout.StagePrime_Avg
   '      AvgStageSec = Dataout.StageSecnd_Avg
+            CallTable Burst
+            Delay (1,5,mSec)
+          MedBurstDate = Burst.BurstDate_Med
+          MedBurstTime = Burst.BurstTime_Med
+          MedBurstTime = Round(MedBurstTime,0)
+          MedTempC = Burst.BurstTempC_Med
+          MedTempF = Burst.BurstTempF_Med
+          MedSpCond = Burst.BurstSpCond_Med
+          MedTurbFNU = Burst.BurstTurbFNU_Med
+          MedDOSat = Burst.BurstDOSat_Med
+          MedDOmgL= Burst.BurstDOmgL_Med
+          MedORP= Burst.BurstORP_Med
+          MedDepthFt = Burst.BurstDepthFt_Med
+          MedBattV= Burst.BurstBattV_Med
+          MedpH= Burst.BurstpH_Med
+          MedpHmV= Burst.BurstpHmV_Med
+          MedChlugL= Burst.BurstChlugL_Med
+          MedChlRFU= Burst.BurstChlRFU_Med
+          MedBGApcRFU= Burst.BurstBGApcRFU_Med
+          MedBGApcugL= Burst.BurstBGApcugL_Med
+          MedFdomRFU= Burst.BurstFdomRFU_Med
+          MedFDomQSU= Burst.BurstFDomQSU_Med
+          MedNH4Amgl= Burst.BurstNH4Amgl_Med
+          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+          MedCLmgl= Burst.BurstCLmgl_Med
+          MedWiperPos= Burst.BurstWiperPos_Med
+          Delay (1,5,mSec)
   CallTable Aquarius
   If Rec15minFlag = True Then
     Call ResetBurstVars
