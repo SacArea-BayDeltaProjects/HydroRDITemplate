@@ -285,6 +285,10 @@ Const MaxBurstCnt = 30
 'Min = 1
 'Max = 30
 'Inc = 1
+Const MinBurstVals = 4
+'Min = 1
+'Max = 30
+'Inc = 1
 Const IsVmMax232 = False
 'value = True
 'value = False
@@ -3026,6 +3030,33 @@ EndSub
     MedCLmgl= BadDataIndicator
     MedWiperPos= BadDataIndicator
   EndSub
+  
+Sub CopyMedBurstVals
+            MedBurstDate = Burst.BurstDate_Med
+          MedBurstTime = Burst.BurstTime_Med
+          MedBurstTime = Round(MedBurstTime,0)
+          MedTempC = Burst.BurstTempC_Med
+          MedTempF = Burst.BurstTempF_Med
+          MedSpCond = Burst.BurstSpCond_Med
+          MedTurbFNU = Burst.BurstTurbFNU_Med
+          MedDOSat = Burst.BurstDOSat_Med
+          MedDOmgL= Burst.BurstDOmgL_Med
+          MedORP= Burst.BurstORP_Med
+          MedDepthFt = Burst.BurstDepthFt_Med
+          MedBattV= Burst.BurstBattV_Med
+          MedpH= Burst.BurstpH_Med
+          MedpHmV= Burst.BurstpHmV_Med
+          MedChlugL= Burst.BurstChlugL_Med
+          MedChlRFU= Burst.BurstChlRFU_Med
+          MedBGApcRFU= Burst.BurstBGApcRFU_Med
+          MedBGApcugL= Burst.BurstBGApcugL_Med
+          MedFdomRFU= Burst.BurstFdomRFU_Med
+          MedFDomQSU= Burst.BurstFDomQSU_Med
+          MedNH4Amgl= Burst.BurstNH4Amgl_Med
+          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+          MedCLmgl= Burst.BurstCLmgl_Med
+          MedWiperPos= Burst.BurstWiperPos_Med
+          EndSub
 #EndIf
 
 '-------WipWQ-----Wipe the serial connected EXO sensors----------------------------------------
@@ -5521,6 +5552,7 @@ BeginProg
             '              BurstMedTime = ""
             BurstCount = 0
             TotalBurstVals = 0
+            BurstErrCnt = 0
             GotToBurst = GotToBurst + 1
             jCount = 0
             kCount = 0
@@ -5542,11 +5574,13 @@ BeginProg
               EndIf
               If BurstErrCnt > BurstMaxErrCnt Then
                 TotalBurstVals = jCount - BurstMaxErrCnt
+                SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50)
+                
                 ExitFor 'if error occurs more than a threshold, exit the loop
               EndIf
 
              If BurstCount >= MaxBurstCnt Then
-               TotalBurstVals = jCount 'provided we made it through the full burst, total values = jCount (max burst count)
+               TotalBurstVals = jCount - BurstErrCnt 'if there's an interuption during the burst but it comes back online, we need to subtract how many times error happened to calculate a total number of values
                BurstMissed = False 'we had good values coming in, so Make sure disable variable is set to false so the values get processed
                RecBurstFlag = True
              CallTable Burst
@@ -5569,32 +5603,14 @@ BeginProg
             BurstMissed = True 'Disable processing of Median values in burst table
             RecBurstFlag = True
             CallTable Burst 'Call the burst table with Disable Variable True to NAN all burst values
+            EndIf
             'Set all values that are going to be stored into AQ table to NANs
-          MedBurstDate = Burst.BurstDate_Med
-          MedBurstTime = Burst.BurstTime_Med
-          MedBurstTime = Round(MedBurstTime,0)
-          MedTempC = Burst.BurstTempC_Med
-          MedTempF = Burst.BurstTempF_Med
-          MedSpCond = Burst.BurstSpCond_Med
-          MedTurbFNU = Burst.BurstTurbFNU_Med
-          MedDOSat = Burst.BurstDOSat_Med
-          MedDOmgL= Burst.BurstDOmgL_Med
-          MedORP= Burst.BurstORP_Med
-          MedDepthFt = Burst.BurstDepthFt_Med
-          MedBattV= Burst.BurstBattV_Med
-          MedpH= Burst.BurstpH_Med
-          MedpHmV= Burst.BurstpHmV_Med
-          MedChlugL= Burst.BurstChlugL_Med
-          MedChlRFU= Burst.BurstChlRFU_Med
-          MedBGApcRFU= Burst.BurstBGApcRFU_Med
-          MedBGApcugL= Burst.BurstBGApcugL_Med
-          MedFdomRFU= Burst.BurstFdomRFU_Med
-          MedFDomQSU= Burst.BurstFDomQSU_Med
-          MedNH4Amgl= Burst.BurstNH4Amgl_Med
-          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
-          MedCLmgl= Burst.BurstCLmgl_Med
-          MedWiperPos= Burst.BurstWiperPos_Med
+          If TotalBurstVals >= MinBurstVals Then
+          Call CopyMedBurstVals
+          Else
+          Call ResetBurstVars        
           EndIf
+          SerialFlush (WqSerialPort)
 '          CallTable Burst
 '          MedBurstDate = Burst.BurstDate_Med
 '          MedBurstTime = Burst.BurstTime_Med
@@ -5796,33 +5812,33 @@ BeginProg
   '      AvgLoggerQcfs = DataOut.Qcfs_Avg
   '      AvgStagePrime = Dataout.StagePrime_Avg
   '      AvgStageSec = Dataout.StageSecnd_Avg
-  #If WqSonde = "WQ_SERIAL_BURST" Then
-  'Set all Med Values to be stored in AQ to the Burst table values
-          MedBurstDate = Burst.BurstDate_Med
-          MedBurstTime = Burst.BurstTime_Med
-          MedBurstTime = Round(MedBurstTime,0)
-          MedTempC = Burst.BurstTempC_Med
-          MedTempF = Burst.BurstTempF_Med
-          MedSpCond = Burst.BurstSpCond_Med
-          MedTurbFNU = Burst.BurstTurbFNU_Med
-          MedDOSat = Burst.BurstDOSat_Med
-          MedDOmgL= Burst.BurstDOmgL_Med
-          MedORP= Burst.BurstORP_Med
-          MedDepthFt = Burst.BurstDepthFt_Med
-          MedBattV= Burst.BurstBattV_Med
-          MedpH= Burst.BurstpH_Med
-          MedpHmV= Burst.BurstpHmV_Med
-          MedChlugL= Burst.BurstChlugL_Med
-          MedChlRFU= Burst.BurstChlRFU_Med
-          MedBGApcRFU= Burst.BurstBGApcRFU_Med
-          MedBGApcugL= Burst.BurstBGApcugL_Med
-          MedFdomRFU= Burst.BurstFdomRFU_Med
-          MedFDomQSU= Burst.BurstFDomQSU_Med
-          MedNH4Amgl= Burst.BurstNH4Amgl_Med
-          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
-          MedCLmgl= Burst.BurstCLmgl_Med
-          MedWiperPos= Burst.BurstWiperPos_Med
-  #EndIf
+'  #If WqSonde = "WQ_SERIAL_BURST" Then
+'  'Set all Med Values to be stored in AQ to the Burst table values
+'          MedBurstDate = Burst.BurstDate_Med
+'          MedBurstTime = Burst.BurstTime_Med
+'          MedBurstTime = Round(MedBurstTime,0)
+'          MedTempC = Burst.BurstTempC_Med
+'          MedTempF = Burst.BurstTempF_Med
+'          MedSpCond = Burst.BurstSpCond_Med
+'          MedTurbFNU = Burst.BurstTurbFNU_Med
+'          MedDOSat = Burst.BurstDOSat_Med
+'          MedDOmgL= Burst.BurstDOmgL_Med
+'          MedORP= Burst.BurstORP_Med
+'          MedDepthFt = Burst.BurstDepthFt_Med
+'          MedBattV= Burst.BurstBattV_Med
+'          MedpH= Burst.BurstpH_Med
+'          MedpHmV= Burst.BurstpHmV_Med
+'          MedChlugL= Burst.BurstChlugL_Med
+'          MedChlRFU= Burst.BurstChlRFU_Med
+'          MedBGApcRFU= Burst.BurstBGApcRFU_Med
+'          MedBGApcugL= Burst.BurstBGApcugL_Med
+'          MedFdomRFU= Burst.BurstFdomRFU_Med
+'          MedFDomQSU= Burst.BurstFDomQSU_Med
+'          MedNH4Amgl= Burst.BurstNH4Amgl_Med
+'          MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+'          MedCLmgl= Burst.BurstCLmgl_Med
+'          MedWiperPos= Burst.BurstWiperPos_Med
+'  #EndIf
   Delay (1,3,mSec)
   CallTable Aquarius
   If Rec15minFlag = True Then
