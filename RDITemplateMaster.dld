@@ -5546,6 +5546,7 @@ BeginProg
               EndIf
 
              If BurstCount >= MaxBurstCnt Then
+               TotalBurstVals = jCount 'provided we made it through the full burst, total values = jCount (max burst count)
                BurstMissed = False 'we had good values coming in, so Make sure disable variable is set to false so the values get processed
                RecBurstFlag = True
              CallTable Burst
@@ -5560,7 +5561,7 @@ BeginProg
               '                  BurstMedTime = BurstTime ' "   "      "        "       "     "
               Delay(1,1,msec)
             Next jCount 'restart the loop until we reach max burst count
-            TotalBurstVals = jCount - 1 'provided we made it through the full burst, total values = jCount (max burst count) (subtract 1 because the loop checks the value, if = max, it processes, if > than max, it skips loop but still records Max + 1)
+
             kCount = 0
             jCount = 0
 '          EndIf
