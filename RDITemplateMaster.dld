@@ -2518,25 +2518,25 @@ EndSub
 
 #If WqSonde <> "NONE"
   Sub OpenWQPort
-    #If LoggerType = CR6
+    #If LoggerType = CR6 'For a CR6 the port require a different configuration from a CR1000
+'      If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
+'        If UseCommsOneForSonde Then
+'          SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)'If a Max232 is present the sonde communicates in TTL so we need Comms Mode One needs to be true 
+'        Else
+'          SerialOpen (WqSerialPort,WqBaud,19,0,2000)'why would we have a Max232 connected to A cR6 and not have commsone set to true?
+'        EndIf
+'      Else 'Max232 not used
+'        If UseCommsOneForSonde Then
+'          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)'For a CR6 the comms mode needs to be zero so it uses RS232 language
+'        Else
+'          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+'        EndIf
+'      EndIf
+    #Else 'else it is a CR1000
       If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        If UseCommsOneForSonde Then
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)
-        Else
-          SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-        EndIf
+        SerialOpen (WqSerialPort,WqBaud,19,0,2000)'need to use TTL if Max232 is present
       Else
-        If UseCommsOneForSonde Then
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000,1)
-        Else
-          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-        EndIf
-      EndIf
-    #Else
-      If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        SerialOpen (WqSerialPort,WqBaud,19,0,2000)
-      Else
-        SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+        SerialOpen (WqSerialPort,WqBaud,0,0,2000)'standard RS232 language works if no Max232 is present
       EndIf
     #EndIf
 
