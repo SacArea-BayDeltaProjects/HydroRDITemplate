@@ -237,6 +237,8 @@ Const ProgramVersionDate = 20190221
 '               Added StdDev, Min, and Max to Burst Table.
 '               Now pull median values from the burst table using "MedTempC = Burst.BurstTempC_Med" to populate the AQ table. No sense in having two tables process the exact same functions.
 '               Because of how the Median function works, we now "Round" the time of the mid point of the burst. Median is calculated by averaging the two median numbers if the total number of values is even.
+'20190227 - MRI added logic to dermine what comms mode to us for the sonde based on if a Max232 was used or not. Current logic requires use of the C ports but additional flag of WQUseUPort may be added if testing shows U ports can be used for sonde communication
+'                Due to differences in processing speed the CR1000 was set to use a longer period between samples while collecting burst data to avoid missing/shifting data
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -441,9 +443,13 @@ Public VmDeadCount As Long 'number of times VM has bad data
 #If Debugging = True Then
   Public UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
   Public UseCommsOneForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+  Public UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+  Public WqUseCPort As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde. Future version may allow U ports too.
 #Else
   Dim UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
   Dim UseCommsOneForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+  Dim UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
+  Dim WqUseCPort As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde. Future version may allow U ports too.
 #EndIf
 'Declare variables to hold time values
 Dim rTime(9) As Float 'this array holds time values returned from the realtime statement
@@ -2519,19 +2525,13 @@ EndSub
 #If WqSonde <> "NONE"
   Sub OpenWQPort
     #If LoggerType = CR6 'For a CR6 the port require a different configuration from a CR1000
-'      If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-'        If UseCommsOneForSonde Then
-'          SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)'If a Max232 is present the sonde communicates in TTL so we need Comms Mode One needs to be true 
-'        Else
-'          SerialOpen (WqSerialPort,WqBaud,19,0,2000)'why would we have a Max232 connected to A cR6 and not have commsone set to true?
-'        EndIf
-'      Else 'Max232 not used
-'        If UseCommsOneForSonde Then
-'          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)'For a CR6 the comms mode needs to be zero so it uses RS232 language
-'        Else
-'          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-'        EndIf
-'      EndIf
+        If UseCommsOneForSonde = True Then
+        SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)'Max232 requires us to use TTL language
+        ElseIf UseCommsZeroForSonde = True Then
+        SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)'No Max232 is present so we uses standard RS232 language
+        Else
+        SerialOpen (WqSerialPort,WqBaud,0,0,2000)'In case we use a non-stanadard port configuration this is the generic code
+        EndIf
     #Else 'else it is a CR1000
       If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
         SerialOpen (WqSerialPort,WqBaud,19,0,2000)'need to use TTL if Max232 is present
@@ -3025,11 +3025,17 @@ EndSub
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,20,mSec)
-    #If WqBaud = 9600 Then
-      SerialOut (WqSerialPort,"setperiod 1170" + CHR(13) + CHR(10),"OK",3,50)
-    #Else
+        #If LoggerType = CR6 Then 'if we are using a CR6 we can use a faster period 
       SerialOut (WqSerialPort,"setperiod 1000" + CHR(13) + CHR(10),"OK",3,50)
+    #Else 'a CR1000's slower processing speed require a slower period to not miss data coming from the sonde during a burst. Do not go below 1150.
+      SerialOut (WqSerialPort,"setperiod 1150" + CHR(13) + CHR(10),"OK",3,50)
     #EndIf
+    'We won't use baude rate 9600 any more
+'    #If WqBaud = 9600 Then 
+'      SerialOut (WqSerialPort,"setperiod 1170" + CHR(13) + CHR(10),"OK",3,50)
+'    #Else
+'      SerialOut (WqSerialPort,"setperiod 1000" + CHR(13) + CHR(10),"OK",3,50)
+'    #EndIf
     Delay (1,200,msec)
     SerialOut (WqSerialPort,"#" + CHR(13),"#" + CHR(13),3,100)
     SerialOut (WqSerialPort,"run" + CHR(13),"run" + CHR(13),3,10) 'Starts the Wq sampling at 1Hz
@@ -5287,14 +5293,22 @@ BeginProg
   #EndIf
   'Set comms mode to Zero and include in open commands if using c1,c3 on cr6
   UseCommsZeroForADCP = False
-  UseCommsOneForSonde = False
+  UseCommsOneForSonde = False 'if Max232 is present this flag should show true in the public table
+  UseCommsZeroForSonde = False 'If no Max232 is present this flag should show true in the public table
+  WqUseCPort = False 'If using C1/C3 this flag should be true. Future versions may have option to use U ports instead.
   #If LoggerType = CR6 Then
     If (AdcpPort = ComC1) OR (AdcpPort = ComC3) Then
       UseCommsZeroForADCP = True
     EndIf
-    If (WqSerialPort = ComC1) OR (WqSerialPort = ComC3) Then
-      UseCommsOneForSonde = True
-    EndIf
+      If (WqSerialPort = ComC1) OR (WqSerialPort = ComC3) Then
+      WQUseCPort = True 'Variable to indicate if WQ is in the C port
+      EndIf
+      If (IsWqMax232 = True) AND (WqUseCPort = True) Then ' if sonde is using Max232 and is in a C port
+        UseCommsOneForSonde = True 'then me need to use comms mode one to speak TTL
+        EndIf
+      If (IsWqMax232 = False) AND (WqUseCPort = True) Then 'ifsonde isn't using a Max232 and is in a c port
+        UseCommsZeroForSonde = True 'then we need to uses comms mode zero to speak standard RS232
+        EndIf
   #EndIf
   PanelTemp(PTempC,250)
   PTempF = PTempC * 9/5 + 32
