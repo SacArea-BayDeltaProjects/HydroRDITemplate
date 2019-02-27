@@ -2519,19 +2519,19 @@ EndSub
 #If WqSonde <> "NONE"
   Sub OpenWQPort
     #If LoggerType = CR6 'For a CR6 the port require a different configuration from a CR1000
-'      If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-'        If UseCommsOneForSonde Then
-'          SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)'If a Max232 is present the sonde communicates in TTL so we need Comms Mode One needs to be true 
-'        Else
-'          SerialOpen (WqSerialPort,WqBaud,19,0,2000)'why would we have a Max232 connected to A cR6 and not have commsone set to true?
-'        EndIf
-'      Else 'Max232 not used
-'        If UseCommsOneForSonde Then
-'          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)'For a CR6 the comms mode needs to be zero so it uses RS232 language
-'        Else
-'          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
-'        EndIf
-'      EndIf
+      If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
+        If UseCommsOneForSonde Then
+          SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)'If a Max232 is present the sonde communicates in TTL so we need Comms Mode One needs to be true 
+        Else
+          SerialOpen (WqSerialPort,WqBaud,19,0,2000)'why would we have a Max232 connected to A cR6 and not have commsone set to true?
+        EndIf
+      Else 'Max232 not used
+        If UseCommsOneForSonde Then
+          SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)'For a CR6 the comms mode needs to be zero so it uses RS232 language
+        Else
+          SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+        EndIf
+      EndIf
     #Else 'else it is a CR1000
       If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
         SerialOpen (WqSerialPort,WqBaud,19,0,2000)'need to use TTL if Max232 is present
@@ -3028,7 +3028,7 @@ EndSub
     #If WqBaud = 9600 Then
       SerialOut (WqSerialPort,"setperiod 1170" + CHR(13) + CHR(10),"OK",3,50)
     #Else
-      SerialOut (WqSerialPort,"setperiod 1000" + CHR(13) + CHR(10),"OK",3,50)
+      SerialOut (WqSerialPort,"setperiod 1010" + CHR(13) + CHR(10),"OK",3,50)
     #EndIf
     Delay (1,200,msec)
     SerialOut (WqSerialPort,"#" + CHR(13),"#" + CHR(13),3,100)
@@ -5673,7 +5673,7 @@ BeginProg
                 BurstErrCnt = BurstErrCnt + 1 'count up if the error occurs
               EndIf
               If BurstErrCnt > BurstMaxErrCnt Then 'if we have more errors than the threshold
-                TotalBurstVals = jCount - BurstMaxErrCnt 'the total number of values used for the burst should be jCount - number of errors (need to investigate)
+                TotalBurstVals = jCount - BurstErrCnt 'the total number of values used for the burst should be jCount - number of errors
                 SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50) 'send a "0" out to stop the SOA from attempting to burst
                 
                 ExitFor 'if error occurs more than a threshold, exit the loop
@@ -5684,11 +5684,15 @@ BeginProg
                BurstMissed = False 'we had good values coming in, so Make sure disable variable is set to false so the values get processed
                RecBurstFlag = True 'set our output flag to true
                CallTable SecBurst 'call the table that stores individual 1sec values
-             CallTable Burst 'call the burst table
-             Else
+               CallTable Burst 'call the burst table
+             ElseIf BurstCount < MaxBurstCnt AND WqError = True Then
                BurstMissed = False 'we have good values
                RecBurstFlag = False 'don't set the output flag because we haven't reached our threshold
                CallTable SecBurst 'store the next 1sec value
+             ElseIf BurstCount < MaxBurstCnt AND WqError = False Then
+               BurstMissed = False
+               RecBurstFlag = False
+               CallTable SecBurst
                CallTable Burst 'Need to call table to store the values in the table memory until the output flag (RecBurstFlag) is true
              EndIf
               '                If BurstCount = 15 Then
