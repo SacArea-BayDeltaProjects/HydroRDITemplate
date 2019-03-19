@@ -4,8 +4,13 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
+<<<<<<< HEAD
 Const ProgramVersionDate = 20180622
 'Last Modified by: Michael Simpson
+=======
+Const ProgramVersionDate = 20190221
+'Last Modified by: Trevor Violette and Mark Inc
+>>>>>>> parent of 9bc7397... Documentation update
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -217,6 +222,32 @@ Const ProgramVersionDate = 20180622
 '20180509 - TAV Increased WQ "SerialIn" instruction's Max Characters to account for a full suite of sensors/more than 1 parameter per sensor. Set the "GetVariablesFlag" to True in the "Initialize" Sub. Otherwise
 '               it wouldn't get called if the system went down and rebooted.
 '20180622 - TAV Fixed bug that was disallowing modem to cycle properly. Syntax around Conditional Compile statements regarding SW12 ports was not correct.
+<<<<<<< HEAD
+=======
+'20180706 - TAV Added code to detect "No Sonde" being returned from the SOA. This will put logger into Redeploy mode until a sonde is found.
+'20180710 - TAV Added the TrueStage values to the keypad menu.
+'               Fixed another Conditional Compile Syntax error regarding the Modem
+'               Added SVMaq Table to allow techs to get field visit readings easier without having to scroll through the public table. SVMaq table only stores 1 record.
+'               Added IsNClosed to USR variables.
+'               Updated BiRating code to allow for use with 3-beam systems that aren't uplookers.
+'20180823 - MRS Fixed bug for warning if U ports are used for VM or Sonde on the CR6 using the comms mode 0 option. Put Serialopen commands in subroutines.
+'20180824 - MRS Eliminated "baudratehi" and VMbaud is now set in constant menu
+'20181018 - TAV added battery voltages (Station, VM, and Wq Sonde) to Aquarius data tables. Added individual sensor stage values to AQ table and removed "StagePrime" and "StageSec". This selection will be done within Aquarius
+'               so the changes can be tracked and managed more easily.
+'20181114 - MRI created MaxBurstCnt constant, added into constant table so it can be changed more easily. Call burst table when MaxBurstCnt is met and write to Aqurius table.
+'20181206 - TAV added Bi-directional rating variables into QAQC Table.
+'20181219 - MRI added stagesecnd and selstgsecnd to 1min data table
+'20190220 - TAV & MRI reworked entire WQ burst function/loop. It had been reporting 15min late and also not being triggered if the sonde missed the prior 1min punch.
+'               Wrote logic to Exit the For...Next... loop if burst values were missed during the burst collection. Still working on logic to COUNT the actual number of values used for the burst. Unless something
+'                      happens in the middle of the burst, it's been verified that 30 values are used.
+'               Wrote table to sample every value every time through the Burst loop so we have a table stored with each individual sample to verify accuracy of the burst table.
+'               Added StdDev, Min, and Max to Burst Table.
+'               Now pull median values from the burst table using "MedTempC = Burst.BurstTempC_Med" to populate the AQ table. No sense in having two tables process the exact same functions.
+'               Because of how the Median function works, we now "Round" the time of the mid point of the burst. Median is calculated by averaging the two median numbers if the total number of values is even.
+'20190227 - MRI added logic to dermine what comms mode to us for the sonde based on if a Max232 was used or not. Current logic requires use of the C ports but additional flag of WQUseUPort may be added if testing shows U ports can be used for sonde communication
+'                Due to differences in processing speed the CR1000 was set to use a longer period between samples while collecting burst data to avoid missing/shifting data
+
+>>>>>>> parent of 9bc7397... Documentation update
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 
 SequentialMode 'must not use pipeline mode or averages are missed
