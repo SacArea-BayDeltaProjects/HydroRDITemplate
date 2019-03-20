@@ -240,6 +240,7 @@ Const ProgramVersionDate = 20190227
 '20190227 - MRI added logic to dermine what comms mode to us for the sonde based on if a Max232 was used or not. Current logic requires use of the C ports but additional flag of WQUseUPort may be added if testing shows U ports can be used for sonde communication
 '                Due to differences in processing speed the CR1000 was set to use a longer period between samples while collecting burst data to avoid missing/shifting data
 '           TAV updated the burst loop to exclude zeroes from the median calculation in the Burst table if there were issues with the communication. Total number of values used in the calculation also seems to be working correctly now.
+'20190320 - MRI Added statement to conditional compile out the ADCPLoop if the HasVM is false to avoid potential timing problems
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
