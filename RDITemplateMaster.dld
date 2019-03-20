@@ -5550,6 +5550,7 @@ BeginProg
     'data is flagged, and the serial port is flushed.  On the next scan the next valid ensemble
     'is read, if there is good data in the buffer then that should be reflected in the output.
     ADCPDone = False
+    #If HasVM = true Then
     For ADCPLoop = 1 To 2
       Do While SerialInChk(AdcpPort)
         InCount=InCount+1
@@ -5582,6 +5583,7 @@ BeginProg
       If ADCPDone Then ExitFor
       Delay (1,5,Sec) 'Wait a bit for incoming ensemble, but not more than 10 seconds
     Next
+    #EndIf
     ADCPEnd = Timer(2,mSec,4)
     ADCPEnd = ADCPEnd/1000
 
