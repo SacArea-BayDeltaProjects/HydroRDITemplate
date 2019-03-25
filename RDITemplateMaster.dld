@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190227
+Const ProgramVersionDate = 20190325
 'Last Modified by: Trevor Violette and Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -241,6 +241,7 @@ Const ProgramVersionDate = 20190227
 '                Due to differences in processing speed the CR1000 was set to use a longer period between samples while collecting burst data to avoid missing/shifting data
 '           TAV updated the burst loop to exclude zeroes from the median calculation in the Burst table if there were issues with the communication. Total number of values used in the calculation also seems to be working correctly now.
 '20190320 - MRI Added statement to conditional compile out the ADCPLoop if the HasVM is false to avoid potential timing problems
+'20190325 - MRI Added BurstPeriod variable in public table so user can adjust the period length that is sent to the sonde during serial burst communication. Had it set to standard 1150 unless otherwise declared. Minimum value is 250. Presereve in USR file too.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -417,6 +418,7 @@ Public ExtWHConvertVolt As Float 'get volts from external power supply or batter
 Public ExtSolarVolt As Float 'get volts from solar panel
 Public PTempC As Float 'CR1000 panel temperature in DegC
 Public PTempF As Float 'CR1000 panel temperature in Degf
+Public BurstPeriod As Long 'give user ability to alter burst period in the public table
 Public RecCalibData As Boolean 'flag to recored data at 1 minute interval when measurements are being done.
 Public StoreVariablesFlg As Boolean
 Public GetVariablesFlg As Boolean
@@ -1402,6 +1404,7 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,SiteNum,String)
     Sample (1,BurstDate,IEEE4)
     Sample (1,BurstTime,IEEE4)
+    Sample (1, BurstPeriod, IEEE4)
     '    Sample (1,BurstMedDate,IEEE4)
     '    Sample (1,BurstMedTime,IEEE4)
     Median (1,BurstDate,MaxBurstCnt,IEEE4,BurstMissed)
@@ -3028,9 +3031,9 @@ EndSub
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,20,mSec)
         #If LoggerType = CR6 Then 'if we are using a CR6 we can use a faster period. 1000 worked with no issues but changed to 1150 so we have continuity in sampling rate between loggers. Can be altered in the future if needed.
-      SerialOut (WqSerialPort,"setperiod 1150" + CHR(13) + CHR(10),"OK",3,50)
+      SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
     #Else 'a CR1000's slower processing speed require a slower period to not miss data coming from the sonde during a burst. Do not go below 1150. 1138 was the quickest tested speed that resulted in no errors. Added a little extra time as a buffer.
-      SerialOut (WqSerialPort,"setperiod 1150" + CHR(13) + CHR(10),"OK",3,50)
+      SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
     #EndIf
     'We won't use baude rate 9600 any more
 '    #If WqBaud = 9600 Then 
@@ -4799,8 +4802,8 @@ Sub ReadVariables
     '    'set error txt
     ExitSub
   EndIf
-  Dim InVar(38) As String
-  SplitStr(InVar,PreserveFile,",",38,0)
+  Dim InVar(39) As String
+  SplitStr(InVar,PreserveFile,",",39,0)
   StartBin = InVar(1)
   EndBin = InVar(2)
   StartEbbBin = InVar(3)
@@ -4839,13 +4842,14 @@ Sub ReadVariables
   IsSubmersed = InVar(36)
   IsWQNClosed = InVar(37)
   isVMNClosed = InVar(38)
+  BurstPeriod = InVar(39)
 EndSub
 
 'Store Variables to USR File (preserve variables)
 '--------------------------------------------------
 Sub StoreVariables
   'store variables out
-  Dim Var(38) As String
+  Dim Var(39) As String
   Public SendVarString As String * 500
   Public VarStringLen As Long
   Public VarHandle = Long
@@ -4890,9 +4894,10 @@ Sub StoreVariables
   Var(36) = IsSubmersed
   Var(37) = IsWQNClosed
   Var(38) = isVMNClosed
+  Var(39) = BurstPeriod
   'build send string
   SendVarString = Var(1)
-  For VarCnt = 2 To 38
+  For VarCnt = 2 To 39
     SendVarString = SendVarString + "," + Var(VarCnt)
   Next VarCnt
   VarStringLen = Len(SendVarString)
@@ -5487,6 +5492,12 @@ BeginProg
     #If WqSonde = "WQ_SERIAL_BURST" Then
       BurstTimeReached = Timer(5,mSec,4)
       BurstReachedMod = Mod15Minutes
+      'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
+      If BurstPeriod = 0 Then
+      BurstPeriod = 1150
+      ElseIf BurstPeriod < 250 Then 'if user enters values less than 250, but not 0, bring it up to 250. This is the max rate that the sonde can collect.
+        BurstPeriod = 250
+      EndIf
       If Mod15Minutes > 830 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
         GetBurst = True 'set the burst flag to true
       Else
