@@ -1,0 +1,4827 @@
+Const ProgramVersionDate = 20190227
+SequentialMode
+Const Yes = True
+Const No = False
+Const WqSonde = "WQ_SERIAL_BURST"
+Const WqBaud = 38400
+Const VmBaud = 38400
+Const IsWqMax232 = True
+Const MaxBurstCnt = 30
+Const MinBurstVals = 4
+Const IsVmMax232 = False
+Const IsSpecStudy = False
+Const GetNoiseFloor = False
+Const HasSlave = False
+Const HasVM = True
+Const UseAutoRange = False
+Const WQDeadCntMax = 20
+Const VMDeadCntMax = 20
+Const StoreAllToCard = True
+Const Debugging = True
+Const SeeAllVel = False
+Const SeeRawWQ = True
+#If LoggerType = CR1000 Then
+Const AdcpPort = Com1
+Const WqSerialPort = Com4
+Const VMSwitchPort = 4
+Const WqSwitchPort = 6
+Const PS1Com3 = 3
+Const PS1Com5 = 5
+Const PS2Com3 = 3
+Const PS2Com5 = 5
+Const WqCom3 = 3
+Const wqCom5 = 5
+#If HasSlave = Yes Then
+Const SlaveCom = Com4
+#EndIf
+Const ExtPwrCom = 1
+Const ExtSolarCom = 2
+#ElseIf LoggerType = CR6 Then
+Const AdcpPort = ComU1
+Const WqSerialPort = ComC1
+Const WqSwitchPort = U6
+Const UseSW12_2_forWQ = False
+Const VMSwitchPort = U4
+Const PS1Com3 = U3
+Const PS1Com5 = U5
+Const PS2Com3 = U3
+Const PS2Com5 = U5
+Const WqCom3 = U3
+Const wqCom5 = U5
+#If HasSlave = Yes Then
+Const SlaveCom = ComU7
+#EndIf
+Const ExtPwrCom = U11
+Const ExtSolarCom = U9
+#EndIf
+Const VelocityScaleWater = 1/304.8
+Const ScanRate = 60
+Const ScanUnit = 2
+Const FastScanRate = 15
+Const FastScanUnit = 2
+Const UPbeam = 1
+Const VMpress = 2
+Const PSpress = 3
+Const PSpress2 = 4
+Const WqPress = 5
+Const FixedLeaderID = 0
+Const VariableLeaderID = 128
+Const CorrelationProfileID = 512
+Const RSSIProfileID = 768
+Const PGoodProfileID = 1024
+Const VelocityProfileID = 256
+Const VMStageID = 16384
+Const BottomID = 1536
+Const MaxBins = 27
+Const MaxBeams = 4
+Const BadVel = -32768
+Const BadDataIndicator = NAN
+Const Meters_to_Feet = 3.280839895
+Const DegToRad = (3.14159265358979323846/180)
+Public SiteID As String * 6
+Public SiteNum As String * 16
+Public CR1Volts As Float
+Public ExtWHConvertVolt As Float
+Public ExtSolarVolt As Float
+Public PTempC As Float
+Public PTempF As Float
+Public BurstPeriod As Long
+Public RecCalibData As Boolean
+Public StoreVariablesFlg As Boolean
+Public GetVariablesFlg As Boolean
+Dim Rec15minFlag As Boolean
+Public RecAQFlag As Boolean
+Dim Rec24HrFlag As Boolean
+Dim Rec1MinFlag As Boolean
+Dim OneMinCount As Long
+Dim RecDataFlag As Boolean
+Public RecAllVelFlag As Boolean
+Public VemcoRTR As Boolean
+Public IsSubmersed As Boolean
+Public Prompt As String *5
+Dim RecBeamCheckFlag As Boolean
+Public LowRatVel As Float
+Dim InitialLRV As Float
+Public HighRatVel As Float
+Dim InitialHRV As Float
+Public LowMeas As Boolean
+Public HighMeas As Boolean
+Dim LowCount As Long
+Dim HighCount As Long
+Public VMPower As Boolean
+Public isVMNClosed As Boolean
+Public VmDeadCount As Long
+#If Debugging = True Then
+Public UseCommsZeroForADCP As Boolean
+Public UseCommsOneForSonde As Boolean
+Public UseCommsZeroForSonde As Boolean
+Public WqUseCPort As Boolean
+#Else
+Dim UseCommsZeroForADCP As Boolean
+Dim UseCommsOneForSonde As Boolean
+Dim UseCommsZeroForSonde As Boolean
+Dim WqUseCPort As Boolean
+#EndIf
+Dim rTime(9) As Float
+Alias rTime(3) = DOM
+Alias rTime(4) = Hour
+Alias rTime(5) = Minute
+Alias rTime(6) = Second
+Alias rTime(7) = MicroSecond
+Public LastScan As String * 6
+Dim RealSeconds As Long
+Dim Mod5Minutes As Long
+Dim Mod15Minutes As Float
+Dim Mod60Minutes As Float
+Dim ModDay As Float
+#If Debugging = True Then
+Public VMYear As Long
+Public VMMonth As Long
+Public VMDay As Long
+Public VMHour As Long
+Public VMMinute As Long
+Public VMSecond As Long
+Public VMTime As String * 25
+Public SetVMTimeFlg As Boolean
+Public VMTimeString As String * 25
+Public SplitTime(6) As Float
+Public RawSetTime As String * 25
+Public FSplitTime(6) As Float
+#Else
+Dim VMYear As Long
+Dim VMMonth As Long
+Dim VMDay As Long
+Dim VMHour As Long
+Dim VMMinute As Long
+Dim VMSecond As Long
+Dim VMTime As String * 25
+Dim SetVMTimeFlg As Boolean
+Dim VMTimeString As String * 25
+Dim SplitTime(6) As Float
+Dim RawSetTime As String * 25
+Dim FSplitTime(6) As Float
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Public EXOTimeString As String * 25
+Public SetEXOTimeFlg As Boolean
+#EndIf
+#If HasVM Then
+Dim RSSIspike(MaxBins,4,16) As Float
+Dim Corrspike(MaxBins,4,16) As Float
+Dim Velspike(MaxBins,4,16) As Float
+Dim StageSpike(16) As Float
+Public QueueDQI As Float
+Public RSSIStdNo As Long = 2
+Public CorrStdNo As Long = 2
+Public VelStdNo As Long = 2
+Public SpikeFileName As String * 64
+Dim FileHandle As Long
+Public FileHeader As String * 500
+Public SpikeCounter As Long
+Public SendHeader As Boolean = True
+Public TestTime As String * 20
+Public CardError As String * 25
+#EndIf
+Dim CdmaScans As Long
+Public HrsCdmaOff As Long
+Dim LoggernetAddr As Long
+Public CdmaWorks As Boolean
+Dim CDMAFailure As Boolean
+Public CycleCdmaPwr As Boolean
+Public IsCDMAOn As Boolean
+Public IsCDMANClosed As Boolean
+Public KeepCDMAon As Boolean
+Public Tech As String * 3
+Public VisitReason As String *100
+Public SerNum As Long
+Public OSVers As String * 18
+Public Program As String * 25
+Public ProgVersDate As String * 8
+Public ProgErrors As Long
+Public Low12Volts As Long
+Public LithBat As Float
+Public SkipScans As Long
+Public FreeCFMem As Float
+Public ErrorEvent As String * 100
+Public Coord As String * 20
+Dim ADCPSN01 As Long
+Dim ADCPSN02 As Long
+Dim ADCPSN03 As Long
+Dim ADCPSN04 As Long
+Public AdcpSN As Long
+Dim InitialAdcpSN As Long
+Public NewADCP As Boolean
+Public PS1SN As String * 40
+Dim InitialPS1SN As String * 40
+Public NewPS1 As Boolean
+Public PS2SN As String * 40
+Dim InitialPS2SN As String * 40
+Public NewPS2 As Boolean
+Public BadChecksum As Long
+Public HeaderMismatch As Long
+Dim NumbytesZero As Long
+Public CalcCheckSum As Float
+Public EnsChecksum As Float
+Dim TempL As Long
+Public Numbytes
+Public BadEnsemble As Long
+Public ScanNo As Long
+Dim Longarray(2000) As Long
+Dim Nums(2) As Long
+Public EnsembleLen As Long
+Dim Datatypes As Long
+Dim Offsets(25) As Long
+Public BinSize As Long
+Public NumADCPBins As Long
+Public Numbins As Long
+Public EnsPings As Long
+Public NumBeams As Long
+Public BlankDist As Long
+Public EX As Long
+Public ES As Long
+Public Decode As String * 70
+Public FramingError As Long
+Dim FixedLeadOffset As Long
+Dim MSB As Long
+Dim MSB1 As Long
+Dim LSB As Long
+Dim ReceivedBytes As Long
+Dim TempId As Long
+Public UseDir As Boolean
+Public PosFlowDir As Float
+Public RecordAll As Boolean
+Public PreserveFile As String * 500
+Public CalcQ As Boolean
+Public UseV2 As Boolean
+Public IndexVel As Float
+Public MeanVel As Float
+Public Qcfs As Float
+Public BadQCount As Long
+Public MinExpVel As Long
+Public MaxExpVel As Long
+Public FlowSign As Long
+Public BadVelCount As Long
+Public BadBinCnt As Long
+Public DataErr As Long
+Public BadVelFlag As Boolean
+Public BadQFlag As Boolean
+Dim VelDatOffset As Long
+Dim Bin As Long
+Public StartBin As Long
+Public StartEbbBin As Long
+Public EndEbbBin As Long
+Public StartFldBin As Long
+Public EndFldBin As Long
+Public EndBin As Long
+Public BiRating As Boolean = False
+Public BiRatOK As Boolean = False
+Public UseBiRat As Boolean = False
+Public BiRatTran As Float
+Dim Beam As Long
+Dim temp As Long
+Dim Index As Long
+Dim BinVel As Float
+Dim BinStep As Long
+Dim EnsBin As Long
+Dim ensVelocity(MaxBins,4)As Float
+#If SeeAllVel = True Then
+Public V1(MaxBins) As Float
+Public V2(MaxBins) As Float
+Public V3(MaxBins) As Float
+Public V4(MaxBins) As Float
+Public VMBinVel(MaxBins) As Float
+#Else
+Dim V1(MaxBins) As Float
+Dim V2(MaxBins) As Float
+Dim V3(MaxBins) As Float
+Dim V4(MaxBins) As Float
+Dim VMBinVel(MaxBins) As Float
+#EndIf
+Dim VelCount As Long
+Dim BadBinCount As Long
+Dim V1Sum As Float
+Dim V1EbbSum As Float
+Dim V1FldSum As Float
+Dim V2Sum As Float
+Dim V2EbbSum As Float
+Dim V2FldSum As Float
+Dim V3Sum As Float
+Dim V4Sum As Float
+Dim V1Disable(MaxBins) As Boolean
+Dim V2Disable(MaxBins) As Boolean
+Dim V3Disable(MaxBins) As Boolean
+Dim V4disable(MaxBins) As Boolean
+Dim VmBinVelDisable(MaxBins) As Boolean
+Public V1AVG As Float
+Dim V1EbbAvg As Float
+Dim V2EbbAvg As Float
+Public V2AVG As Float
+Dim V1FldAvg As Float
+Dim V2FldAvg As Float
+Public V3AVG As Float
+Public V4AVG As Float
+Dim Cnt As Long
+Public V1Cnt As Long
+Dim V1EbbCnt As Long
+Dim V2EbbCnt As Long
+Dim V1FldCnt As Long
+Dim V2FldCnt As Long
+Dim V2Cnt As Long
+Dim V3Cnt As Long
+Dim V4Cnt As Long
+Const rad = 3.14159/180
+Const deg = 180/3.14159
+Dim VarLeadOffset As Long
+Public BIT As Long
+Public EnsembleNo As Long
+Dim RSSIDatOffset As Long
+Dim ensRSSI(MaxBins,4) As Long
+Dim nRSSI As Long
+Dim AccumRSSI As Long
+Dim AvgRSSI(MaxBins) As Long
+Public AvgRSSIStartBin As Long
+Public AvgRSSIEndBin As Long
+Dim AvgRSSIcounter As Long
+Dim AvgRSSIAccum As Long
+Public AvgSwathRSSI As Float
+Dim CorrDatOffset As Long
+Dim ensCorr(MaxBins,4) As Long
+Dim nCorr As Long
+Dim AccumCorr As Long
+Dim AvgCorr(MaxBins) As Long
+Public VMStageDatOffset As Long
+Dim L1SB As Long
+Dim M1SB As Long
+Dim TempM As Float
+#If Debugging = True Then
+Public VMTemp As Long
+Public VMPSTemp As Long
+Public WHPSTemp As Float
+Public WHTempM As Float
+Public WHTempK As Float
+#Else
+Dim VMTemp As Long
+Dim VMPSTemp As Long
+Dim WHPSTemp As Float
+Dim WHTempM As Float
+Dim WHTempK As Float
+#EndIf
+Public IsCM As Boolean
+Public IsVADCP As Boolean
+Public IsWorkhorse As Boolean
+Public SelectFilter As Long
+Public RangedBin As Long = 0
+Public DucerDepthOffset As Float
+Public RangeSource As Long
+Public CutOffBins As Long
+Public RSSIThreshold As Float
+Public StdCorrThreshold As Float
+Public CorrThreshold As Float
+Dim BadEnsCount As Long
+Dim LoopInterval As Long
+Dim FastLoopInterval As Long
+Dim EventCDMAFlag As Boolean
+Dim EventVoltFlag As Boolean
+Dim EventYSIFlag As Boolean
+Dim EventQFlag As Boolean
+Public PSPressPort As Long
+Public PSPressAddr As Long
+Public PSPressDataIn As Boolean
+Public PsPress1Stg(2) As Float
+Alias PsPress1Stg(1) = PS1RawDepthFt
+Alias PsPress1Stg(2) = PS1TempC
+Public PSpress2Stg(2) As Float
+Alias PSpress2Stg(1) = PS2RawDepthFt
+Alias PSpress2Stg(2) = PS2TempC
+Public PSpress2Port As Long
+Public PSpress2Addr As Long
+Public PSpress2DataIn As Boolean
+Public StagePrime As Float
+Public StageSecnd As Float
+Public StgDiff As Float
+Public UpBeamStg As Float
+Public VMPressStg As Float
+Public PS1Stg As Float
+Public PS2Stg As Float
+Public SondeStg As Float
+Public TrueUpBeamStg As Float
+Public TrueVMPressStg As Float
+Public TruePS1Stg As Float
+Public TruePS2Stg As Float
+Public TrueSondeStg As Float
+Dim SelStgPrime As String
+Public SelStgSecnd As String
+Public UpBeamOffset As Float
+Public VMPressOffset As Float
+Public PS1Offset As Float
+Public PS2Offset As Float
+Public SondeOffset As Float
+Public StgSelect As String
+Public Area As Float
+Public BadStgFlag As Boolean
+Public BadStgCount As Long
+Public MaxExpStg As Long
+Public MinExpStg As Long
+Public StgOffset As Float
+Public StgCoef As Float
+Public StgCoef2 As Float
+Public VelOffset As Float
+Public VelCoef As Float
+Public VelCoef2 As Float
+Public VelCoef3 As Float
+Public UpVelOffset As Float
+Public UpVelCoef As Float
+Public UpVelCoef2 As Float
+Public UpVelCoef3 As Float
+Public LowVelOffset As Float
+Public LowVelCoef As Float
+Public LowVelCoef2 As Float
+Public LowVelCoef3 As Float
+Public Trans As String * 4
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Public WqNparams = 23
+Public Redeploy As Boolean
+Public NoSondeTrig
+Public GetBurst As Boolean
+Public BurstTimeReached As Float
+Public BurstReachedMod As Float
+Public BurstComs As String * 10000
+Public OldEXOTime As Long
+Dim DateCode = 52
+Dim TimeCode = 54
+Dim TempCCode = 1
+Dim TempFCode = 2
+Dim CondCode = 7
+Dim TurbCode = 223
+Dim DoSatCode = 211
+Dim DOmgLCode = 212
+Dim DepthCode = 23
+Dim BattCode = 28
+Dim pHCode = 18
+Dim pHmVCode = 17
+Dim ChlugLCode = 193
+Dim ChlRFUCode = 194
+Dim BGApcRFUCode = 216
+Dim BGApcugLCode = 225
+Dim FDomRFU = 227
+Dim FDomQSU = 228
+Dim ORPCode = 19
+Dim NH4Code = 48
+Dim CLCode = 112
+Dim NO3Code = 106
+Dim WiperPos = 229
+#If WqSonde = "WQ_SERIAL_BURST" Then
+Public BurstData(23)
+Dim BurstArray(30,23)
+Public BurstIn As String * 256
+Public jCount As Long
+Public kCount As Long
+Public BurstCount As Long
+Public GotToBurst
+Public TotalBurstVals
+Public BurstErrCnt
+Public BurstMaxErrCnt = 3
+Public BurstMissed As Boolean
+Public BurstDebugCount As Long
+Public BurstDate
+Public BurstTime
+Public BurstTempC
+Public BurstTempF
+Public BurstSpCond
+Public BurstTurbFNU
+Public BurstDOSat
+Public BurstDOmgL
+Public BurstORP
+Public BurstDepthFt
+Public BurstBattV
+Public BurstpH
+Public BurstpHmV
+Public BurstChlugL
+Public BurstChlRFU
+Public BurstBGApcRFU
+Public BurstBGApcugL
+Public BurstFdomRFU
+Public BurstFDomQSU
+Public BurstNH4Amgl
+Public BurstNO3Nmgl
+Public BurstCLmgl
+Public BurstWiperPos
+Public MedBurstDate
+Public MedBurstTime
+Public MedTempC
+Public MedTempF
+Public MedSpCond
+Public MedTurbFNU
+Public MedDOSat
+Public MedDOmgL
+Public MedORP
+Public MedDepthFt
+Public MedBattV
+Public MedpH
+Public MedpHmV
+Public MedChlugL
+Public MedChlRFU
+Public MedBGApcRFU
+Public MedBGApcugL
+Public MedFdomRFU
+Public MedFDomQSU
+Public MedNH4Amgl
+Public MedNO3Nmgl
+Public MedCLmgl
+Public MedWiperPos
+#EndIf
+#If SeeRawWQ = True OR Debugging = True Then
+Public t(23)
+Public WqData(23)
+Public WqIn As String * 256
+Public WqDelay As Long
+Public RecBurstFlag As Boolean
+#Else
+Dim t(23)
+Dim WqData(23)
+Dim WqIn As String * 256
+Dim WqDelay As Long
+Dim RecBurstFlag As Boolean
+#EndIf
+Public WipeTime As String * 25
+Public WqParamOrder(23)
+Public WqLocDate
+Public WqLocTime
+Public WqLocTempC
+Public WqLocTempF
+Public WqLocCond
+Public WqLocTurb
+Public WqLocDoSat
+Public WqLocDOmgL
+Public WqLocORP
+Public WqLocDepth
+Public WqLocBatt
+Public WqLocpH
+Public WqLocpHmV
+Public WqLocChlugL
+Public WqLocChlRFU
+Public WqLocBGApcRFU
+Public WqLocBGApcugL
+Public WqLocFDomRFU
+Public WqLocFDomQSU
+Public WqLocNH4
+Public WqLocNO3
+Public WqLocCL
+Public WqLocWiperPos
+Public Wipeflag As Boolean
+#EndIf
+#If WqSonde = "WQ_SDI12" Then
+Public WqSDI12Sensor(23)
+Public Wiper1Min As Float
+Public WiperTestCount As Float
+Public WiperInCount As Float
+Public LocTempC As Long
+Public LocSpCond As Long
+Public LocTurbFNU As Long
+Public LocVolts As Long
+Public LocDOmgL As Long
+Public LocDOSat As Long
+Public LocPH As Long
+Public LocORP As Float
+Public LocDepth As Long
+Public LocChlorMGL As Long
+Public LocChlorRFU As Long
+Public LocBGA As Float
+Public LocFdomRFU As Float
+Public LocFdomQSU As Float
+Public LocAmmonium As Float
+Public LocNitrate As Float
+Public LocChloride As Float
+Public LocWiperPos As Float
+Public WqAddr As Long
+Public WqSDIPort As Long
+Public WiperErrCount As Float
+Public WiperOut As Boolean
+Public MilliToMicro As Boolean
+#EndIf
+#If (WqSonde <> "NONE") Then
+Public TempDiff As Float
+Public WqError As Boolean
+Public WqDead As Boolean
+Public WqBadData As Boolean
+Public WqDate As String
+Public WqTime As String
+Public WqTempC As Float
+Public WqTempF As Float
+Public WqSpCond As Float
+Public WqTurbFNU As Float
+Public WqChlugL As Float
+Public WqChlRFU As Float
+Public WqDOMgl As Float
+Public WqDOSat As Float
+Public WqPH As Float
+Public WqPHmv As Float
+Public WqORP As Float
+Public WqDepthFt As Float
+Public WqBattV As Float
+Public WqBGAugl As Float
+Public WqBGArfu As Float
+Public WqFDOMrfu As Float
+Public WqFDOMqsu As Float
+Public WqNH4mgl As Float
+Public WqNO3mgl As Float
+Public WqCLmgl As Float
+Public WqWiperPos As Float
+Public WqErrCount As Long
+Public WqPwrCycleCnt As Long
+Public WqManualCycle As Boolean
+#EndIf
+Public IsWQNClosed As Boolean
+Public AvgIndexVel As Float
+Public AvgVMTemp As Float
+Public AvgVMPitch As Float
+Public AvgVMRoll As Float
+Public AvgPS1Stg As Float
+Public AvgPS2Stg As Float
+Public AvgUpBeamStg As Float
+Public VMtempF As Float
+Public VMupBeam As Float
+Public VMpressure As Float
+Public WHpressure As Float
+Public VMHeading As Float
+Public VMpitch As Float
+Public VMroll As Float
+Public VMVolts As Float
+Public VMtempC As Float
+Public VMdataIn As Boolean
+#If Debugging = True Then
+Public DepthMSB As Long
+Public DepthMSB1 As Long
+Public DepthLSB As Long
+Public DepthLSB1 As Long
+Public IDwords(14) As Long
+Public LSBTemp As Long
+Public LSB1Temp As Long
+Public MSBTemp As Long
+Public MSB1Temp As Long
+Public Subscans As Long
+Public EnsBytes As Long
+Public MissedEns As Long
+Public ADCPLoop As Long
+Public ADCPDone As Boolean
+Public ScanDiff As Long
+Public DebugTime(9)
+Alias DebugTime(3) = DayOfMnth
+Alias DebugTime(4) = Hours
+Alias DebugTime(5) = Minites
+Alias DebugTime(6) = Secints
+Alias DebugTime(7) = MicSec
+Public ScanStart
+Public ScanEnd
+Public ADCPEnd
+Public BeforeBurst
+Public AfterBurst
+Public CDMACheckStart
+Public CDMACheckEnd
+Public CDMACheckTotTime
+Public ZeroVMTimeStart
+Public ZeroVMTimeEnd
+Public ZeroVMTotTime
+Public ChkSumChkStart
+Public ChkSumChkEnd
+Public ChkSumChkTotTime
+Public MainDecodeStart
+Public MainDecodeEnd
+Public MainDecodeTotTime
+Public CalcRangeStart
+Public CalcRangeEnd
+Public CalcRangeTotTime
+Public OneMinCalcStart
+Public OneMinCalcEnd
+Public OneMinCalcTotTime
+Public CalcQStart
+Public CalcQEnd
+Public CalcQTotTime
+Public GetVMMemStart
+Public GetVMMemEnd
+Public GetVMMemTotTime
+Public VMTimeStart
+Public VMTimeEnd
+Public VMTotTime
+Public CallBmChkStart
+Public CallBmChkEnd
+Public CallBmChkTotTime
+Public DataTabsStart
+Public DataTabsEnd
+Public DataTabsTotTime
+Public DataOutStart
+Public DataOutEnd
+Public DataOutTotTime
+Public Data1mStart
+Public Data1mEnd
+Public Data1mTotTime
+Public AQTabStart
+Public AQTabEnd
+Public AQTabTotTime
+Public StoreToCrdStart
+Public StoreToCrdEnd
+Public StoreToCrdTotTime
+Public ChkSpikeStart
+Public ChkSpikeEnd
+Public ChkSpikeTotTime
+Public AddSpikeStart
+Public AddSpikeEnd
+Public AddSpikeTotTime
+Public ProcessTime
+Public DataOutCount
+Public AQcount
+Public Data1mCount
+Public CardBadCount
+Public CardOkCount
+#Else
+Dim DepthMSB As Long
+Dim DepthMSB1 As Long
+Dim DepthLSB As Long
+Dim DepthLSB1 As Long
+Dim IDwords(14) As Long
+Dim LSBTemp As Long
+Dim LSB1Temp As Long
+Dim MSBTemp As Long
+Dim MSB1Temp As Long
+Dim Subscans As Long
+Dim EnsBytes As Long
+Dim MissedEns As Long
+Dim ADCPLoop As Long
+Dim ADCPDone As Boolean
+Dim ScanDiff As Long
+Dim DebugTime(9)
+Alias DebugTime(3) = DayOfMnth
+Alias DebugTime(4) = Hours
+Alias DebugTime(5) = Minites
+Alias DebugTime(6) = Secints
+Alias DebugTime(7) = MicSec
+Dim ScanStart
+Dim ScanEnd
+Dim ADCPEnd
+Dim BeforeBurst
+Dim AfterBurst
+Dim CDMACheckStart
+Dim CDMACheckEnd
+Dim CDMACheckTotTime
+Dim ZeroVMTimeStart
+Dim ZeroVMTimeEnd
+Dim ZeroVMTotTime
+Dim ChkSumChkStart
+Dim ChkSumChkEnd
+Dim ChkSumChkTotTime
+Dim MainDecodeStart
+Dim MainDecodeEnd
+Dim MainDecodeTotTime
+Dim CalcRangeStart
+Dim CalcRangeEnd
+Dim CalcRangeTotTime
+Dim OneMinCalcStart
+Dim OneMinCalcEnd
+Dim OneMinCalcTotTime
+Dim CalcQStart
+Dim CalcQEnd
+Dim CalcQTotTime
+Dim GetVMMemStart
+Dim GetVMMemEnd
+Dim GetVMMemTotTime
+Dim VMTimeStart
+Dim VMTimeEnd
+Dim VMTotTime
+Dim CallBmChkStart
+Dim CallBmChkEnd
+Dim CallBmChkTotTime
+Dim DataTabsStart
+Dim DataTabsEnd
+Dim DataTabsTotTime
+Dim DataOutStart
+Dim DataOutEnd
+Dim DataOutTotTime
+Dim Data1mStart
+Dim Data1mEnd
+Dim Data1mTotTime
+Dim AQTabStart
+Dim AQTabEnd
+Dim AQTabTotTime
+Dim StoreToCrdStart
+Dim StoreToCrdEnd
+Dim StoreToCrdTotTime
+Dim ChkSpikeStart
+Dim ChkSpikeEnd
+Dim ChkSpikeTotTime
+Dim AddSpikeStart
+Dim AddSpikeEnd
+Dim AddSpikeTotTime
+Dim ProcessTime
+Dim DataOutCount
+Dim AQcount
+Dim Data1mCount
+Dim CardBadCount
+Dim CardOkCount
+#EndIf
+Public Banner As String * 200
+Public Warning As String * 2000
+Public VMMemString As String * 200
+#If GetNoiseFloor = Yes Then
+Public NoiseFlrParsed As String * 105
+Public FilterString As String * 5
+Public StartString
+Public NoiseHGainW(4)
+Public NoiseLGainW(4)
+Public NoiseHGainN(4)
+Public NoiseLGainN(4)
+Public SendPT3 As Boolean
+Public PT3Time As Long
+#EndIf
+Public CMD As String
+Public CSCmd As String * 10
+Public SendCMD As Boolean
+Public WakeUpVM As Boolean
+Public VMRestartAttempts As Long
+Public VMLowMem As Boolean
+Public VMLowMemCount As Float
+Public VMMemFree As Float
+Public VMLowMemVal As Float
+Public VMNoMem As Boolean
+Public VMNoMemCount As Float
+Public RecErased As Boolean
+Public RecEraseString As String * 200
+Public SendFlowData As Boolean
+PreserveVariables
+SetStatus ("USRDriveSize",16384)
+#If (WqSonde <> "NONE") Then
+DataTable (DataOut,Rec15minFlag,-1)
+OpenInterval
+CardOut (0,17280)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,IndexVel,IEEE4)
+Average (1,IndexVel,IEEE4,BadVelFlag)
+Average (1,MeanVel,IEEE4,BadQFlag)
+Average (1,Qcfs,IEEE4,BadQFlag)
+Sample (1,StagePrime,IEEE4)
+Average (1,StagePrime,IEEE4,BadStgFlag)
+Sample (1,StageSecnd,FP2)
+Average (1,StageSecnd,IEEE4,false)
+Average (1,PS1Stg,IEEE4,false)
+Average (1,PS2Stg,IEEE4,false)
+Average (1,UpBeamStg,IEEE4,false)
+Average (1,VMPressStg,IEEE4,false)
+Average (1,SondeStg,IEEE4,false)
+Average (1,StgDiff,IEEE4,False)
+Sample (1,StgSelect,String)
+Average (1,VMpitch,FP2,False)
+Average (1,VMroll,FP2,False)
+Sample (1,VMHeading,FP2)
+Average (1,VMtempC,FP2,False)
+Minimum (1,CR1Volts,FP2,False,False)
+Minimum (1,VMVolts,FP2,False,False)
+Sample (1,BadStgCount,FP2)
+Sample (1,BadVelCount,FP2)
+Sample (1,BadQCount,FP2)
+Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
+Average(1,AvgSwathRSSI,FP2,False)
+Sample (1,LowRatVel,FP2)
+Sample (1,HighRatVel,FP2)
+Minimum (1,ExtWHConvertVolt,FP2,False,False)
+Minimum (1,ExtSolarVolt,FP2,False,False)
+Average (1,RangedBin,FP2,False)
+Sample (1,WqTempC,FP2)
+Average (1,TempDiff,IEEE4,False)
+Sample (1,WqSpCond,IEEE4)
+Sample (1,WqBattV,FP2)
+Sample (1,WqDOMgl,FP2)
+Sample (1,WqPH,FP2)
+Sample (1,WqTurbFNU,FP2)
+Sample (1,WqChlugL,FP2)
+Sample (1,WqChlRFU,FP2)
+Average (1,WqDepthFt,FP2,WqBadData)
+Average (1,WqTurbFNU,FP2,WqBadData)
+Median (1,WqTurbFNU,15,FP2,WqBadData)
+Sample (1,WqDOSat,FP2)
+Sample (1,WqORP,FP2)
+Sample (1,WqFDOMrfu,FP2)
+Sample (1,WqFDOMqsu,FP2)
+Sample (1,WqBGAugl,FP2)
+Sample (1,WqNH4mgl,FP2)
+Sample (1,WqNO3mgl,FP2)
+Sample (1,WqCLmgl,FP2)
+Sample (1,WqWiperPos,FP2)
+EndTable
+#EndIf
+#If (WqSonde = "NONE") Then
+DataTable (DataOut,Rec15minFlag,-1)
+OpenInterval
+CardOut (0,17280)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,IndexVel,IEEE4)
+Average (1,IndexVel,IEEE4,BadVelFlag)
+Average (1,MeanVel,IEEE4,BadQFlag)
+Average (1,Qcfs,IEEE4,BadQFlag)
+Sample (1,StagePrime,IEEE4)
+Average (1,StagePrime,IEEE4,BadStgFlag)
+Sample (1,StageSecnd,FP2)
+Average (1,StageSecnd,IEEE4,false)
+Average (1,PS1Stg,IEEE4,false)
+Average (1,PS2Stg,IEEE4,false)
+Average (1,UpBeamStg,IEEE4,false)
+Average (1,VMPressStg,IEEE4,false)
+Average (1,SondeStg,IEEE4,false)
+Average (1,StgDiff,IEEE4,False)
+Sample (1,StgSelect,String)
+Average (1,VMpitch,FP2,False)
+Average (1,VMroll,FP2,False)
+Average (1,VMtempC,FP2,False)
+Sample (1,VMHeading,FP2)
+Minimum (1,CR1Volts,FP2,False,False)
+Minimum (1,VMVolts,FP2,False,False)
+Sample (1,BadStgCount,FP2)
+Sample (1,BadVelCount,FP2)
+Sample (1,BadQCount,FP2)
+Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
+Average(1,AvgSwathRSSI,FP2,False)
+Sample (1,LowRatVel,FP2)
+Sample (1,HighRatVel,FP2)
+Minimum (1,ExtWHConvertVolt,FP2,False,False)
+Minimum (1,ExtSolarVolt,FP2,False,False)
+EndTable
+#EndIf
+#If WqSonde = "WQ_SERIAL_BURST" Then
+DataTable(Burst,RecBurstFlag,-1)
+CardOut (0,17280)
+OpenInterval
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,BurstDate,IEEE4)
+Sample (1,BurstTime,IEEE4)
+Sample (1, BurstPeriod, IEEE4)
+Median (1,BurstDate,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstTime,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstORP,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstBattV,MaxBurstCnt,FP2,BurstMissed)
+Median (1,BurstpH,MaxBurstCnt,FP2,BurstMissed)
+Median (1,BurstpHmV,MaxBurstCnt,FP2,BurstMissed)
+Median (1,BurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
+Median (1,BurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
+StdDev (1,BurstTempC,IEEE4,False)
+Minimum (1,BurstTempC,IEEE4,False,0)
+Maximum (1,BurstTempC,IEEE4,False,0)
+StdDev (1,BurstSpCond,IEEE4,False)
+Minimum (1,BurstSpCond,IEEE4,False,0)
+Maximum (1,BurstSpCond,IEEE4,False,0)
+StdDev (1,BurstTurbFNU,IEEE4,False)
+Minimum (1,BurstTurbFNU,IEEE4,False,0)
+Maximum (1,BurstTurbFNU,IEEE4,False,0)
+StdDev (1,BurstDOSat,IEEE4,False)
+Minimum (1,BurstDOSat,IEEE4,False,0)
+Maximum (1,BurstDOSat,IEEE4,False,0)
+StdDev (1,BurstDOmgL,IEEE4,False)
+Minimum (1,BurstDOmgL,IEEE4,False,0)
+Maximum (1,BurstDOmgL,IEEE4,False,0)
+StdDev (1,BurstORP,IEEE4,False)
+Minimum (1,BurstORP,IEEE4,False,0)
+Maximum (1,BurstORP,IEEE4,False,0)
+StdDev (1,BurstDepthFt,IEEE4,False)
+Minimum (1,BurstDepthFt,IEEE4,False,0)
+Maximum (1,BurstDepthFt,IEEE4,False,0)
+StdDev (1,BurstBattV,FP2,False)
+Minimum (1,BurstBattV,FP2,False,0)
+Maximum (1,BurstBattV,FP2,False,0)
+StdDev (1,BurstpH,FP2,False)
+Minimum (1,BurstpH,FP2,False,0)
+Maximum (1,BurstpH,FP2,False,0)
+StdDev (1,BurstpHmV,FP2,False)
+Minimum (1,BurstpHmV,FP2,False,0)
+Maximum (1,BurstpHmV,FP2,False,0)
+StdDev (1,BurstChlugL,IEEE4,False)
+Minimum (1,BurstChlugL,IEEE4,False,0)
+Maximum (1,BurstChlugL,IEEE4,False,0)
+StdDev (1,BurstChlRFU,IEEE4,False)
+Minimum (1,BurstChlRFU,IEEE4,False,0)
+Maximum (1,BurstChlRFU,IEEE4,False,0)
+StdDev (1,BurstBGApcRFU,IEEE4,False)
+Minimum (1,BurstBGApcRFU,IEEE4,False,0)
+Maximum (1,BurstBGApcRFU,IEEE4,False,0)
+StdDev (1,BurstBGApcugL,IEEE4,False)
+Minimum (1,BurstBGApcugL,IEEE4,False,0)
+Maximum (1,BurstBGApcugL,IEEE4,False,0)
+StdDev (1,BurstFdomRFU,IEEE4,False)
+Minimum (1,BurstFdomRFU,IEEE4,False,0)
+Maximum (1,BurstFdomRFU,IEEE4,False,0)
+StdDev (1,BurstFDomQSU,IEEE4,False)
+Minimum (1,BurstFDomQSU,IEEE4,False,0)
+Maximum (1,BurstFDomQSU,IEEE4,False,0)
+StdDev (1,BurstNH4Amgl,IEEE4,False)
+Minimum (1,BurstNH4Amgl,IEEE4,False,0)
+Maximum (1,BurstNH4Amgl,IEEE4,False,0)
+StdDev (1,BurstNO3Nmgl,IEEE4,False)
+Minimum (1,BurstNO3Nmgl,IEEE4,False,0)
+Maximum (1,BurstNO3Nmgl,IEEE4,False,0)
+StdDev (1,BurstCLmgl,IEEE4,False)
+Minimum (1,BurstCLmgl,IEEE4,False,0)
+Maximum (1,BurstCLmgl,IEEE4,False,0)
+StdDev (1,BurstWiperPos,FP2,False)
+Minimum (1,BurstWiperPos,FP2,False,0)
+Maximum (1,BurstWiperPos,FP2,False,0)
+Sample (1,TotalBurstVals,FP2)
+Sample (1,BurstMissed,Boolean)
+Sample (1,BurstErrCnt,FP2)
+EndTable
+DataTable(SecBurst,True,-1)
+CardOut (0,350000)
+OpenInterval
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,BurstDate,IEEE4)
+Sample (1,BurstTime,IEEE4)
+Sample (1,BurstTempC,IEEE4)
+Sample (1,BurstTempF,IEEE4)
+Sample (1,BurstSpCond,IEEE4)
+Sample (1,BurstTurbFNU,IEEE4)
+Sample (1,BurstDOSat,IEEE4)
+Sample (1,BurstDOmgL,IEEE4)
+Sample (1,BurstORP,IEEE4)
+Sample (1,BurstDepthFt,IEEE4)
+Sample (1,BurstBattV,FP2)
+Sample (1,BurstpH,FP2)
+Sample (1,BurstpHmV,FP2)
+Sample (1,BurstChlugL,IEEE4)
+Sample (1,BurstChlRFU,IEEE4)
+Sample (1,BurstBGApcRFU,IEEE4)
+Sample (1,BurstBGApcugL,IEEE4)
+Sample (1,BurstFdomRFU,IEEE4)
+Sample (1,BurstFDomQSU,IEEE4)
+Sample (1,BurstNH4Amgl,IEEE4)
+Sample (1,BurstNO3Nmgl,IEEE4)
+Sample (1,BurstCLmgl,IEEE4)
+Sample (1,BurstWiperPos,FP2)
+Sample (1,TotalBurstVals,FP2)
+Sample (1,jCount,FP2)
+Sample (1,BurstMissed,Boolean)
+Sample (1,BurstErrCnt,FP2)
+EndTable
+DataTable (Aquarius,Rec15minFlag,-1)
+CardOut (0,17280)
+OpenInterval
+Minimum (1,CR1Volts,FP2,False,False)
+Sample (1,MedBurstDate,IEEE4)
+Sample (1,MedBurstTime,IEEE4)
+Minimum (1,WqBattV,FP2,False,False)
+Sample (1,MedTempC,IEEE4)
+Sample (1,MedSpCond,IEEE4)
+Sample (1,MedTurbFNU,IEEE4)
+Sample (1,MedDOSat,IEEE4)
+Sample (1,MedDOmgL,IEEE4)
+Sample (1,MedDepthFt,IEEE4)
+Sample (1,MedBattV,FP2)
+Sample (1,MedpH,IEEE4)
+Sample (1,MedChlugL,IEEE4)
+Sample (1,MedChlRFU,IEEE4)
+Sample (1,MedFdomRFU,IEEE4)
+Sample (1,MedFDomQSU,IEEE4)
+Sample (1,AvgPS1Stg,IEEE4)
+Sample (1,AvgPS2Stg,IEEE4)
+Sample (1,AvgUpBeamStg,IEEE4)
+Sample (1,AvgIndexVel,IEEE4)
+Minimum (1,VMVolts,FP2,False,False)
+Sample (1,AvgVMTemp,IEEE4)
+Sample (1,AvgVMPitch,IEEE4)
+Sample (1,AvgVMRoll,IEEE4)
+EndTable
+#ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then
+DataTable (Aquarius,Rec15minFlag,-1)
+CardOut (0,17280)
+OpenInterval
+Minimum (1,CR1Volts,FP2,False,False)
+Sample (1,WqDate,IEEE4)
+Sample (1,WqTime,IEEE4)
+Minimum (1,WqBattV,FP2,False,False)
+Sample (1,WqTempC,IEEE4)
+Sample (1,WqSpCond,IEEE4)
+Sample (1,WqTurbFNU,IEEE4)
+Sample (1,WqDOSat,IEEE4)
+Sample (1,WqDOMgl,IEEE4)
+Sample (1,WqDepthFt,IEEE4)
+Sample (1,WqBattV,IEEE4)
+Sample (1,WqPH,IEEE4)
+Sample (1,WqChlugL,IEEE4)
+Sample (1,WqChlRFU,IEEE4)
+Sample (1,WqFDOMrfu,IEEE4)
+Sample (1,WqFDOMqsu,IEEE4)
+Sample (1,AvgPS1Stg,IEEE4)
+Sample (1,AvgPS2Stg,IEEE4)
+Sample (1,AvgUpBeamStg,IEEE4)
+Sample (1,AvgIndexVel,IEEE4)
+Minimum (1,VMVolts,FP2,False,False)
+Sample (1,AvgVMTemp,IEEE4)
+Sample (1,AvgVMPitch,IEEE4)
+Sample (1,AvgVMRoll,IEEE4)
+EndTable
+#EndIf
+#If (WqSonde = "NONE") Then
+DataTable (Aquarius,Rec15minFlag,-1)
+CardOut (0,17280)
+OpenInterval
+Minimum (1,CR1Volts,FP2,False,False)
+Sample (1,AvgPS1Stg,IEEE4)
+Sample (1,AvgPS2Stg,IEEE4)
+Sample (1,AvgUpBeamStg,IEEE4)
+Sample (1,AvgIndexVel,IEEE4)
+Minimum (1,VMVolts,FP2,False,False)
+Sample (1,AvgVMTemp,IEEE4)
+Sample (1,AvgVMPitch,IEEE4)
+Sample (1,AvgVMRoll,IEEE4)
+EndTable
+#EndIf
+#If IsSpecStudy = Yes Then
+DataTable (VelData,RecAllVelFlag,-1)
+OpenInterval
+CardOut (0,17280)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample(1,Coord,String)
+Sample(1,Decode,String)
+Average(MaxBins,V1(),FP2,V1Disable())
+Average(MaxBins,V2(),FP2,V2Disable())
+Average(MaxBins,V3(),FP2,V3Disable())
+Average(MaxBins,V4(),FP2,V4disable())
+Average (108,ensRSSI(),UINT2,False)
+Average (108,ensCorr(),UINT2,False)
+Sample (1,VMHeading,FP2)
+Average (1,VMpitch,FP2,False)
+Average (1,VMroll,FP2,False)
+Average (1,VMtempC,FP2,False)
+EndTable
+#EndIf
+DataTable  (QAQCInfo,Rec24HrFlag,-1)
+CardOut (0,180)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,Tech,String)
+Sample (1,VisitReason,String
+Sample (1,Program,String)
+Sample (1,ProgVersDate,String)
+Sample (1,SerNum,Long)
+Sample (1,OSVers,String)
+Sample (1,AdcpSN,Long)
+Sample (1,IsCM,Boolean)
+Sample (1,NewADCP,Boolean)
+Sample (1,PS1SN,String)
+Sample (1,NewPS1,Boolean)
+Sample (1,PS2SN,String)
+Sample (1,NewPS2,Boolean)
+Sample (1,EX,Long)
+Sample (1,Coord,String)
+Sample (1,Decode,String)
+Sample (1,ProgErrors,Long)
+Sample (1,Low12Volts,Long)
+Sample (1,LithBat,FP2)
+Sample (1,SkipScans,Long)
+Sample (1,FreeCFMem,IEEE4)
+Sample (1,LowMeas,Boolean)
+Sample (1,HighMeas, Boolean)
+Sample (1,BadQCount,Long)
+Sample (1,BadVelCount,Long)
+Sample (1,BadBinCnt,Long)
+Sample (1,BadEnsCount,FP2)
+Sample (1,BadStgCount,Long)
+#If (WqSonde <> "NONE") Then
+Sample (1,WqErrCount,Long)
+Sample (1,WqBattV,FP2)
+#EndIf
+Sample (1,VMRestartAttempts,FP2)
+Sample (1,IndexVel,FP2)
+Sample (1,StagePrime,IEEE4)
+Sample (1,StageSecnd,IEEE4)
+Sample (1,SelStgPrime,FP2)
+Sample (1,SelStgSecnd,FP2)
+Sample (1,UpBeamStg,IEEE4)
+Sample (1,VMPressStg,IEEE4)
+Sample (1,PS1Stg,IEEE4)
+Sample (1,PS2Stg,IEEE4)
+Sample (1,SondeStg,IEEE4)
+Sample (1,UpBeamOffset,IEEE4)
+Sample (1,VMPressOffset,IEEE4)
+Sample (1,PS1Offset,IEEE4)
+Sample (1,PS2Offset,IEEE4)
+Sample (1,SondeOffset,IEEE4)
+Sample (1,VMtempC,FP2)
+Sample (1,VMpitch,FP2)
+Sample (1,VMroll,FP2)
+Sample (1,CR1Volts,FP2)
+Sample (1,ExtWHConvertVolt,FP2)
+Maximum (1,PTempC,FP2,false,false)
+Minimum (1,PTempC,FP2,false,false)
+Sample (1,NumADCPBins,FP2)
+Sample (1,NumBeams,FP2)
+Sample (1,EnsPings,FP2)
+Sample (1,BinSize,FP2)
+Sample (1,BlankDist,FP2)
+Sample (1,StartBin,FP2)
+Sample (1,EndBin,FP2)
+Sample (1,StartEbbBin,FP2)
+Sample (1,EndEbbBin,FP2)
+Sample (1,StartFldBin,FP2)
+Sample (1,EndFldBin,FP2)
+Sample (1,BiRatTran,FP2)
+Sample (1,UseBiRat,Boolean)
+Sample (1,CutOffBins,FP2)
+Sample (1,VMHeading,FP2)
+Sample (1,UseV2,Boolean)
+Sample (1,FlowSign,Long)
+Sample (1,CdmaWorks,Boolean)
+Sample (1,StgOffset,IEEE4)
+Sample (1,StgCoef,IEEE4)
+Sample (1,StgCoef2,IEEE4)
+Sample (1,VelOffset,IEEE4)
+Sample (1,VelCoef,IEEE4)
+Sample (1,VelCoef2,IEEE4)
+Sample (1,VelCoef3,IEEE4)
+Sample (1,UpVelOffset,IEEE4)
+Sample (1,UpVelCoef,IEEE4)
+Sample (1,UpVelCoef2,IEEE4)
+Sample (1,UpVelCoef3,IEEE4)
+Sample (1,LowVelOffset,IEEE4)
+Sample (1,LowVelCoef,IEEE4)
+Sample (1,LowVelCoef2,IEEE4)
+Sample (1,LowVelCoef3,IEEE4)
+Sample (1,Trans,FP2)
+Sample (1,VMLowMemCount,FP2)
+Sample (1,VMLowMem,Boolean)
+Sample (1,VMMemFree,FP2)
+Sample (1,RecErased,Boolean)
+EndTable
+DataTable(SiteVisit,True,-1)
+CardOut (0,50)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,IndexVel,IEEE4)
+Sample (1,Qcfs,IEEE4)
+Sample (1,StagePrime,IEEE4)
+Sample (1,UpBeamStg,IEEE4)
+Sample (1,VMPressStg,IEEE4)
+Sample (1,PS1Stg,IEEE4)
+Sample (1,PS2Stg,IEEE4)
+Sample (1,SondeStg,IEEE4)
+Sample (1,UpBeamOffset,IEEE4)
+Sample (1,VMPressOffset,IEEE4)
+Sample (1,PS1Offset,IEEE4)
+Sample (1,PS2Offset,IEEE4)
+Sample (1,SondeOffset,IEEE4)
+Sample (1,VMtempC,FP2)
+Sample (1,VMpitch,FP2)
+Sample (1,VMroll,FP2)
+Sample (1,CR1Volts,FP2)
+Sample (1,ExtWHConvertVolt,FP2)
+Sample (1,StartBin,Long)
+Sample (1,EndBin,Long)
+Sample (1,VMHeading,FP2)
+Sample (1,NumADCPBins,Long)
+Sample (1,BlankDist,Long)
+Sample (1,BinSize,Long)
+Sample (1,CutOffBins,FP2)
+#If (WqSonde <> "NONE") Then
+Sample (1,WqBattV,FP2)
+Sample (1,WqTempC,FP2)
+Sample (1,WqSpCond,IEEE4)
+Sample (1,WqTurbFNU,FP2)
+Sample (1,WqDOMgl,FP2)
+Sample (1,WqPH,FP2)
+Sample (1,WqChlugL,FP2)
+Sample (1,WqChlRFU,FP2)
+Sample (1,WqDepthFt,FP2)
+Sample (1,WqDOSat,FP2)
+Sample (1,WqFDOMrfu,FP2)
+Sample (1,WqFDOMqsu,FP2)
+Sample (1,WqBGArfu,FP2)
+Sample (1,WqBGAugl,FP2)
+Sample (1,WqNH4mgl,FP2)
+Sample (1,WqNO3mgl,FP2)
+Sample (1,WqCLmgl,FP2)
+Sample (1,WqErrCount,Long)
+#EndIf
+Sample (1,BadQCount,Long)
+Sample (1,LithBat,FP2)
+Sample (1,Tech,String)
+Sample (1,VisitReason,String)
+Sample (1,VMMemFree,FP2)
+EndTable
+DataTable (Data1m,Rec1MinFlag,-1)
+OpenInterval
+CardOut (0,43200)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,StagePrime,IEEE4)
+Sample (1,IndexVel,IEEE4)
+Sample (1,MeanVel,IEEE4,)
+Sample (1,Qcfs,IEEE4)
+#If (WqSonde <> "NONE") Then
+Sample (1,WqBattV,FP2)
+Sample (1,WqTempC,FP2)
+Sample (1,WqSpCond,IEEE4)
+Sample (1,WqTurbFNU,FP2)
+Sample (1,WqDOMgl,FP2)
+Sample (1,WqPH,FP2)
+Sample (1,WqPHmv,FP2)
+Sample (1,WqChlugL,FP2)
+Sample (1,WqChlRFU,FP2)
+Sample (1,WqDepthFt,FP2)
+Sample (1,WqDOSat,FP2)
+Sample (1,WqFDOMrfu,FP2)
+Sample (1,WqFDOMqsu,FP2)
+Sample (1,WqBGArfu,FP2)
+Sample (1,WqBGAugl,FP2)
+Sample (1,WqNH4mgl,FP2)
+Sample (1,WqNO3mgl,FP2)
+Sample (1,WqCLmgl,FP2)
+Sample (1,WqWiperPos,FP2)
+#EndIf
+Sample (MaxBins,VMBinVel(),IEEE4)
+Sample (MaxBins,V1(),IEEE4)
+Sample (MaxBins,V2(),IEEE4)
+Sample (MaxBins,V3(),IEEE4)
+Sample (MaxBins,V4(),IEEE4)
+Sample (1,RangedBin,FP2)
+Sample (1,CutOffBins,FP2)
+Sample (1,LowRatVel,FP2)
+Sample (1,HighRatVel,FP2)
+Sample (1,SelStgPrime,FP2)
+Sample (1,StageSecnd,IEEE4)
+Sample (1,SelStgSecnd,FP2)
+EndTable
+DataTable (BeamCheck,RecBeamCheckFlag,-1)
+OpenInterval
+CardOut (0,17280)
+Sample (1,SiteID,String)
+Sample (1,StagePrime,IEEE4)
+Sample (1,NumBeams,Long)
+Sample (1,NumADCPBins,Long)
+Sample (1,BinSize,Long)
+Sample (1,StartBin,Long)
+Sample (1,EndBin,Long)
+Sample (1,VMpitch,FP2)
+Sample (1,VMroll,FP2)
+Average (108,ensRSSI(),UINT2,False)
+Average (108,ensCorr(),UINT2,False)
+Sample (1,VMupBeam,IEEE4)
+Average (1,VMupBeam,IEEE4,False)
+Sample (1,VMtempC,IEEE4)
+Average (1,VMtempC,IEEE4,False)
+Sample (1,VMVolts,IEEE4)
+Average (1,VMVolts,IEEE4,False)
+Sample (1,ExtWHConvertVolt,IEEE4)
+Average (1,ExtWHConvertVolt,IEEE4,False)
+EndTable
+DataTable (SVMaq,True,1)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (1,CR1Volts,FP2)
+#If HasVM <> False Then
+Sample (1,StagePrime,FP2)
+Sample (1,StageSecnd,FP2)
+Sample (1,PS1Stg,FP2)
+Sample (1,PS2Stg,IEEE4)
+Sample (1,UpBeamStg,IEEE4)
+Sample (1,VMPressStg,IEEE4)
+Sample (1,SondeStg,IEEE4)
+Sample (1,IndexVel,FP2)
+Sample (1,VMpitch,FP2)
+Sample (1,VMroll,FP2)
+Sample (1,VMtempC,FP2)
+Sample (1,VMVolts,FP2)
+Sample (1,PS1Offset,IEEE4)
+Sample (1,PS2Offset,IEEE4)
+Sample (1,UpBeamOffset,IEEE4)
+Sample (1,VMPressOffset,IEEE4)
+Sample (1,SondeOffset,IEEE4)
+#EndIf
+#If (WqSonde <> "NONE") Then
+Sample (1,WqBattV,FP2)
+Sample (1,WqTempC,FP2)
+Sample (1,WqSpCond,IEEE4)
+Sample (1,WqTurbFNU,FP2)
+Sample (1,WqDOMgl,FP2)
+Sample (1,WqPH,FP2)
+Sample (1,WqPHmv,FP2)
+Sample (1,WqChlugL,FP2)
+Sample (1,WqChlRFU,FP2)
+Sample (1,WqDepthFt,FP2)
+Sample (1,WqDOSat,FP2)
+Sample (1,WqFDOMrfu,FP2)
+Sample (1,WqFDOMqsu,FP2)
+Sample (1,WqBGArfu,FP2)
+Sample (1,WqBGAugl,FP2)
+Sample (1,WqNH4mgl,FP2)
+Sample (1,WqNO3mgl,FP2)
+Sample (1,WqCLmgl,FP2)
+Sample (1,WqWiperPos,FP2)
+#EndIf
+EndTable
+#If GetNoiseFloor = Yes Then
+DataTable (NoiseFloor,True,-1)
+OpenInterval
+CardOut (0,180)
+Sample (1,SiteID,String)
+Sample (1,SiteNum,String)
+Sample (4,NoiseHGainW(),FP2)
+Sample (4,NoiseHGainN(),FP2)
+Sample (4,NoiseLGainW(),FP2)
+Sample (4,NoiseLGainN(),FP2)
+Sample (1,VMtempC,IEEE4)
+Sample (1,VMVolts,IEEE4)
+Sample (1,ExtWHConvertVolt,IEEE4)
+EndTable
+#EndIf
+DataTable (Debugger,True,-1)
+OpenInterval
+CardOut (0,1440)
+Sample (1,ScanStart,FP2)
+Sample (1,ScanEnd,FP2)
+Sample (1,ADCPEnd,FP2)
+Sample (1,BeforeBurst,FP2)
+Sample (1,AfterBurst,FP2)
+#If (WqSonde <> "NONE") Then
+#If (WqSonde = "WQ_SERIAL_BURST") Then
+Sample (1,BurstDebugCount,FP2)
+Sample (1,BurstCount,FP2)
+Sample (1,WipeTime,String)
+Sample (1,WqDelay,FP2)
+Sample (1,Wipeflag,Boolean)
+#EndIf
+Sample (1,WqErrCount,FP2)
+Sample (1,WqPwrCycleCnt,Long)
+#EndIf
+Sample (1,CDMACheckStart,FP2)
+Sample (1,CDMACheckEnd,FP2)
+Sample (1,CDMACheckTotTime,FP2)
+Sample (1,ZeroVMTimeStart,FP2)
+Sample (1,ZeroVMTimeEnd,FP2)
+Sample (1,ZeroVMTotTime,FP2)
+Sample (1,ChkSumChkStart,FP2)
+Sample (1,ChkSumChkEnd,FP2)
+Sample (1,ChkSumChkTotTime,FP2)
+Sample (1,MainDecodeStart,FP2)
+Sample (1,MainDecodeEnd,FP2)
+Sample (1,MainDecodeTotTime,FP2)
+Sample (1,CalcRangeStart,FP2)
+Sample (1,CalcRangeEnd,FP2)
+Sample (1,CalcRangeTotTime,FP2)
+Sample (1,OneMinCalcStart,FP2)
+Sample (1,OneMinCalcEnd,FP2)
+Sample (1,OneMinCalcTotTime,FP2)
+Sample (1,CalcQStart,FP2)
+Sample (1,CalcQEnd,FP2)
+Sample (1,CalcQTotTime,FP2)
+Sample (1,GetVMMemStart,FP2)
+Sample (1,GetVMMemEnd,FP2)
+Sample (1,GetVMMemTotTime,FP2)
+Sample (1,VMTimeStart,FP2)
+Sample (1,VMTimeEnd,FP2)
+Sample (1,VMTotTime,FP2)
+Sample (1,CallBmChkStart,FP2)
+Sample (1,CallBmChkEnd,FP2)
+Sample (1,CallBmChkTotTime,FP2)
+Sample (1,DataTabsStart,FP2)
+Sample (1,DataTabsEnd,FP2)
+Sample (1,DataTabsTotTime,FP2)
+Sample (1,DataOutStart,FP2)
+Sample (1,DataOutEnd,FP2)
+Sample (1,DataOutTotTime,FP2)
+Sample (1,Data1mStart,FP2)
+Sample (1,Data1mEnd,FP2)
+Sample (1,Data1mTotTime,FP2)
+Sample (1,AQTabStart,FP2)
+Sample (1,AQTabEnd,FP2)
+Sample (1,AQTabTotTime,FP2)
+Sample (1,StoreToCrdStart,FP2)
+Sample (1,StoreToCrdEnd,FP2)
+Sample (1,StoreToCrdTotTime,FP2)
+Sample (1,ChkSpikeStart,FP2)
+Sample (1,ChkSpikeEnd,FP2)
+Sample (1,ChkSpikeTotTime,FP2)
+Sample (1,AddSpikeStart,FP2)
+Sample (1,AddSpikeEnd,FP2)
+Sample (1,AddSpikeTotTime,FP2)
+Sample (1,ProcessTime,FP2)
+Sample (1,DataOutCount,FP2)
+Sample (1,Data1mCount,FP2)
+Sample (1,AQcount,FP2)
+Sample (1,CardBadCount,FP2)
+Sample (1,CardOkCount,FP2)
+Sample (1,OneMinCount,FP2)
+Sample (1,BurstComs,String)
+EndTable
+DataTable (DebugTimer,True,2880)
+Sample (9,DebugTime(),IEEE4)
+EndTable
+Sub GetStartup
+ProgVersDate = ProgramVersionDate
+LastScan = "00:00"
+Tech = "TAV"
+SiteID = "ODM"
+SiteNum = "11455315"
+VisitReason = "Program update"
+StartBin = 2
+EndBin = 13
+StartEbbBin = 1
+EndEbbBin = MaxBins
+StartFldBin = 1
+EndFldBin = MaxBins
+BiRating = False
+BiRatTran = 0
+MinExpStg = 0
+MaxExpStg = 30
+MinExpVel = -5
+MaxExpVel = 6
+LowRatVel = 0
+HighRatVel = 0
+FlowSign = 1
+SelStgPrime = PSpress
+SelStgSecnd = UPbeam
+UpBeamOffset = 0
+VMPressOffset = 0
+PS1Offset = 0
+PS2Offset = 0
+SondeOffset = 0
+PSPressPort = 3
+PSPressAddr = 0
+PSpress2Port = 5
+PSpress2Addr = 0
+#If WqSonde = "WQ_SDI12" Then
+WqSDIPort = 5
+WqAddr = 4
+LocTempC = 3
+LocSpCond = 4
+LocTurbFNU = 5
+LocVolts = 9
+LocChlorMGL = 11
+LocChlorRFU = 12
+LocPH = 10
+LocDOmgL = 7
+LocDOSat = 6
+LocDepth = 8
+LocORP = 0
+LocBGA = 0
+LocFdomRFU = 0
+LocFdomQSU = 0
+LocAmmonium = 0
+LocNitrate = 0
+LocChloride = 0
+MilliToMicro = No
+#EndIf
+CalcQ = Yes
+StgOffset = 0
+StgCoef = 0
+StgCoef2 = 0
+VelOffset = 0
+VelCoef = 0
+VelCoef2 = 0
+VelCoef3 = 0
+UpVelOffset = 0
+UpVelCoef = 0
+UpVelCoef2 = 0
+UpVelCoef3 = 0
+LowVelOffset = 0
+LowVelCoef = 0
+LowVelCoef2 = 0
+LowVelCoef3 = 0
+Trans = NAN
+AvgRSSIStartBin = StartBin
+AvgRSSIEndBin  = EndBin
+BiRatOK  = False
+UseBiRat = False
+#If GetNoiseFloor = Yes Then
+SendPT3 = True
+PT3Time = 3
+#EndIf
+InitialHRV = HighRatVel
+InitialLRV = LowRatVel
+InitialAdcpSN = 0
+InitialPS1SN = 0
+InitialPS2SN = 0
+#If WqSonde <> "NONE" Then
+WqDead = No
+WqErrCount = 0
+IsWQNClosed = Yes
+#If WqSonde = "WQ_SERIAL" Then
+Redeploy = True
+RecBurstFlag = False
+#EndIf
+#EndIf
+RangeSource = UPbeam
+DucerDepthOffset = 0
+RangedBin = 0
+CutOffBins = 1
+VMPower = Yes
+IsSubmersed = False
+IsCDMANClosed = Yes
+isVMNClosed = Yes
+KeepCDMAon = Yes
+UseV2 = No
+UseDir = No
+IsCM = Yes
+IsVADCP = No
+PosFlowDir = 0
+TrueUpBeamStg = BadDataIndicator
+TrueVMPressStg = BadDataIndicator
+TruePS1Stg = BadDataIndicator
+TruePS2Stg = BadDataIndicator
+TrueSondeStg = BadDataIndicator
+RSSIThreshold = 8
+CorrThreshold = 15
+SelectFilter = 1
+HrsCdmaOff = 4
+CDMAFailure = No
+VemcoRTR = No
+SendFlowData = False
+Rec1MinFlag = No
+OneMinCount = 0
+RecordAll = No
+RecDataFlag = False
+BadStgFlag = Yes
+BadVelFlag = Yes
+BadQFlag = Yes
+LowCount = 0
+HighCount = 0
+LowMeas = No
+HighMeas = No
+VMLowMemVal = 0
+#If GetNoiseFloor = Yes Then
+FilterString = "RSSI"
+#EndIf
+If IsSubmersed = False AND IsCDMANClosed Then
+#If LoggerType = CR1000 Then
+SW12(0)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,0)
+#EndIf
+Else
+#If LoggerType = CR1000 Then
+SW12(1)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,1)
+#EndIf
+EndIf
+IsCDMAOn = Yes
+EndSub
+Sub ExtPwrSource
+VoltDiff (ExtWHConvertVolt,1,mV5000,ExtPwrCom,True,0,250,0.01,0)
+VoltDiff (ExtSolarVolt,1,mv5000,ExtSolarCom,true,0,250,0.01,0)
+End Sub
+Sub GetLastScan
+RealTime (rTime())
+If Minute >= 0 AND Minute < 10 Then
+LastScan = Hour + ":0" + Minute
+Else
+LastScan = Hour + ":" + Minute
+EndIf
+EndSub
+Sub Initialize
+VMdataIn = No
+ScanNo = 0
+BadChecksum = 0
+HeaderMismatch = 0
+NumbytesZero = 0
+ReceivedBytes = 0
+WakeUpVM = No
+SetVMTimeFlg = No
+StoreVariablesFlg = No
+GetVariablesFlg = True
+VMRestartAttempts = 0
+AvgRSSIcounter = 0
+AvgRSSIAccum = 0
+AvgSwathRSSI = 0
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST")
+#If WqSonde = "WQ_SERIAL_BURST" Then
+Public iCount As Long = 0
+ResetTable(burst)
+RecBurstFlag = False
+GetBurst = Yes
+#Else
+GetBurst = No
+#EndIf
+SetEXOTimeFlg = No
+Redeploy = True
+WqParamOrder = BadDataIndicator
+Wipeflag = False
+WqManualCycle = False
+OldEXOTime = 0
+#EndIf
+Erase(Longarray())
+#If (WqSonde <> "NONE") Then
+WqDate = ""
+WqTime =""
+WqTempC = 0
+WqTempF = 0
+WqSpCond = 0
+WqTurbFNU = 0
+WqChlugL = 0
+WqChlRFU = 0
+WqDOMgl = 0
+WqDOSat = 0
+WqPH = 0
+WqPHmv = 0
+WqORP = 0
+WqDepthFt = 0
+WqBattV = 0
+WqBGAugl = 0
+WqBGArfu = 0
+WqFDOMrfu = 0
+WqFDOMqsu = 0
+WqNH4mgl = 0
+WqNO3mgl = 0
+WqCLmgl = 0
+WqWiperPos = 0
+WqErrCount = 0
+WqPwrCycleCnt = 0
+WqError = False
+WqDead = False
+#EndIf
+End Sub
+Sub GetSysInfo
+Battery (CR1Volts)
+SerNum = Status.SerialNumber(1,1)
+OSVers = Status.OSVersion(1,1)
+Program = Status.ProgName(1,1)
+ProgErrors = Status.ProgErrors(1,1)
+Low12Volts = Status.Low12VCount(1,1)
+LithBat = Status.LithiumBattery(1,1)
+SkipScans = Status.SkippedScan(1,1)
+FreeCFMem = Status.CardBytesFree(1,1)
+EndSub
+Sub CdmaCheck
+If IsSubmersed = True  Then
+ExitSub
+EndIf
+Select Case IsCDMANClosed
+Case Yes
+If KeepCDMAon = Yes Then
+#If LoggerType = CR1000 Then
+SW12(0)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,0)
+#EndIf
+IsCDMAOn = Yes
+Else
+If TimeIntoInterval(0,60,min) Then
+#If LoggerType = CR1000 Then
+SW12(0)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,0)
+#EndIf
+IsCDMAOn = Yes
+EndIf
+If TimeIntoInterval(10,60,min) Then
+#If LoggerType = CR1000 Then
+SW12(1)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,1)
+#EndIf
+IsCDMAOn = No
+EndIf
+EndIf
+Case No
+If KeepCDMAon = Yes Then
+#If LoggerType = CR1000 Then
+SW12(1)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,1)
+#EndIf
+IsCDMAOn = Yes
+Else
+If TimeIntoInterval(0,60,min) Then
+#If LoggerType = CR1000 Then
+SW12(1)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,1)
+#EndIf
+IsCDMAOn = Yes
+EndIf
+If TimeIntoInterval(10,60,min) Then
+#If LoggerType = CR1000 Then
+SW12(0)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,0)
+#EndIf
+IsCDMAOn = No
+EndIf
+EndIf
+EndSelect
+If CycleCdmaPwr = Yes Then
+If IsCDMANClosed Then
+#If LoggerType = CR1000 Then
+SW12(1)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,1)
+#EndIf
+Else
+#If LoggerType = CR1000 Then
+SW12(0)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,0)
+#EndIf
+EndIf
+IsCDMAOn = No
+CycleCdmaPwr = No
+EndIf
+LoggernetAddr = Route(4094)
+If LoggernetAddr = 4094 Then
+CdmaWorks = Yes
+CdmaScans = 0
+CDMAFailure = No
+Else
+CdmaWorks = No
+CdmaScans = CdmaScans + 1
+If (CdmaScans >= HrsCdmaOff * (FastLoopInterval * 4)) AND (EventCDMAFlag = No) Then
+If IsCDMANClosed Then
+#If LoggerType = CR1000 Then
+SW12(1)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,1)
+#EndIf
+Else
+#If LoggerType = CR1000 Then
+SW12(0)
+#EndIf
+#If LoggerType = CR6 Then
+SW12(1,0)
+#EndIf
+EndIf
+IsCDMAOn = No
+CDMAFailure = Yes
+CdmaScans = 0
+EndIf
+EndIf
+EndSub
+#If HasSlave = Yes Then
+Sub SerialDataOut
+Dim Outstring As String * 100
+Outstring = Qcfs+","+IndexVel+","+StagePrime+","+VMtempF+","+VMVolts+","+CR1Volts+","+PTempF
+SerialOut (SlaveCom,Outstring,"",0,0)
+EndSub
+#EndIf
+Sub (SendSetup)
+If (SendCMD) Then
+Banner = ""
+Warning = ""
+CSCmd = ""
+If CMD = "" Then
+SendCMD = False
+ExitSub
+EndIf
+SerialFlush (AdcpPort)
+Call CycleVMPower
+Call OpenADCPPort
+Delay (1,1,Sec)
+SerialIn (Banner,AdcpPort,500,">",200)
+SerialFlush (AdcpPort)
+Delay (1,1,Sec)
+SerialOut (AdcpPort,"+++" + CHR(13) + CHR(10),"",0,100)
+SerialIn (Banner,AdcpPort,500,">",200)
+SerialIn (Prompt,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+Delay (1,500,mSec)
+SerialOut (AdcpPort,CMD + CHR(13) + CHR(10),"",0,100)
+SerialIn (Warning,AdcpPort,150,-1,2000)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,"CS" + CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SendCMD = False
+Call EraseWH
+#If GetNoiseFloor = Yes Then
+Call ParsePT3
+#EndIf
+EndIf
+EndSub
+Sub OpenADCPPort
+#If LoggerType = CR6 Then
+If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
+If UseCommsZeroForADCP Then
+SerialOpen (AdcpPort,VmBaud,19,0,2000,0)
+Else
+SerialOpen (AdcpPort,VmBaud,19,0,2000)
+EndIf
+Else
+If UseCommsZeroForADCP Then
+SerialOpen (AdcpPort,VmBaud,3,0,2000,0)
+Else
+SerialOpen (AdcpPort,VmBaud,3,0,2000)
+EndIf
+EndIf
+#Else
+If (IsVmMax232 = Yes) AND (AdcpPort <> ComMe) Then
+SerialOpen (AdcpPort,VmBaud,19,0,2000)
+Else
+SerialOpen (AdcpPort,VmBaud,3,0,2000)
+EndIf
+#EndIf
+EndSub
+#If WqSonde <> "NONE"
+Sub OpenWQPort
+#If LoggerType = CR6
+If UseCommsOneForSonde = True Then
+SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)
+ElseIf UseCommsZeroForSonde = True Then
+SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)
+Else
+SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+EndIf
+#Else
+If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
+SerialOpen (WqSerialPort,WqBaud,19,0,2000)
+Else
+SerialOpen (WqSerialPort,WqBaud,0,0,2000)
+EndIf
+#EndIf
+EndSub
+#EndIf
+Sub EraseWH
+If CMD = "RE ErAsE" Then
+RecEraseString = Mid (Warning,23,15)
+Else
+RecEraseString = ""
+EndIf
+If RecEraseString = "Recorder erased" Then
+RecErased = True
+EndIf
+If IfTime (10,1440,min) AND RecErased = True Then
+RecErased = False
+EndIf
+EndSub
+#If GetNoiseFloor = Yes Then
+Sub ParsePT3
+Public PT3String As String * 2000
+PT3String = ""
+PT3String = Warning
+NoiseFlrParsed = ""
+Erase NoiseHGainW()
+Erase NoiseLGainW()
+Erase NoiseHGainN()
+Erase NoiseLGainN()
+If (IsCM = False) AND (IsWorkhorse = False) Then ExitSub
+If CMD = "PT3" Then
+VisitReason = "Sent PT3 Command to ADVM"
+If IsWorkhorse Then
+StartString = InStr (1,PT3String,FilterString,2)
+NoiseFlrParsed = Mid (PT3String,StartString,104)
+NoiseHGainW(1) = Mid (NoiseFlrParsed,10,2)
+NoiseHGainW(2) = Mid (NoiseFlrParsed,15,2)
+NoiseHGainW(3) = Mid (NoiseFlrParsed,20,2)
+NoiseHGainW(4) = Mid (NoiseFlrParsed,25,2)
+NoiseLGainW(1) = Mid (NoiseFlrParsed,50,2)
+NoiseLGainW(2) = Mid (NoiseFlrParsed,55,2)
+NoiseLGainW(3) = Mid (NoiseFlrParsed,60,2)
+NoiseLGainW(4) = Mid (NoiseFlrParsed,65,2)
+Else
+StartString = InStr (1,PT3String,FilterString,2)
+NoiseFlrParsed = Mid (PT3String,StartString,104)
+NoiseHGainW(1) = Mid (NoiseFlrParsed,33,2)
+NoiseHGainW(2) = Mid (NoiseFlrParsed,37,2)
+NoiseLGainW(1) = Mid (NoiseFlrParsed,52,2)
+NoiseLGainW(2) = Mid (NoiseFlrParsed,56,2)
+NoiseHGainN(1) = Mid (NoiseFlrParsed,71,2)
+NoiseHGainN(2) = Mid (NoiseFlrParsed,75,2)
+NoiseLGainN(1) = Mid (NoiseFlrParsed,90,2)
+NoiseLGainN(2) = Mid (NoiseFlrParsed,94,2)
+EndIf
+Else
+Warning = ""
+EndIf
+EndSub
+#EndIf
+#If HasVM Then
+Sub WakeVM
+Banner = ""
+CSCmd = ""
+Call CycleVmPower
+Call OpenAdcpPort
+If IsVADCP = True Then
+SerialOut (AdcpPort,"+++","",0,100)
+Delay (1,1,Sec)
+SerialIn (Banner,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,"CSTOP" + CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+Delay (1,1,Sec)
+SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+VMRestartAttempts = VMRestartAttempts + 1
+Else
+Delay (1,1,Sec)
+SerialIn (Banner,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+VMRestartAttempts = VMRestartAttempts + 1
+EndIf
+VmDeadCount = 0
+EndSub
+#EndIf
+Sub SetVMTime
+VMTimeStart = Timer(2,msec,4)
+VMTimeStart = VMTimeStart/1000
+Call CycleVmPower
+RawSetTime = Status.Timestamp
+SplitStr (SplitTime(),RawSetTime," ",6,0)
+#If Debugging = True Then
+Public SendVMMonth As String
+Public SendVMDay As String
+Public SendVmHour As String
+Public SendVmMin As String
+Public SendVmSec As String
+Public SendVmYear As String
+#Else
+Dim SendVMMonth As String
+Dim SendVMDay As String
+Dim SendVmHour As String
+Dim SendVmMin As String
+Dim SendVmSec As String
+Dim SendVmYear As String
+#EndIf
+If SplitTime(1) < 10 Then
+SendVMMonth = "0" + SplitTime(1)
+Else
+SendVMMonth = SplitTime(1)
+EndIf
+If SplitTime(2) < 10 Then
+SendVMDay = "0" + SplitTime(2)
+Else
+SendVMDay = SplitTime(2)
+EndIf
+If SplitTime(4) < 10 Then
+SendVmHour = "0" + SplitTime(4)
+Else
+SendVmHour = SplitTime(4)
+EndIf
+If SplitTime(5) < 10 Then
+SendVmMin = "0" + SplitTime(5)
+Else
+SendVmMin = SplitTime(5)
+EndIf
+If Round(SplitTime(6),0) < 10 Then
+SendVmSec = "0" + Round(SplitTime(6),0)
+Else
+SendVmSec = Round(SplitTime(6),0)
+EndIf
+SendVmYear = Right(SplitTime(3),2)
+VMTimeString = "TS" + SendVmYear + "/" + SendVMMonth + "/" + SendVMDay + "," + SendVmHour + ":" + SendVmMin + ":" + SendVmSec
+Call OpenADCPPort
+If IsVADCP = True Then
+SerialOut (AdcpPort,"+++","",0,100)
+Delay (1,1,Sec)
+SerialIn (Banner,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,"CSTOP" + CHR(13) + CHR(10),"",0,100)
+SerialIn (Warning,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
+SerialIn (Warning,AdcpPort,100,-1,100)
+Delay (1,1,Sec)
+SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+Else
+SerialOut (AdcpPort,"+++","",0,100)
+Delay (1,1,Sec)
+SerialIn (Banner,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
+SerialIn (Warning,AdcpPort,100,-1,100)
+Delay (1,1,Sec)
+SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+EndIf
+SetVMTimeFlg = false
+VMTimeEnd = Timer(2,msec,4)
+VMTimeEnd = VMTimeEnd/1000
+VMTotTime = VMTimeEnd - VMTimeStart
+EndSub
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub SetEXOTime
+RawSetTime = Status.Timestamp
+SplitStr (SplitTime(),RawSetTime," ",6,0)
+Public SendEXOHour As String
+Public SendEXOMin As String
+Public SendEXOSec As String
+Public CalcHour As Float
+CalcHour = SplitTime(4)
+CalcHour = CalcHour + 8
+If CalcHour >= 24 Then CalcHour = CalcHour - 24
+If CalcHour < 10 Then
+SendEXOHour = "0" + CalcHour
+Else
+SendEXOHour = CalcHour
+EndIf
+If SplitTime(5) < 10 Then
+SendEXOMin = "0" + SplitTime(5)
+Else
+SendEXOMin = SplitTime(5)
+EndIf
+If Round(SplitTime(6),0) < 10 Then
+SendEXOSec = "0" + Round(SplitTime(6),0)
+Else
+SendEXOSec = Round(SplitTime(6),0)
+EndIf
+EXOTimeString = SendEXOHour + ":" + SendEXOMin + ":" + SendEXOSec
+Call OpenWQPort
+SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+Delay (1,10,mSec)
+SerialOut (WqSerialPort,"time " + EXOTimeString + CHR(13) + CHR(10),"OK",3,50)
+Delay (1,200,mSec)
+SerialFlush(WqSerialPort)
+SerialClose(WqSerialPort)
+SetEXOTimeFlg = False
+End Sub
+#EndIf
+Sub CycleVMPower
+Select Case IsSubmersed
+Case False
+SerialFlush (AdcpPort)
+If isVMNClosed Then
+PortSet (VMSwitchPort,1 )
+Delay (1,3,Sec)
+PortSet (VMSwitchPort,0)
+Else
+PortSet (VMSwitchPort,0 )
+Delay (1,3,Sec)
+PortSet (VMSwitchPort,1)
+EndIf
+Case True
+SerialFlush (AdcpPort)
+#If LoggerType = CR1000 Then SW12(0)
+#ElseIf LoggerType = CR6 Then SW12(1,0)
+#EndIf
+Delay (1,3,Sec)
+#If LoggerType = CR1000 Then SW12(1)
+#ElseIf LoggerType = CR6 Then SW12(1,1)
+#EndIf
+EndIf
+EndSub
+Sub ToggleVMPower
+Select Case IsSubmersed
+Case False
+If VMPower = True Then
+ExitSub
+EndIf
+If VMPower = False Then
+SerialFlush (AdcpPort)
+If isVMNClosed Then
+PortSet (VMSwitchPort,1)
+Else
+PortSet (VMSwitchPort,0)
+EndIf
+EndIf
+Case True
+If VMPower = True Then
+#If LoggerType = CR1000 Then SW12(1)
+#ElseIf LoggerType = CR6 Then SW12(1,1)
+#EndIf
+ExitSub
+Else
+SerialFlush (AdcpPort)
+#If LoggerType = CR1000 Then SW12(0)
+#ElseIf LoggerType = CR6 Then SW12(1,0)
+#EndIf
+EndIf
+End Select
+EndSub
+Sub GetVMFreeMem
+Banner = ""
+Warning = ""
+If IsWorkhorse = False Then ExitSub
+If IfTime(10,1440,Min) AND RecCalibData = False Then
+SerialOut (AdcpPort,"+++" + CHR(13) + CHR(10),"",0,100)
+SerialIn (Banner,AdcpPort,500,">",200)
+SerialIn (Prompt,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+Delay (1,500,mSec)
+SerialOut (AdcpPort,"RS?" + CHR(13) + CHR(10),"",0,100)
+SerialIn (VMMemString,AdcpPort,150,-1,150)
+SerialFlush (AdcpPort)
+SerialOut (AdcpPort,"CS" + CHR(13) + CHR(10),"",0,100)
+SerialIn (CSCmd,AdcpPort,100,-1,100)
+SerialFlush (AdcpPort)
+SendCMD = False
+VMMemFree = Mid (VMMemString,17,3)
+Else
+VMMemString = ""
+If VMMemFree <= VMLowMemVal Then
+VMLowMem = True
+VMLowMemCount = VMLowMemCount + 1
+Else
+VMLowMem = False
+VMLowMemCount = 0
+EndIf
+If VMMemFree = 0 Then
+VMNoMem = True
+VMNoMemCount = VMNoMemCount + 1
+Else
+VMNoMem = False
+VMNoMemCount = 0
+EndIf
+EndIf
+EndSub
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub DefineLocs
+WqLocDate = t(1)
+WqLocTime = t(2)
+WqLocTempC = t(3)
+WqLocTempF = t(4)
+WqLocCond = t(5)
+WqLocTurb = t(6)
+WqLocDoSat = t(7)
+WqLocDOmgL = t(8)
+WqLocDepth = t(9)
+WqLocBatt = t(10)
+WqLocpH = t(11)
+WqLocpHmV = t(12)
+WqLocORP = t(13)
+WqLocChlugL = t(14)
+WqLocChlRFU = t(15)
+WqLocBGApcRFU = t(16)
+WqLocBGApcugL = t(17)
+WqLocFDomRFU = t(18)
+WqLocFDomQSU = t(19)
+WqLocNH4 = t(20)
+WqLocNO3 = t(21)
+WqLocCL = t(22)
+WqLocWiperPos = t(23)
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub ParamCheck
+Call OpenWQPort
+SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+Delay (1,10,mSec)
+SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
+Delay (1,300,mSec)
+SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
+WqIn = Trim(WqIn)
+SplitStr (WqParamOrder,WqIn,CHR(32),WqNparams,0)
+NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+Delay (1,200,mSec)
+SerialFlush(WqSerialPort)
+SerialClose(WqSerialPort)
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub SetDelim
+Call OpenWQPort
+SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+Delay (1,10,mSec)
+SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
+Delay (1,300,mSec)
+SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
+NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+Delay (1,20,mSec)
+SerialFlush(WqSerialPort)
+SerialClose(WqSerialPort)
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub GetWQ_Serial
+Call OpenWQPort
+SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+Delay (1,10,mSec)
+SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
+Delay (1,200,mSec)
+SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
+Erase WqData()
+WqIn = Trim(WqIn)
+SplitStr (WqData,WqIn,",",WqNparams,0)
+NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+Delay (1,20,mSec)
+SerialFlush(WqSerialPort)
+SerialClose(WqSerialPort)
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub ParseData
+If (WqData(WqLocDate) <> NAN) AND (WqData(WqLocDate)<> 0) AND (WqData(WqLocTime)<> OldEXOTime)  Then
+OldEXOTime = WqData(WqLocTime)
+WqError = False
+WqDead = False
+WqErrCount = 0
+WqPwrCycleCnt = 0
+Else
+WqError = True
+OldEXOTime = WqData(WqLocTime)
+Call WQ_Mark_Bad
+Exit Sub
+EndIf
+If WqLocDate > 0 Then WqDate = WqData(WqLocDate)
+If WqLocTime > 0 Then WqTime = WqData(WqLocTime)
+If WqLocTempC > 0 Then WqTempC = WqData(WqLocTempC)
+If WqLocTempF > 0 Then WqTempF = WqData(WqLocTempF)
+If WqLocCond > 0 Then WqSpCond = WqData(WqLocCond)
+If WqLocTurb > 0 Then WqTurbFNU = WqData(WqLocTurb)
+If WqLocDoSat > 0 Then WqDOSat = WqData(WqLocDoSat)
+If WqLocDOmgL > 0 Then WqDOMgl = WqData(WqLocDOmgL)
+If WqLocDepth > 0 Then WqDepthFt = WqData(WqLocDepth)
+If WqLocBatt > 0 Then WqBattV = WqData(WqLocBatt)
+If WqLocpH > 0 Then WqPH = WqData(WqLocpH)
+If WqLocpHmV > 0 Then WqPHmv = WqData(WqLocpHmV)
+If WqLocORP > 0 Then WqORP = WqData(WqLocORP)
+If WqLocChlugL > 0 Then WqChlugL = WqData(WqLocChlugL)
+If WqLocChlRFU > 0 Then WqChlRFU = WqData(WqLocChlRFU)
+If WqLocBGApcRFU > 0 Then WqBGArfu = WqData(WqLocBGApcRFU)
+If WqLocBGApcugL > 0 Then WqBGAugl = WqData(WqLocBGApcugL)
+If WqLocFDomRFU > 0 Then WqFDOMrfu = WqData(WqLocFDomRFU)
+If WqLocFDomQSU > 0 Then WqFDOMqsu = WqData(WqLocFDomQSU)
+If WqLocNH4 > 0 Then WqNH4mgl = WqData(WqLocNH4)
+If WqLocNO3 > 0 Then WqNO3mgl = WqData(WqLocNO3)
+If WqLocCL > 0 Then WqCLmgl = WqData(WqLocCL)
+If WqLocWiperPos > 0 Then WqWiperPos = WqData(WqLocWiperPos)
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub DefineParamsOrder
+t(1) = FindSpa (DateCode,DateCode,1,WqParamOrder())
+t(2) = FindSpa (TimeCode,TimeCode,1,WqParamOrder())
+t(3) = FindSpa (TempCCode,TempCCode,1,WqParamOrder())
+t(4) = FindSpa (TempFCode,TempFCode,1,WqParamOrder())
+t(5) = FindSpa (CondCode,CondCode,1,WqParamOrder())
+t(6) = FindSpa (TurbCode,TurbCode,1,WqParamOrder())
+t(7) = FindSpa (DoSatCode,DoSatCode,1,WqParamOrder())
+t(8) = FindSpa (DOmgLCode,DOmgLCode,1,WqParamOrder())
+t(9) = FindSpa (DepthCode,DepthCode,1,WqParamOrder())
+t(10) = FindSpa (BattCode,BattCode,1,WqParamOrder())
+t(11) = FindSpa (pHCode,pHCode,1,WqParamOrder())
+t(12) = FindSpa (pHmVCode,pHmVCode,1,WqParamOrder())
+t(13) = FindSpa (ORPCode,ORPCode,1,WqParamOrder())
+t(14) = FindSpa (ChlugLCode,ChlugLCode,1,WqParamOrder())
+t(15) = FindSpa (ChlRFUCode,ChlRFUCode,1,WqParamOrder())
+t(16) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,WqParamOrder())
+t(17) = FindSpa (BGApcugLCode,BGApcugLCode,1,WqParamOrder())
+t(18) = FindSpa (FDomRFU,FDomRFU,1,WqParamOrder())
+t(19) = FindSpa (FDomQSU,FDomQSU,1,WqParamOrder())
+t(20) = FindSpa (NH4Code,NH4Code,1,WqParamOrder())
+t(21) = FindSpa (NO3Code,NO3Code,1,WqParamOrder())
+t(22) = FindSpa (CLCode,CLCode,1,WqParamOrder())
+t(23) = FindSpa (WiperPos,WiperPos,1,WqParamOrder())
+EndSub
+#EndIf
+#If WqSonde = "WQ_SERIAL_BURST" Then
+Sub SetBurst
+Call OpenWQPort
+SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+Delay (1,20,mSec)
+#If LoggerType = CR6 Then
+SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
+#Else
+SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
+#EndIf
+Delay (1,200,msec)
+SerialOut (WqSerialPort,"#" + CHR(13),"#" + CHR(13),3,100)
+SerialOut (WqSerialPort,"run" + CHR(13),"run" + CHR(13),3,10)
+Delay (1,1,Sec)
+End Sub
+Sub GetBurstArray
+BurstCount = 0
+Dim Lcount As Long
+For Lcount = 1 To 30
+SerialIn (BurstIn,WqSerialPort,100,"#",150)
+Delay(1,50,mSec)
+If BurstIn = "" Then
+WqError = true
+iCount = 1
+Exit Sub
+EndIf
+BurstIn = Replace (BurstIn,"-nan","-9999")
+SplitStr (BurstArray(iCount,1),BurstIn,CHR(32),17,0)
+Delay(1,20,mSec)
+Erase(BurstIn)
+SerialFlush(WqSerialPort)
+iCount = iCount+1
+#If WqBaud = 9600 Then
+Delay(1,1100,mSec)
+#Else
+Delay (1,930,mSec)
+#EndIf
+Next Lcount
+Delay (1,20,mSec)
+SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50)
+SerialClose(WqSerialPort)
+End Sub
+#EndIf
+#If WqSonde = "WQ_SERIAL_BURST" Then
+Sub ParseBurst
+If (BurstData(WqLocDate) <> NAN) AND (BurstData(WqLocDate) <> 0) Then
+WqError = False
+WqDead = False
+WqErrCount = 0
+WqPwrCycleCnt = 0
+Else
+WqError = True
+EndIf
+If WqLocDate > 0 Then BurstDate = BurstData(WqLocDate)
+If WqLocTime > 0 Then BurstTime = BurstData(WqLocTime)
+If WqLocTempC > 0 Then BurstTempC = BurstData(WqLocTempC)
+If WqLocTempF > 0 Then BurstTempF = BurstData(WqLocTempF)
+If WqLocCond > 0 Then BurstSpCond = BurstData(WqLocCond)
+If WqLocTurb > 0 Then BurstTurbFNU = BurstData(WqLocTurb)
+If WqLocDoSat > 0 Then BurstDOSat = BurstData(WqLocDoSat)
+If WqLocDOmgL > 0 Then BurstDOmgL = BurstData(WqLocDOmgL)
+If WqLocDepth > 0 Then BurstDepthFt = BurstData(WqLocDepth)
+If WqLocBatt > 0 Then BurstBattV = BurstData(WqLocBatt)
+If WqLocpH > 0 Then BurstpH = BurstData(WqLocpH)
+If WqLocpHmV > 0 Then BurstpHmV = BurstData(WqLocpHmV)
+If WqLocORP > 0 Then BurstORP = BurstData(WqLocORP)
+If WqLocChlugL > 0 Then BurstChlugL = BurstData(WqLocChlugL)
+If WqLocChlRFU > 0 Then BurstChlRFU = BurstData(WqLocChlRFU)
+If WqLocBGApcRFU > 0 Then BurstBGApcRFU = BurstData(WqLocBGApcRFU)
+If WqLocBGApcugL > 0 Then BurstBGApcugL = BurstData(WqLocBGApcugL)
+If WqLocFDomRFU > 0 Then BurstFdomRFU = BurstData(WqLocFDomRFU)
+If WqLocFDomQSU > 0 Then BurstFDomQSU = BurstData(WqLocFDomQSU)
+If WqLocNH4 > 0 Then BurstNH4Amgl = BurstData(WqLocNH4)
+If WqLocNO3 > 0 Then BurstNO3Nmgl = BurstData(WqLocNO3)
+If WqLocCL > 0 Then BurstCLmgl = BurstData(WqLocCL)
+If WqLocWiperPos > 0 Then BurstWiperPos = BurstData(WqLocWiperPos)
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL_BURST") Then
+Sub ResetBurstVars
+MedBurstDate = BadDataIndicator
+MedBurstTime = BadDataIndicator
+MedTempC = BadDataIndicator
+MedTempF = BadDataIndicator
+MedSpCond = BadDataIndicator
+MedTurbFNU = BadDataIndicator
+MedDOSat = BadDataIndicator
+MedDOmgL= BadDataIndicator
+MedORP= BadDataIndicator
+MedDepthFt = BadDataIndicator
+MedBattV= BadDataIndicator
+MedpH= BadDataIndicator
+MedpHmV= BadDataIndicator
+MedChlugL= BadDataIndicator
+MedChlRFU= BadDataIndicator
+MedBGApcRFU= BadDataIndicator
+MedBGApcugL= BadDataIndicator
+MedFdomRFU= BadDataIndicator
+MedFDomQSU= BadDataIndicator
+MedNH4Amgl= BadDataIndicator
+MedNO3Nmgl= BadDataIndicator
+MedCLmgl= BadDataIndicator
+MedWiperPos= BadDataIndicator
+EndSub
+Sub CopyMedBurstVals
+MedBurstDate = Burst.BurstDate_Med
+MedBurstTime = Burst.BurstTime_Med
+MedBurstTime = Round(MedBurstTime,0)
+MedTempC = Burst.BurstTempC_Med
+MedTempF = Burst.BurstTempF_Med
+MedSpCond = Burst.BurstSpCond_Med
+MedTurbFNU = Burst.BurstTurbFNU_Med
+MedDOSat = Burst.BurstDOSat_Med
+MedDOmgL= Burst.BurstDOmgL_Med
+MedORP= Burst.BurstORP_Med
+MedDepthFt = Burst.BurstDepthFt_Med
+MedBattV= Burst.BurstBattV_Med
+MedpH= Burst.BurstpH_Med
+MedpHmV= Burst.BurstpHmV_Med
+MedChlugL= Burst.BurstChlugL_Med
+MedChlRFU= Burst.BurstChlRFU_Med
+MedBGApcRFU= Burst.BurstBGApcRFU_Med
+MedBGApcugL= Burst.BurstBGApcugL_Med
+MedFdomRFU= Burst.BurstFdomRFU_Med
+MedFDomQSU= Burst.BurstFDomQSU_Med
+MedNH4Amgl= Burst.BurstNH4Amgl_Med
+MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
+MedCLmgl= Burst.BurstCLmgl_Med
+MedWiperPos= Burst.BurstWiperPos_Med
+EndSub
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Sub WipeWq
+Call OpenWQPort
+SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+Delay(1,10,mSec)
+SerialOut (WqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
+SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
+SplitStr (WqDelay,WqIn,"",1,0)
+EndSub
+#EndIf
+#If (WqSonde <> "NONE") Then
+Sub CycleWQPower
+#If LoggerType = CR1000 Then
+If IsWQNClosed Then
+PortSet(WqSwitchPort,1)
+Else
+PortSet(WqSwitchPort,0)
+EndIf
+#ElseIf LoggerType = CR6 Then
+If  UseSW12_2_forWQ Then
+SW12(2,0)
+Else
+If IsWQNClosed Then
+PortSet(WqSwitchPort,1)
+Else
+PortSet(WqSwitchPort,0)
+EndIf
+EndIf
+#EndIf
+WqPwrCycleCnt = 0
+WqManualCycle = False
+Delay(1,15,sec)
+ErrorEvent = "Cycle Sonde Power"
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Redeploy = true
+#EndIf
+EndSub
+#EndIf
+#If WqSonde = "WQ_SDI12" Then
+Sub GetWq_SDI12
+Select Case WqSDIPort
+Case 3
+SDI12Recorder (WqSDI12Sensor(),WqCom3,WqAddr,"C!",1.0,0)
+Case 5
+SDI12Recorder (WqSDI12Sensor(),wqCom5,WqAddr,"C!",1.0,0)
+EndSelect
+If (WqSDI12Sensor(1) <> NAN) AND (WqSDI12Sensor(1) <> 0)  Then
+WqError = No
+WqErrCount = 0
+WqDead = No
+If LocTempC > 0 Then WqTempC = WqSDI12Sensor(LocTempC)
+If LocSpCond > 0 Then WqSpCond = WqSDI12Sensor(LocSpCond)
+If MilliToMicro = Yes Then WqSpCond = WqSpCond * 1000
+If LocVolts > 0 Then WqBattV = WqSDI12Sensor(LocVolts)
+If LocDOmgL > 0 Then WqDOMgl = WqSDI12Sensor(LocDOmgL)
+If LocDOSat > 0 Then WqDOSat = WqSDI12Sensor(LocDOSat)
+If LocPH > 0 Then WqPH = WqSDI12Sensor(LocPH)
+If LocORP > 0 Then WqORP = WqSDI12Sensor(LocORP)
+If LocDepth > 0 Then WqDepthFt = WqSDI12Sensor(LocDepth)
+If LocTurbFNU > 0 Then WqTurbFNU = WqSDI12Sensor(LocTurbFNU)
+If LocFdomRFU > 0 Then WqFDOMrfu = WqSDI12Sensor(LocFdomRFU)
+If LocFdomQSU > 0 Then WqFDOMqsu = WqSDI12Sensor(LocFdomQSU)
+If LocChlorMGL > 0 Then WqChlugL = WqSDI12Sensor(LocChlorMGL)
+If LocChlorRFU > 0 Then WqChlRFU = WqSDI12Sensor(LocChlorRFU)
+If LocBGA > 0 Then WqBGAugl = WqSDI12Sensor(LocBGA)
+If LocAmmonium > 0 Then WqNH4mgl = WqSDI12Sensor(LocAmmonium)
+If LocNitrate > 0 Then WqNO3mgl = WqSDI12Sensor(LocNitrate)
+If LocChloride > 0 Then WqCLmgl = WqSDI12Sensor(LocChloride)
+If LocWiperPos > 0 Then WqWiperPos = WqSDI12Sensor(LocWiperPos)
+WqTempF = WqTempC*1.8+32
+Wiper1Min = Data1m.wqWiperPos
+If WqWiperPos > Data1m.wqWiperPos + 0.1 OR WqWiperPos < Data1m.wqWiperPos - 0.1 Then
+WiperErrCount = WiperErrCount + 1
+Else
+WiperErrCount = 0
+WiperTestCount = WiperTestCount + 1
+EndIf
+If WiperErrCount >= 15 Then
+WiperOut = True
+Else
+WiperOut = False
+EndIf
+If WqWiperPos < Data1m.wqWiperPos + 0.1 AND WqWiperPos > Data1m.wqWiperPos - 0.1 Then
+WiperInCount = WiperInCount + 1
+EndIf
+Else
+WqErrCount = WqErrCount + 1
+WqPwrCycleCnt = WqPwrCycleCnt + 1
+WqError = True
+WqBattV = -999999
+WqSDI12Sensor() = NAN
+Call WQ_Mark_Bad
+If WqDead Then
+Call CycleWQPower
+Else
+If WqErrCount >= WQDeadCntMax Then
+WqDead = Yes
+Else
+WqDead = No
+EndIf
+EndIf
+EndIf
+EndSub
+#EndIf
+#If (WqSonde <> "NONE") Then
+Sub WQ_Mark_Bad
+WqDate = ""
+WqTime =""
+WqTempC = BadDataIndicator
+WqTempF = BadDataIndicator
+WqSpCond = BadDataIndicator
+WqTurbFNU = BadDataIndicator
+WqChlugL = BadDataIndicator
+WqChlRFU = BadDataIndicator
+WqDOMgl = BadDataIndicator
+WqDOSat = BadDataIndicator
+WqPH = BadDataIndicator
+WqPHmv = BadDataIndicator
+WqORP = BadDataIndicator
+WqDepthFt = BadDataIndicator
+WqBattV = BadDataIndicator
+WqBGAugl = BadDataIndicator
+WqBGArfu = BadDataIndicator
+WqFDOMrfu = BadDataIndicator
+WqFDOMqsu = BadDataIndicator
+WqNH4mgl = BadDataIndicator
+WqNO3mgl = BadDataIndicator
+WqCLmgl = BadDataIndicator
+WqWiperPos = BadDataIndicator
+EndSub
+#EndIf
+Sub GetStage
+If IsWorkhorse Then
+VMpressure = WHpressure
+EndIf
+Call GetPSPress
+Call GetPsPress2
+UpBeamStg = VMupBeam + UpBeamOffset
+VMPressStg = VMpressure + VMPressOffset
+PS1Stg = PsPress1Stg(1) + PS1Offset
+PS2Stg = PSpress2Stg(1) + PS2Offset
+#If WqSonde <> "NONE" Then
+SondeStg = WqDepthFt + SondeOffset
+#EndIf
+Select Case SelStgPrime
+Case UPbeam
+If (VMdataIn = Yes AND VMupBeam <> NAN) Then
+StagePrime = UpBeamStg
+BadStgFlag = No
+Else
+BadStgFlag = Yes
+StagePrime = BadDataIndicator
+EndIf
+Case VMpress
+If (VMdataIn = Yes AND VMpressure <> NAN) Then
+StagePrime = VMPressStg
+BadStgFlag = No
+Else
+BadStgFlag = Yes
+StagePrime = BadDataIndicator
+EndIf
+Case PSpress
+If PSPressDataIn = Yes Then
+StagePrime = PS1Stg
+BadStgFlag = No
+Else
+BadStgFlag = Yes
+StagePrime = BadDataIndicator
+EndIf
+Case PSpress2
+If PSpress2DataIn = Yes Then
+StagePrime = PS2Stg
+BadStgFlag = No
+Else
+BadStgFlag = Yes
+StagePrime = BadDataIndicator
+EndIf
+#If WqSonde <> "NONE" Then
+Case WqPress
+If WqError = No Then
+StagePrime = SondeStg
+BadStgFlag = No
+Else
+BadStgFlag = Yes
+StagePrime = BadDataIndicator
+EndIf
+#EndIf
+EndSelect
+Select Case SelStgSecnd
+Case UPbeam
+If (VMdataIn = Yes AND VMupBeam <> NAN) Then
+StageSecnd = UpBeamStg
+Else
+StageSecnd = BadDataIndicator
+EndIf
+Case VMpress
+If (VMdataIn = Yes AND VMpressure <> NAN) Then
+StageSecnd = VMPressStg
+Else
+StageSecnd = BadDataIndicator
+EndIf
+Case PSpress
+If PSPressDataIn = Yes Then
+StageSecnd = PS1Stg
+Else
+StageSecnd = BadDataIndicator
+EndIf
+Case PSpress2
+If PSpress2DataIn = Yes Then
+StageSecnd = PS2Stg
+Else
+StageSecnd = BadDataIndicator
+EndIf
+#If WqSonde <> "NONE" Then
+Case WqPress
+If WqError = No Then
+StageSecnd = SondeStg
+Else
+StageSecnd = BadDataIndicator
+EndIf
+#EndIf
+EndSelect
+If BadStgFlag = No Then
+If (StagePrime > MaxExpStg) OR (StagePrime < MinExpStg) Then
+BadStgFlag = Yes
+StagePrime = BadDataIndicator
+BadStgCount = BadStgCount + 1
+Else
+EndIf
+Else
+BadStgCount = BadStgCount + 1
+EndIf
+StgSelect = SelStgPrime + ":" + SelStgSecnd
+EndSub
+Sub TrueStage
+If TrueUpBeamStg = BadDataIndicator AND TrueVMPressStg = BadDataIndicator AND TruePS1Stg = BadDataIndicator AND TruePS2Stg = BadDataIndicator AND TrueSondeStg = BadDataIndicator Then
+ExitSub
+EndIf
+If ((TrueUpBeamStg <> BadDataIndicator) AND (VMupBeam <> BadDataIndicator)) Then
+UpBeamOffset = TrueUpBeamStg-VMupBeam
+EndIf
+If ((TrueVMPressStg <> BadDataIndicator) AND (VMpressure <> BadDataIndicator)) Then
+VMPressOffset = TrueVMPressStg-VMpressure
+EndIf
+If ((TruePS1Stg <> BadDataIndicator) AND (PsPress1Stg(1) <> BadDataIndicator)) Then
+PS1Offset = TruePS1Stg-PsPress1Stg(1)
+EndIf
+If ((TruePS2Stg <> BadDataIndicator) AND (PSpress2Stg(1) <> BadDataIndicator)) Then
+PS2Offset = TruePS2Stg - PSpress2Stg(1)
+EndIf
+#If WqSonde <> "NONE" Then
+If ((TrueSondeStg <> BadDataIndicator) AND (WqDepthFt <> BadDataIndicator)) Then
+SondeOffset = TrueSondeStg - WqDepthFt
+EndIf
+#EndIf
+EndSub
+Sub StageDiff
+StgDiff = StagePrime - StageSecnd
+Round (StgDiff,3)
+EndSub
+Sub GetPsPress
+Select Case PSPressPort
+Case 3
+SDI12Recorder (PsPress1Stg(),PS1Com3,PSPressAddr,"M!",1.0,0)
+Case 5
+SDI12Recorder (PsPress1Stg(),PS1Com5,PSPressAddr,"M!",1.0,0)
+EndSelect
+If PsPress1Stg(1) = NAN Then
+PSPressDataIn = No
+Else
+PSPressDataIn = Yes
+EndIf
+EndSub
+Sub GetPSpress2
+Select Case PSpress2Port
+Case 3
+SDI12Recorder (PSpress2Stg(),PS2Com3,PSpress2Addr,"M!",1.0,0)
+Case 5
+SDI12Recorder (PSpress2Stg(),PS2Com5,PSpress2Addr,"M!",1.0,0)
+EndSelect
+If PSpress2Stg(1) = NAN Then
+PSpress2DataIn = No
+Else
+PSpress2DataIn = Yes
+EndIf
+EndSub
+Sub GetSN
+If (ModDay > 79270) AND (ModDay < 79390) AND RecCalibData = False Then
+AdcpSN = AdcpSN
+If AdcpSN <> InitialAdcpSN Then
+NewADCP = True
+InitialAdcpSN = AdcpSN
+Else
+NewADCP = False
+EndIf
+Select Case PSPressPort
+Case 3
+SDI12Recorder (PS1SN,PS1Com3,PSPressAddr,"I!",1.0,0)
+If PS1SN <> InitialPS1SN Then
+NewPS1 = True
+InitialPS1SN = PS1SN
+Else
+NewPS1 = False
+EndIf
+Case 5
+SDI12Recorder (PS1SN,PS1Com5,PSPressAddr,"I!",1.0,0)
+If PS1SN <> InitialPS1SN Then
+NewPS1 = True
+InitialPS1SN = PS1SN
+Else
+NewPS1 = False
+EndIf
+EndSelect
+Select Case PSpress2Port
+Case 3
+SDI12Recorder (PS2SN,PS2Com3,PSpress2Addr,"I!",1.0,0)
+If PS2SN <> InitialPS2SN Then
+NewPS2 = True
+InitialPS2SN = PS2SN
+Else
+NewPS2 = False
+EndIf
+Case 5
+SDI12Recorder (PS2SN,PS2Com5,PSpress2Addr,"I!",1.0,0)
+If PS2SN <> InitialPS2SN Then
+NewPS2 = True
+InitialPS2SN = PS2SN
+Else
+NewPS2 = False
+EndIf
+EndSelect
+EndIf
+EndSub
+Sub CalcLoopInterval
+Dim UnitMult As Float
+Select Case ScanUnit
+Case = 1
+UnitMult = 60000
+Case = 2
+UnitMult = 60
+Case = 3
+UnitMult = 1
+Case = 4
+UnitMult = 0.0166666666
+Case = 5
+UnitMult = 0.0006944444
+EndSelect
+LoopInterval = (UnitMult/ScanRate) * 15
+Select Case FastScanUnit
+Case = 1
+UnitMult = 60000
+Case = 2
+UnitMult = 60
+Case = 3
+UnitMult = 1
+Case = 4
+UnitMult = 0.0166666666
+Case = 5
+UnitMult = 0.0006944444
+EndSelect
+FastLoopInterval = (UnitMult/FastScanRate) * 15
+EndSub
+Sub MainDecode
+Dim OffsetCounter As Long
+Dim TypeCounter As Long
+Dim IdCounter As Long
+Datatypes = Longarray(6)
+Datatypes = Datatypes + 1
+OffsetCounter = 1
+For TypeCounter = 1 To (Datatypes*2) Step 2
+LSB = Longarray(TypeCounter+6)
+MSB = Longarray(TypeCounter+7)
+Offsets(OffsetCounter)=(LSB + (MSB*256)) + 1
+OffsetCounter = OffsetCounter + 1
+Next TypeCounter
+FixedLeadOffset = Offsets(1)
+VarLeadOffset = Offsets(2)
+NumBeams = Longarray(FixedLeadOffset + 8)
+NumADCPBins = Longarray(FixedLeadOffset + 9)
+If NumADCPBins >= MaxBins Then
+Numbins = MaxBins
+EndIf
+LSB = Longarray(FixedLeadOffset + 10)
+MSB = Longarray(FixedLeadOffset + 11)
+EnsPings = LSB + (MSB * 256)
+LSB = Longarray(FixedLeadOffset + 12)
+MSB = Longarray(FixedLeadOffset + 13)
+BinSize = LSB + (MSB * 256)
+LSB = Longarray(FixedLeadOffset + 14)
+MSB = Longarray(FixedLeadOffset + 15)
+BlankDist = LSB + (MSB * 256)
+EX = Longarray(FixedLeadOffset + 25)
+If EX <= 7 Then
+Coord = "BEAM"
+Select Case NumBeams
+Case 2
+Decode = "Radial Velocities - V1=Beam1 V2=Beam2 disregard V3 and V4"
+Case 3
+Decode = "Radial Velocities - V1=Beam1 V2=Beam2 V3=Beam3 disregard V4"
+Case 4
+Decode = "Radial Velocities - V1=Beam1 V2=Beam2 V3=Beam3 V4=Beam4"
+Case Else
+Decode = "System could not be decoded"
+End Select
+RecordAll = true
+UseDir = false
+EndIf
+If (EX <= 15) AND (EX > 7) Then
+Coord = "INST"
+Select Case NumBeams
+Case 2
+Decode = "Instrument Coordinates - V1=X V2=Y disregard V3 and V4"
+BiRatOK = True
+Case 3
+Decode = "Instrument Coordinates - V1=X V2=Y disregard V3 V4=Error"
+If IsVADCP = False Then
+BiRatOK = True
+Else
+BiRatOK = False
+EndIf
+Case 4
+Decode = "Instrument Coordinates - V1=X V2=Y V3=Z and V4=Error"
+BiRatOK = False
+Case Else
+Decode = "System could not be decoded"
+End Select
+UseDir = false
+EndIf
+If (EX <= 23) AND (EX > 15) Then
+Coord = "SHIP"
+Select Case NumBeams
+Case 2
+Decode = "Error! --  Cannot set CM to ship coordinates"
+Case 3
+Decode = "Ship Coordinates - V1=Port V2=Starbord V3=Z and V4=Error"
+Case 4
+Decode = "Ship Coordinates - V1=Port V2=Starbord V3=Z and V4=Error"
+Case Else
+Decode = "System could not be decoded"
+End Select
+UseDir = false
+EndIf
+If (EX <= 31) AND (EX > 23) Then
+Coord = "EARTH"
+Select Case NumBeams
+Case 2
+Decode = "Error! --  Cannot set CM to Earth coordinates"
+Case 3
+Decode = "Earth Coordinates - V1=East V2=North V3=Z and V4=Error"
+RecordAll = true
+UseDir = false
+Case 4
+Decode = "Earth Coordinates - V1=East V2=North V3=Z and V4=Error"
+RecordAll = true
+Case Else
+Decode = "System could not be decoded"
+End Select
+EndIf
+ADCPSN01 = Longarray(FixedLeadOffset + 57)
+ADCPSN02 = Longarray(FixedLeadOffset + 56)
+ADCPSN03 = Longarray(FixedLeadOffset + 55)
+ADCPSN04 = Longarray(FixedLeadOffset + 54)
+AdcpSN = ADCPSN04 + (ADCPSN03*256) + (ADCPSN02*65536) +(ADCPSN01*16777216)
+Call VarLeadDecode
+IsCM = No
+IsVADCP = No
+IsWorkhorse = No
+For IdCounter = 3 To Datatypes
+LSB = Longarray(Offsets(IdCounter))
+MSB = Longarray(Offsets(IdCounter) + 1)
+TempId = LSB + (MSB * 256)
+IDwords(IdCounter) = TempId
+Select Case TempId
+Case CorrelationProfileID
+CorrDatOffset = Offsets(IdCounter)
+Call CorrelationDecode
+Case RSSIProfileID
+RSSIDatOffset = Offsets(IdCounter)
+Call RSSIDecode
+Case VelocityProfileID
+VelDatOffset = Offsets(IdCounter)
+Call VelDecode
+Case VMStageID
+VMStageDatOffset = Offsets(IdCounter)
+If NumBeams = 2 Then
+IsCM = Yes
+Else
+IsVADCP = Yes
+Call VADCPTransform
+EndIf
+Call VMStageDecode
+EndSelect
+Next IdCounter
+If (IsCM = No) AND (IsVADCP = No)
+If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkhorse = Yes
+EndIf
+Erase (Longarray())
+EndSub
+Sub(VarLeadDecode)
+VarLeadOffset = VarLeadOffset - 1
+LSB = 0
+MSB = 0
+temp = 0
+LSB = Longarray(VarLeadOffset + 3)
+MSB = Longarray(VarLeadOffset + 4)
+MSB1 = Longarray(VarLeadOffset + 12)
+EnsembleNo = (65536 * MSB1) + (256 * MSB) + LSB
+VMYear = Longarray(VarLeadOffset + 5)
+VMMonth = Longarray(VarLeadOffset + 6)
+VMDay = Longarray(VarLeadOffset + 7)
+VMHour = Longarray(VarLeadOffset + 8)
+VMMinute = Longarray(VarLeadOffset + 9)
+VMSecond = Longarray(VarLeadOffset + 10)
+VMTime = VMYear + "/" + VMMonth + "/" + VMDay + " " + VMHour + ":" + VMMinute + ":" + VMSecond
+LSB = Longarray(VarLeadOffset + 13)
+MSB = Longarray(VarLeadOffset + 14)
+BIT = (256 * MSB) + LSB
+LSB = Longarray(VarLeadOffset + 19)
+MSB = Longarray(VarLeadOffset + 20)
+VMHeading = ((256 * MSB) + LSB) * 0.01
+LSB = Longarray(VarLeadOffset + 21)
+MSB = Longarray(VarLeadOffset + 22)
+temp = (256 * MSB) + LSB
+If temp > 32767 Then
+temp = temp - 65536
+EndIf
+VMpitch = temp * 0.01
+LSB = Longarray(VarLeadOffset + 23)
+MSB = Longarray(VarLeadOffset + 24)
+temp = (256 * MSB) + LSB
+If temp > 32767 Then
+temp = temp - 65536
+EndIf
+VMroll = temp * 0.01
+LSB = Longarray(VarLeadOffset + 25)
+MSB = Longarray(VarLeadOffset + 26)
+temp = (256 * MSB) + LSB
+ES = temp
+LSB = Longarray(VarLeadOffset + 27)
+MSB = Longarray(VarLeadOffset + 28)
+temp = (256 * MSB) + LSB
+If temp > 32767 Then
+temp = temp - 65536
+EndIf
+VMtempC = temp * 0.01
+VMtempF = VMtempC * 9/5 + 32
+VMVolts = Longarray(VarLeadOffset + 36)
+WHpressure = 0
+WHTempM = 0
+WHTempK = 0
+WHPSTemp = 0
+DepthLSB = 0
+DepthLSB1 = 0
+DepthMSB = 0
+DepthMSB1 = 0
+DepthLSB = Longarray(VarLeadOffset + 49)
+DepthLSB1 = Longarray(VarLeadOffset + 50)
+DepthMSB = Longarray(VarLeadOffset + 51)
+DepthMSB1 = Longarray(VarLeadOffset + 52)
+WHPSTemp = (16777216 * DepthMSB1) + (65536 * DepthMSB) + (256 * DepthLSB1) + DepthLSB
+If WHPSTemp <> 0 Then
+WHTempK = WHPSTemp/100
+WHTempM = (WHTempK * (1.02-0.00069*ES))/10
+WHpressure = WHTempM * Meters_to_Feet
+Else
+WHpressure = BadDataIndicator
+EndIf
+ScanDiff = EnsembleNo - ScanNo
+EndSub
+Sub(CorrelationDecode)
+For Bin = 1 To MaxBins
+For Beam = 1 To MaxBeams
+ensCorr(Bin,Beam) = 0
+Next Beam
+Next Bin
+BinStep = 1
+EnsBin = 0
+CorrDatOffset = CorrDatOffset + 1
+For Bin = 1 To Numbins
+nCorr = 0
+AccumCorr = 0
+temp = CorrDatOffset + (4 * EnsBin)
+EnsBin = EnsBin + BinStep
+For Beam = 1 To NumBeams
+AccumCorr = AccumCorr + Longarray(temp + Beam)
+nCorr = nCorr + 1
+ensCorr(Bin,Beam) = Longarray(temp + Beam)
+Next Beam
+Select Case nCorr
+Case 0
+AvgCorr(Bin)= 0
+Case 1
+AvgCorr(Bin) = AccumCorr
+Case 2 To 4
+AvgCorr(Bin) = AccumCorr / nCorr
+Case Else
+AvgCorr(Bin) = 0
+EndSelect
+Next Bin
+EndSub
+Sub(RSSIDecode)
+For Bin = 1 To MaxBins
+For Beam = 1 To MaxBeams
+ensRSSI(Bin,Beam) = 0
+Next Beam
+Next Bin
+BinStep = 1
+EnsBin = 0
+RSSIDatOffset = RSSIDatOffset + 1
+For Bin = 1 To Numbins
+nRSSI = 0
+AccumRSSI = 0
+AvgRSSIAccum = 0
+AvgRSSIcounter = 0
+temp = RSSIDatOffset + (4 * EnsBin)
+EnsBin = EnsBin + BinStep
+For Beam = 1 To NumBeams
+AccumRSSI = AccumRSSI + Longarray(temp + Beam)
+nRSSI = nRSSI + 1
+ensRSSI(Bin,Beam) = Longarray(temp + Beam)
+Next Beam
+Select Case nRSSI
+Case 0
+AvgRSSI(Bin)= 0
+Case 1
+AvgRSSI(Bin) = AccumRSSI
+Case 2 To 4
+AvgRSSI(Bin) = AccumRSSI / nRSSI
+Case Else
+AvgRSSI(Bin) = 0
+EndSelect
+Next Bin
+For Bin = AvgRSSIStartBin To AvgRSSIEndBin
+If AvgRSSI(Bin) <> 0 Then
+AvgRSSIAccum = AvgRSSIAccum + AvgRSSI(Bin)
+AvgRSSIcounter = AvgRSSIcounter + 1
+EndIf
+Next Bin
+If (AvgRSSIAccum <> 0) AND (AvgRSSIcounter <> 0) Then
+AvgSwathRSSI = AvgRSSIAccum/AvgRSSIcounter
+Else
+AvgSwathRSSI = BadDataIndicator
+EndIf
+EndSub
+Sub(VMStageDecode)
+If IsWorkhorse Then
+VMpressure = BadDataIndicator
+VMupBeam = BadDataIndicator
+Exit Sub
+EndIf
+VMStageDatOffset = VMStageDatOffset - 1
+DepthLSB = 0
+DepthLSB1 = 0
+DepthMSB = 0
+DepthMSB1 = 0
+temp = 0
+TempM = 0
+LSBTemp = 0
+LSB1Temp = 0
+MSBTemp = 0
+MSB1Temp = 0
+DepthLSB = Longarray(VMStageDatOffset + 3)
+DepthLSB1 = Longarray(VMStageDatOffset + 4)
+DepthMSB = Longarray(VMStageDatOffset + 5)
+DepthMSB1 = Longarray(VMStageDatOffset + 6)
+VMTemp = (16777216 * DepthMSB1) + (65536 * DepthMSB) + (256 * DepthLSB1) + DepthLSB
+If VMTemp <> 0 Then
+TempM = VMTemp/10000
+Else
+TempM = BadDataIndicator
+EndIf
+VMupBeam = TempM
+LSBTemp = Longarray(VMStageDatOffset + 7)
+LSB1Temp = Longarray(VMStageDatOffset + 8)
+MSBTemp = Longarray(VMStageDatOffset + 9)
+MSB1Temp = Longarray(VMStageDatOffset + 10)
+LSBTemp = Longarray(VMStageDatOffset + 12)
+LSBTemp = Longarray(VMStageDatOffset + 13)
+LSB = 0
+L1SB = 0
+MSB = 0
+M1SB = 0
+temp = 0
+TempM = 0
+LSB = Longarray(VMStageDatOffset + 43)
+L1SB = Longarray(VMStageDatOffset + 44)
+MSB = Longarray(VMStageDatOffset + 45)
+M1SB = Longarray(VMStageDatOffset + 46)
+VMPSTemp = (16777216 * M1SB) + (65536 * MSB) + (256 * L1SB) + LSB
+If VMPSTemp <> 0 Then
+TempM = VMPSTemp/10000
+Else
+TempM = BadDataIndicator
+EndIf
+VMpressure = TempM
+VMupBeam = VMupBeam * Meters_to_Feet
+VMpressure = VMpressure * Meters_to_Feet
+EndSub
+Sub(VelDecode)
+If FlowSign = 0 Then FlowSign = 1
+For Bin = 1 To MaxBins
+For Beam = 1 To MaxBeams
+ensVelocity(Bin,Beam) = NAN
+Next Beam
+V1(Bin) = NAN
+V2(Bin) = NAN
+V3(Bin) = NAN
+V4(Bin) = NAN
+V1Disable(Bin) = False
+V2Disable(Bin) = False
+V3Disable(Bin) = False
+V4disable(Bin) = False
+Next Bin
+BinStep = 1
+EnsBin = 0
+For Bin = 1 To Numbins
+temp = VelDatOffset + 8 * EnsBin
+EnsBin = EnsBin + BinStep
+For Beam = 1 To NumBeams
+Index = temp + 2 * Beam
+LSB = Longarray(Index)
+MSB = Longarray(Index + 1)
+BinVel = (256 * MSB) + LSB
+If BinVel = 32768 Then
+ensVelocity(Bin, Beam) = NAN
+Else
+If BinVel > 32767 Then
+BinVel = BinVel - 65536
+If BinVel < -32767 Then
+BinVel = NAN
+Else
+BinVel = BinVel * VelocityScaleWater
+BinVel = BinVel * FlowSign
+EndIf
+ensVelocity(Bin,Beam) = BinVel
+Else
+If BinVel > 32767 Then
+BinVel = NAN
+Else
+BinVel = BinVel * VelocityScaleWater
+BinVel = BinVel * FlowSign
+EndIf
+ensVelocity(Bin,Beam) = BinVel
+EndIf
+EndIf
+Next Beam
+V1(Bin) = ensVelocity(Bin,1)
+If V1(Bin) = NAN Then V1Disable(Bin) = True
+V2(Bin) = ensVelocity(Bin,2)
+If V2(Bin) = NAN Then V2Disable(Bin) = True
+V3(Bin) = ensVelocity(Bin,3)
+If V3(Bin) = NAN Then V3Disable(Bin) = True
+V4(Bin) = ensVelocity(Bin,4)
+If V4(Bin) = NAN Then V4disable(Bin) = True
+Next Bin
+EndSub
+#If UseAutoRange = true Then
+Sub CalcRangeBin
+Dim DucerDepth As Float
+Dim Sensordepth As Float
+Dim DucerDepthCM As Float
+Select Case RangeSource
+Case UPbeam
+Sensordepth = VMupBeam
+Case VMpress
+Sensordepth = VMpress
+Case PSpress
+Sensordepth = PsPress1Stg(1)
+Case PSpress2
+Sensordepth = PSpress2Stg(1)
+Case WqPress
+Sensordepth = WqDepthFt
+End Select
+DucerDepth = Sensordepth + DucerDepthOffset
+DucerDepthCM = DucerDepth * 30.48
+RangedBin = (FIX((DucerDepthCM - BlankDist)/BinSize))-CutOffBins
+End Sub
+#EndIf
+Sub(OneMinuteCalcs)
+Dim TotBins As Long
+Dim BinVelCount As Long
+Public MidBin As Long
+Public EbbDir As Boolean = true
+V1Cnt = 0
+V1EbbCnt = 0
+V1FldCnt = 0
+V2Cnt = 0
+V2EbbCnt = 0
+V2FldCnt = 0
+V3Cnt = 0
+V4Cnt = 0
+V1Sum = 0
+V1EbbSum = 0
+V1FldSum = 0
+V2Sum = 0
+V2EbbSum = 0
+V2FldSum = 0
+V3Sum = 0
+V4Sum = 0
+IndexVel = 0
+For BinVelCount = 1 To MaxBins
+VMBinVel(BinVelCount) = NAN
+VmBinVelDisable(BinVelCount) = False
+Next BinVelCount
+VelCount = 0
+If (BiRatOK = True) AND (BiRating = True) Then
+UseBiRat = True
+Else
+UseBiRat = False
+EndIf
+TotBins = EndBin - StartBin
+MidBin = TotBins/2
+If V1(MidBin) > BiRatTran Then
+EbbDir = true
+Else
+EbbDir = false
+EndIf
+For Cnt = StartBin To EndBin
+If (V1(Cnt) <> NAN) AND (V1(Cnt)>= MinExpVel) AND (V1(Cnt)<= MaxExpVel)
+V1Sum = V1Sum + V1(Cnt)
+V1Cnt = V1Cnt + 1
+If UseBiRat = true Then
+If EbbDir Then
+If (Cnt >= StartEbbBin) AND (Cnt <= EndEbbBin) Then
+V1EbbSum += V1(Cnt)
+V1EbbCnt += 1
+EndIf
+Else
+If (Cnt >= StartFldBin) AND (Cnt <= EndFldBin)Then
+V1FldSum += V1(Cnt)
+V1FldCnt += 1
+EndIf
+EndIf
+EndIf
+Else
+BadBinCnt = BadBinCnt + 1
+V1(Cnt) = BadDataIndicator
+EndIf
+Next
+If V1Sum <> 0 Then
+V1AVG = V1Sum/V1Cnt
+Else
+V1AVG = 0
+EndIf
+If V1EbbSum <> 0 Then
+V1EbbAvg = V1EbbSum/V1EbbCnt
+Else
+V1EbbAvg = 0
+EndIf
+If V1FldSum <> 0 Then
+V1FldAvg = V1FldSum/V1FldCnt
+Else
+V1FldAvg = 0
+EndIf
+For Cnt = StartBin To EndBin
+If (V2(Cnt) <> NAN) AND (V2(Cnt)>= MinExpVel) AND (V2(Cnt)<= MaxExpVel)
+V2Sum = V2Sum +  V2(Cnt)
+V2Cnt = V2Cnt + 1
+If UseBiRat = true Then
+If EbbDir Then
+If (Cnt >= StartEbbBin) AND (Cnt <= EndEbbBin) Then
+V2EbbSum += V2(Cnt)
+V2EbbCnt += 1
+EndIf
+Else
+If (Cnt >= StartFldBin) AND (Cnt <= EndFldBin)Then
+V2FldSum += V2(Cnt)
+V2FldCnt += 1
+EndIf
+EndIf
+EndIf
+Else
+BadBinCnt = BadBinCnt + 1
+V2(Cnt) = BadDataIndicator
+EndIf
+Next
+If V2Sum <> 0 Then
+V2AVG =  V2Sum/V2Cnt
+Else
+V2AVG = 0
+EndIf
+If V2EbbSum <> 0 Then
+V2EbbAvg = V2EbbSum/V2EbbCnt
+Else
+V2EbbAvg = 0
+EndIf
+If V2FldSum <> 0 Then
+V2FldAvg = V2FldSum/V2FldCnt
+Else
+V2FldAvg = 0
+EndIf
+For Cnt = StartBin To EndBin
+If (V3(Cnt) <> NAN) AND (V3(Cnt)>= MinExpVel) AND (V3(Cnt)<= MaxExpVel)
+V3Sum = V3Sum +  V3(Cnt)
+V3Cnt = V3Cnt + 1
+Else
+BadBinCnt = BadBinCnt + 1
+V3(Cnt) = BadDataIndicator
+EndIf
+Next
+If V3Sum <> 0 Then
+V3AVG =  V3Sum/V3Cnt
+Else
+V3AVG = 0
+EndIf
+For Cnt = StartBin To EndBin
+If (V4(Cnt) <> NAN) AND (V4(Cnt)>= MinExpVel) AND (V4(Cnt)<= MaxExpVel)
+V4Sum = V4Sum +  V4(Cnt)
+V4Cnt = V4Cnt + 1
+Else
+BadBinCnt = BadBinCnt + 1
+V4(Cnt) = BadDataIndicator
+EndIf
+Next
+If V4Sum <> 0 Then
+V4AVG =  V4Sum/V4Cnt
+Else
+V4AVG = 0
+EndIf
+If UseV2 = Yes Then
+If BiRating Then
+If EbbDir Then
+IndexVel = SQR(V1EbbAvg^2 + V2EbbAvg^2)
+Else
+IndexVel = SQR(V1FldAvg^2 + V2FldAvg^2)
+EndIf
+Else
+IndexVel = SQR(V1AVG^2 + V2AVG^2)
+EndIf
+For Cnt = 1 To MaxBins
+If (V1(Cnt)<> BadDataIndicator) AND (V2(Cnt)<> BadDataIndicator) Then
+VMBinVel(Cnt) = SQR (V1(Cnt)^2 + V2(Cnt)^2)
+If ((Cnt >= StartBin) AND (Cnt <= EndBin)) Then
+VelCount = VelCount + 1
+EndIf
+Else
+VMBinVel(Cnt) = BadDataIndicator
+VmBinVelDisable(Cnt) = True
+EndIf
+Next
+ElseIf UseDir = Yes Then
+IndexVel = (V1AVG * SIN(DegToRad * PosFlowDir)) + (V2AVG * COS(DegToRad * PosFlowDir))
+For Cnt = 1 To MaxBins
+If (V1(Cnt)<> BadDataIndicator) AND (V2(Cnt)<> BadDataIndicator) Then
+VMBinVel(Cnt) = (V1 * SIN(DegToRad * PosFlowDir)) + (V2 * COS(DegToRad * PosFlowDir))
+If ((Cnt >= StartBin) AND (Cnt <= EndBin)) Then
+VelCount = VelCount + 1
+EndIf
+Else
+VMBinVel(Cnt) = BadDataIndicator
+VmBinVelDisable(Cnt) = True
+EndIf
+Next
+Else
+If BiRating Then
+If EbbDir Then
+IndexVel = V1EbbAvg
+Else
+IndexVel = V1FldAvg
+EndIf
+Else
+IndexVel = V1AVG
+EndIf
+For Cnt = 1 To MaxBins
+If V1(Cnt) <> BadDataIndicator Then
+VMBinVel(Cnt) = V1(Cnt)
+If ((Cnt >= StartBin) AND (Cnt <= EndBin)) Then
+VelCount = VelCount + 1
+EndIf
+Else
+VMBinVel(Cnt) = BadDataIndicator
+VmBinVelDisable(Cnt) = True
+EndIf
+Next
+EndIf
+If VelCount >=  EndBin - StartBin Then
+BadVelFlag = No
+Call VelFilter
+Else
+BadVelFlag = Yes
+IndexVel = BadDataIndicator
+BadVelCount = BadVelCount + 1
+EndIf
+BadBinCount = (((EndBin+1)-StartBin)- VelCount)
+If ((IndexVel<>BadVel) AND (IndexVel<LowRatVel)) Then
+LowCount = LowCount + 1
+ElseIf ((IndexVel<>BadVel) AND (IndexVel>HighRatVel)) Then
+HighCount = HighCount + 1
+Else
+If HighCount > 0 Then HighCount = HighCount - 1
+If LowCount > 0 Then LowCount = LowCount - 1
+EndIf
+If HighCount > 60 Then HighMeas = true
+If LowCount > 60 Then LowMeas = true
+EndSub
+Sub ResetMeasFlags
+If HighRatVel <> InitialHRV Then
+InitialHRV = HighRatVel
+HighMeas = False
+HighCount = 0
+EndIf
+If LowRatVel <> InitialLRV Then
+InitialLRV = LowRatVel
+LowMeas = False
+LowCount = 0
+EndIf
+EndSub
+Sub VelFilter
+If IndexVel <> 0 OR BadDataIndicator Then
+If (IndexVel >= MinExpVel) AND (IndexVel <= MaxExpVel) Then
+BadVelFlag = False
+Else
+BadVelFlag = Yes
+BadVelCount = BadVelCount + 1
+IndexVel = BadDataIndicator
+ExitSub
+EndIf
+Else
+DataErr = DataErr + 1
+BadVelFlag = Yes
+BadVelCount = BadVelCount + 1
+IndexVel = BadDataIndicator
+ExitSub
+EndIf
+EndSub
+Sub VADCPTransform
+If IsVADCP = Yes Then
+Dim TempV1(MaxBins) As Float
+Dim TempV1Disable(MaxBins) As Boolean
+Dim TempV2(MaxBins) As Float
+Dim TempV2Disable(MaxBins) As Boolean
+Dim TempCounter As Long
+For TempCounter = 1 To MaxBins
+TempV2(TempCounter) = V1(TempCounter)
+tempV2disable(TempCounter) = V1Disable(TempCounter)
+TempV1(TempCounter) = V2(TempCounter)
+TempV1disable(TempCounter) = V2Disable(TempCounter)
+V2(TempCounter) = TempV2(TempCounter)
+V2Disable(TempCounter) = TempV2disable(TempCounter)
+V1(TempCounter) = TempV1(TempCounter)
+V1Disable(TempCounter) = TempV1disable(TempCounter)
+Next TempCounter
+EndIf
+EndSub
+Function Ftime (TimeIn As String * 25) As String * 25
+SplitStr (FSplitTime(),TimeIn," ",6,0)
+Dim SendMonth As String
+Dim SendDay As String
+Dim SendHour As String
+Dim SendMin As String
+Dim SendSec As String
+Dim SendYear As String
+If FSplitTime(1) < 10 Then
+SendMonth = "0" + FSplitTime(1)
+Else
+SendMonth = FSplitTime(1)
+EndIf
+If FSplitTime(2) < 10 Then
+SendDay = "0" + FSplitTime(2)
+Else
+SendDay = FSplitTime(2)
+EndIf
+If FSplitTime(4) < 10 Then
+SendHour = "0" + FSplitTime(4)
+Else
+SendHour = FSplitTime(4)
+EndIf
+If FSplitTime(5) < 10 Then
+SendMin = "0" + FSplitTime(5)
+Else
+SendMin = FSplitTime(5)
+EndIf
+If Round(FSplitTime(6),0) < 10 Then
+SendSec = "0" + Round(FSplitTime(6),0)
+Else
+SendSec = Round(FSplitTime(6),0)
+EndIf
+SendYear = Right(FSplitTime(3),4)
+ftime = SendMonth + "/" + SendDay + "/" + SendYear + " " + SendHour + ":" + SendMin + ":" + SendSec
+End Function
+#If HasVM Then
+Sub CheckSpikes
+Dim BinCount As Long
+Dim BeamCount As Long
+Dim TimeOut As String * 25
+Dim RSSIStd As Float
+Dim RSSIAvg As Float
+Dim CorrStd As Float
+Dim CorrAvg As Float
+Dim VelStd As Float
+Dim DataLine As String * 500
+Dim velAvg As Float
+Dim Top As Float = 0
+Dim Bottom As Float = 0
+Dim QueueCorrSpikes As Long = 0
+Dim QueueRSSISpikes As Long = 0
+Dim QueueVelSpikes As Long = 0
+Dim RSSITemp(16) As Float
+Dim CorrTemp(16) As Float
+Dim VelTemp(16) As Float
+#If SeeAllVel = True Then
+Public Binspikes(30) As Long
+Public BinResults(2) As Long
+#Else
+Dim Binspikes(30) As Long
+Public BinResults(2) As Long
+#EndIf
+Dim n As Long
+Dim QueueAvgStage As Float = 0
+Dim QueueVel As Float = 0
+If InStr(1,Status.CardStatus,"No Card",2) = 0 Then
+SpikeFileName = "CRD:VmSpikes-" & SiteID & ".csv"
+FileHandle = FileOpen (SpikeFileName,"a+b",-1)
+If SendHeader Then
+FileHeader = "Type," & "Timestamp," & "NumBeams," & "NumBins," & "StartBin,"& "EndBin,"& "BinSize," & "Ivel," & "Stage Avg,"& "Corr spikes," & "RSSI Spikes," & "Vel Spikes," & "DQI," & ">1 spikes," & "Bin"
+FileWrite (FileHandle, FileHeader & CHR(13) & CHR(10),0)
+SendHeader = False
+EndIf
+QueueCorrSpikes = 0
+QueueRSSISpikes = 0
+QueueVelSpikes = 0
+QueueAvgStage = 0
+QueueDQI = 0
+QueueVel = 0
+Erase Binspikes()
+For BinCount = StartBin To EndBin
+For BeamCount = 1 To NumBeams
+Erase RSSITemp()
+Erase VelTemp()
+Erase CorrTemp()
+For n = 1 To 16
+RSSITemp(n) = RSSIspike(BinCount,BeamCount,n)
+Veltemp(n) = Velspike(BinCount,BeamCount,n)
+CorrTemp(n)= Corrspike(BinCount,BeamCount,n)
+Next n
+StdDevSpa(RSSIStd,15,rssitemp(1))
+If RSSIStd = 0 Then RSSIStd = 0.1
+AvgSpa(RSSIAvg,15,RSSITemp(1))
+Top = RSSIAvg + (RSSIStd * RSSIStdNo)
+Bottom = RSSIAvg - (RSSIStd * RSSIStdNo)
+If (ensRSSI(BinCount,BeamCount) < Bottom) OR (ensRSSI(BinCount,BeamCount) > Top) Then
+SpikeCounter = SpikeCounter + 1
+Binspikes(BinCount) = Binspikes(BinCount) + 1
+QueueRSSISpikes = QueueRSSISpikes + 1
+TimeOut = Ftime(Public.Timestamp)
+TestTime = TimeOut
+EndIf
+StdDevSpa(CorrStd,15,corrtemp(1))
+If CorrStd = 0 Then CorrStd = 0.1
+AvgSpa(CorrAvg,15,CorrTemp(1))
+Top = CorrAvg + (CorrStd * CorrStdNo)
+Bottom = CorrAvg - (CorrStd * CorrStdNo)
+If (ensCorr(BinCount,BeamCount) < Bottom) OR (ensCorr(BinCount,BeamCount) > Top) Then
+SpikeCounter = SpikeCounter + 1
+Binspikes(BinCount) = Binspikes(BinCount) + 1
+QueueCorrSpikes = QueueCorrSpikes + 1
+TimeOut = Ftime(Public.Timestamp)
+EndIf
+StdDevSpa(VelStd,15,veltemp(1))
+If VelStd = 0 Then VelStd = .1
+AvgSpa(velAvg,15,veltemp(1))
+Top = velAvg + (VelStd * VelStdNo)
+Bottom = velAvg - (VelStd * VelStdNo)
+If (ensVelocity(BinCount,BeamCount) < Bottom) OR (ensVelocity(BinCount,BeamCount) > Top) Then
+SpikeCounter = SpikeCounter + 1
+Binspikes(BinCount) = Binspikes(BinCount) + 1
+QueueVelSpikes = QueueVelSpikes + 1
+TimeOut = Ftime(Public.Timestamp)
+EndIf
+Next BeamCount
+Next BinCount
+QueueDQI = (QueueCorrSpikes + QueueRSSISpikes + QueueVelSpikes)/15
+QueueDQI = Round(QueueDQI,2)
+velAvg = Round(velAvg,2)
+AvgSpa(QueueAvgStage,15,StageSpike(1)
+QueueAvgStage = Round(QueueAvgStage,2)
+QueueVel = Round(IndexVel,2)
+TimeOut = Ftime(Public.Timestamp)
+MaxSpa(BinResults(),30,Binspikes())
+If BinResults(1) < 2 Then
+BinResults(1) = 0
+BinResults(2) = 0
+EndIf
+DataLine = "Stats: ," & TimeOut & "," & NumBeams & "," & Numbins & "," & StartBin & "," & EndBin & "," & BinSize & ","& QueueVel & "," & QueueAvgStage & "," & QueueCorrSpikes & "," & QueueRSSISpikes & "," & QueueVelSpikes & "," & QueueDQI & "," & BinResults(1) & "," & BinResults(2)
+FileWrite (FileHandle,DataLine & CHR(13) & CHR(10),0)
+FileClose(FileHandle)
+EndIf
+CardError = Status.CardStatus
+End Sub
+#EndIf
+#If HasVM Then
+Sub AddSpikes
+Dim BinCount As Long
+Dim BeamCount As Long
+Dim SampleCount As Long
+If BadVelFlag Then Exit Sub
+For BinCount = 1 To Numbins
+For BeamCount = 1 To NumBeams
+Corrspike(BinCount,BeamCount,16) = ensCorr(BinCount,BeamCount)
+RSSIspike(BinCount,BeamCount,16) = ensRSSI(BinCount,BeamCount)
+Velspike(BinCount,BeamCount,16) = ensVelocity(BinCount,BeamCount)
+For SampleCount = 1 To 15
+Corrspike(BinCount,BeamCount,SampleCount) = Corrspike(BinCount,BeamCount,SampleCount + 1)
+RSSIspike(BinCount,BeamCount,SampleCount)=RSSIspike(BinCount,BeamCount,SampleCount + 1)
+Velspike(BinCount,BeamCount,SampleCount) = Velspike(BinCount,BeamCount,SampleCount + 1)
+Next SampleCount
+Next BeamCount
+Next BinCount
+StageSpike(16) = StagePrime
+For SampleCount = 1 To 15
+StageSpike(SampleCount) = StageSpike(SampleCount + 1)
+Next SampleCount
+End Sub
+#EndIf
+#If (StoreAllToCard = true) AND HasVM Then
+Sub StoreAllData
+Dim CorrDataLine As String * 1000
+Dim VelDataLine As String * 1000
+Dim RSSIDataLine As String * 1000
+Dim BeamCount As Long
+Dim BinCount As Long
+If InStr(1,Status.CardStatus,"Card OK.",2) = 0 Then
+CardBadCount = CardBadCount + 1
+ExitSub
+Else
+CardOkCount = CardOkCount + 1
+SpikeFileName = "CRD:VmSpikes-" & SiteID & ".csv"
+FileHandle = FileOpen (SpikeFileName,"a+b",-1)
+For BeamCount = 1 To NumBeams
+Erase CorrDataLine
+Erase VelDataLine
+Erase RSSIDataLine
+CorrDataLine = CorrDataLine & "Corr: ," & BeamCount
+VelDataLine = VelDataLine & "Velocity: ," & BeamCount
+RSSIDataLine = RSSIDataLine & "RSSI: ," & BeamCount
+For BinCount = 1 To Numbins
+CorrDataLine = CorrDataLine & "," & ensCorr(BinCount,BeamCount)
+VelDataLine = VelDataLine & "," & Round(ensVelocity(BinCount,BeamCount),3)
+RSSIDataLine = RSSIDataLine & "," & ensRSSI(BinCount,BeamCount)
+Next BinCount
+FileWrite (FileHandle,RSSIDataLine & CHR(13) & CHR(10),0)
+FileWrite (FileHandle,CorrDataLine & CHR(13) & CHR(10),0)
+FileWrite (FileHandle,VelDataLine & CHR(13) & CHR(10),0)
+Next BeamCount
+FileClose(FileHandle)
+EndIf
+CardError = Status.CardStatus
+End Sub
+#EndIf
+Sub SubCalcQ
+If CalcQ = Yes Then
+If Trans = BadDataIndicator Then
+MeanVel = VelOffset + (VelCoef * IndexVel) + (VelCoef2 * IndexVel^2) + (VelCoef3 * IndexVel^3)
+Else
+If IndexVel >= Trans Then
+MeanVel = UpVelOffset + (UpVelCoef * IndexVel) + (UpVelCoef2 * IndexVel^2) + (UpVelCoef3 * IndexVel^3)
+ElseIf IndexVel <= Trans Then
+MeanVel = LowVelOffset + (LowVelCoef * IndexVel) + (LowVelCoef2 * IndexVel^2) + (LowVelCoef3 * IndexVel^3)
+EndIf
+EndIf
+If BadVelFlag = False AND  BadStgFlag = False Then
+BadQFlag = False
+Area = StgOffset + (StgCoef*StagePrime) + (StgCoef2 * StagePrime^2)
+Qcfs = Area * MeanVel
+If Qcfs = 0 Then
+BadQFlag = True
+BadQCount = BadQCount + 1
+Qcfs = BadDataIndicator
+EndIf
+Else
+BadQFlag = True
+BadQCount = BadQCount + 1
+Qcfs = BadDataIndicator
+EndIf
+Else
+BadQCount = 0
+Area = NAN
+MeanVel = NAN
+Qcfs = 0
+BadQFlag = True
+EndIf
+EndSub
+#If HasVM = True Then
+Sub ZeroVMArrays
+Dim ZeroCounter As Long
+Erase (Longarray())
+For Bin = 1 To MaxBins
+For Beam = 1 To MaxBeams
+ensVelocity(Bin,Beam) = Nan
+Next Beam
+Next Bin
+For ZeroCounter = 1 To MaxBins
+V1(ZeroCounter) = Nan
+V2(ZeroCounter) = Nan
+VMBinVel(ZeroCounter) = Nan
+Next ZeroCounter
+IndexVel = NaN
+Erase (ensCorr())
+Erase (AvgRSSI())
+Erase Velspike()
+Erase RSSIspike()
+Erase Corrspike()
+EndSub
+#EndIf
+Sub ReadVariables
+Public PreserveHandle As Long
+Public PreserveFileLen As Long
+Public Closeerror
+PreserveHandle = FileOpen("USR:VariableStore.txt","r",-1)
+Delay (1,30,mSec)
+PreserveFileLen = FileRead(PreserveHandle,PreserveFile,500)
+Closeerror = FileClose(PreserveHandle)
+If PreserveFileLen = 0 Then
+ExitSub
+EndIf
+Dim InVar(39) As String
+SplitStr(InVar,PreserveFile,",",39,0)
+StartBin = InVar(1)
+EndBin = InVar(2)
+StartEbbBin = InVar(3)
+EndEbbBin = InVar(4)
+StartFldBin = InVar(5)
+EndFldBin = InVar(6)
+BiRating = InVar(7)
+BiRatTran = InVar(8)
+LowRatVel = InVar(9)
+HighRatVel = InVar(10)
+SelStgPrime = InVar(11)
+SelStgSecnd = InVar(12)
+UpBeamOffset = InVar(13)
+VMPressOffset = InVar(14)
+PS1Offset = InVar(15)
+PS2Offset = InVar(16)
+SondeOffset = InVar(17)
+CalcQ = InVar(18)
+StgOffset = InVar(19)
+StgCoef = InVar(20)
+StgCoef2 = InVar(21)
+VelOffset = InVar(22)
+VelCoef = InVar(23)
+VelCoef2 = InVar(24)
+VelCoef3 = InVar(25)
+UpVelOffset = InVar(26)
+UpVelCoef = InVar(27)
+UpVelCoef2 = InVar(28)
+UpVelCoef3 = InVar(29)
+LowVelOffset = InVar(30)
+LowVelCoef = InVar(31)
+LowVelCoef2 = InVar(32)
+LowVelCoef3 = InVar(33)
+RangeSource = InVar(34)
+DucerDepthOffset = InVar(35)
+IsSubmersed = InVar(36)
+IsWQNClosed = InVar(37)
+isVMNClosed = InVar(38)
+BurstPeriod = InVar(39)
+EndSub
+Sub StoreVariables
+Dim Var(39) As String
+Public SendVarString As String * 500
+Public VarStringLen As Long
+Public VarHandle = Long
+Public Varbytes = Long
+Public StoreCloseErr As Long
+Dim VarCnt As Long
+Var(1) = StartBin
+Var(2) = EndBin
+Var(3) = StartEbbBin
+Var(4) = EndEbbBin
+Var(5) = StartFldBin
+Var(6) = EndFldBin
+Var(7) = BiRating
+Var(8) = BiRatTran
+Var(9) = LowRatVel
+Var(10) = HighRatVel
+Var(11) = SelStgPrime
+Var(12) = SelStgSecnd
+Var(13) = UpBeamOffset
+Var(14) = VMPressOffset
+Var(15) = PS1Offset
+Var(16) = PS2Offset
+Var(17) = SondeOffset
+Var(18) = CalcQ
+Var(19) = StgOffset
+Var(20) = StgCoef
+Var(21) = StgCoef2
+Var(22) = VelOffset
+Var(23) = VelCoef
+Var(24) = VelCoef2
+Var(25) = VelCoef3
+Var(26) = UpVelOffset
+Var(27) = UpVelCoef
+Var(28) = UpVelCoef2
+Var(29) = UpVelCoef3
+Var(30) = LowVelOffset
+Var(31) = LowVelCoef
+Var(32) = LowVelCoef2
+Var(33) = LowVelCoef3
+Var(34) = RangeSource
+Var(35) = DucerDepthOffset
+Var(36) = IsSubmersed
+Var(37) = IsWQNClosed
+Var(38) = isVMNClosed
+Var(39) = BurstPeriod
+SendVarString = Var(1)
+For VarCnt = 2 To 39
+SendVarString = SendVarString + "," + Var(VarCnt)
+Next VarCnt
+VarStringLen = Len(SendVarString)
+VarHandle = FileOpen("USR:VariableStore.txt","w",-1)
+Delay(1,100,mSec)
+Varbytes = FileWrite(VarHandle,SendVarString,VarStringLen + 50)
+StoreCloseErr = FileClose(VarHandle)
+StoreVariablesFlg = False
+EndSub
+#If HasVM = True Then
+Sub ChecksumCheck
+Dim CkSumCount As Long
+LSB = Longarray(3)
+MSB = Longarray(4)
+EnsembleLen = LSB + (MSB*256)
+CalcCheckSum = 0
+CkSumCount = 0
+For CkSumCount = 1 To EnsembleLen
+CalcCheckSum = CalcCheckSum + Longarray(CkSumCount)
+Next CkSumCount
+CalcCheckSum = 65535 AND CalcCheckSum
+EnsChecksum = Longarray(CkSumCount)
+TempL = Longarray(CkSumCount + 1)
+EnsChecksum = EnsChecksum + TempL * 256
+EndSub
+#EndIf
+Sub ZeroErrCounters
+BadBinCnt = 0
+BadEnsemble = 0
+BadEnsCount = 0
+VMRestartAttempts = 0
+BadStgCount = 0
+#If WqSonde <> "NONE" Then
+WqPwrCycleCnt = 0
+#EndIf
+BadQCount = 0
+BadVelCount = 0
+EventVoltFlag  = No
+EventYSIFlag  = No
+EventQFlag  = No
+EventCDMAFlag = No
+CDMAFailure = No
+NewADCP = False
+NewPS1 = False
+NewPS2 = False
+EndSub
+Sub KeypadMenu
+DisplayMenu ("Main Menu",-4)
+SubMenu ("SystemInfo")
+DisplayValue ("LastScan",LastScan)
+DisplayValue ("Program",Program)
+DisplayValue ("ProgVersDate",ProgVersDate)
+DisplayValue ("DL_Firm",OSVers)
+DisplayValue ("SerNum",SerNum)
+DisplayValue ("ProgErrors",ProgErrors)
+DisplayValue ("DataErr",DataErr)
+DisplayValue ("Low12Volts",Low12Volts)
+DisplayValue ("LithBat",LithBat)
+DisplayValue ("SkipScans",SkipScans)
+DisplayValue ("FreeCFMem",FreeCFMem)
+DisplayValue ("Restart Attemps",VMRestartAttempts)
+DisplayValue ("NeedLowMeas",LowMeas)
+DisplayValue ("NeedHighMeas",HighMeas)
+EndSubMenu
+SubMenu ("VM Data")
+DisplayValue ("LastScan",LastScan)
+DisplayValue ("StagePrime",StagePrime)
+DisplayValue ("StageSecmd",StageSecnd)
+DisplayValue ("StgDiff",StgDiff)
+DisplayValue ("UpbeamStg",UpBeamStg)
+DisplayValue ("VMPressStg",VMPressStg)
+DisplayValue ("PS1Stg",PS1Stg)
+DisplayValue ("PS2Stg",PS2Stg)
+DisplayValue ("SondeStg",SondeStg)
+DisplayValue ("IndexVel",IndexVel)
+DisplayValue ("BadQCount",BadQCount)
+DisplayValue ("Qcfs",Qcfs)
+DisplayValue ("SiteVolts",CR1Volts)
+DisplayValue ("VMvolts",VMVolts)
+DisplayValue ("ExtWHConvertVolt",ExtWHConvertVolt)
+DisplayValue ("VMpitch",VMpitch)
+DisplayValue ("VMroll",VMroll)
+DisplayValue ("VMtempC",VMtempC)
+DisplayValue ("BadVelCount",BadVelCount)
+DisplayValue ("BadStgCount",BadStgCount)
+DisplayValue ("StgSelect",StgSelect)
+DisplayValue ("VMUpBeam",VMupBeam)
+DisplayValue ("VMPressure",VMpressure)
+DisplayValue ("AvgSwathRSSI",AvgSwathRSSI)
+DisplayValue ("VMMemFree",VMMemFree)
+EndSubMenu
+SubMenu ("OtherSensorData")
+DisplayValue ("LastScan",LastScan)
+#If WqSonde <> "NONE" Then
+DisplayValue ("WQBattV",WqBattV)
+DisplayValue ("WqTempC",WqTempC)
+DisplayValue ("ExoSpCond",WqSpCond)
+DisplayValue ("ExoTurbFNU",WqTurbFNU)
+DisplayValue ("WQChlugL",WqChlugL)
+DisplayValue ("WQChlRFU",WqChlRFU)
+DisplayValue ("WQDOmgL",WqDOMgl)
+DisplayValue ("WQDOSat",WqDOSat)
+DisplayValue ("WQpH",WqPH)
+DisplayValue ("WQBGAugL",WqBGAugl)
+DisplayValue ("WQBGARFU",WqBGArfu)
+DisplayValue ("WQFDomQSU",WqFDOMqsu)
+DisplayValue ("WQFdomRFU",WqFDOMrfu)
+DisplayValue ("WQNH4mgl",WqNH4mgl)
+DisplayValue ("WQNO3mgl",WqNO3mgl)
+DisplayValue ("WQCLmgl",WqCLmgl)
+DisplayValue ("WQWiperPos",WqWiperPos)
+#EndIf
+EndSubMenu
+SubMenu ("SiteParameters")
+DisplayValue ("LastScan",LastScan)
+MenuItem ("Site Id",SiteID)
+MenuItem ("SiteNumb",SiteNum)
+MenuItem ("Tech?",Tech)
+MenuItem ("VisitReason",VisitReason)
+MenuPick (Site Visit,Calib Meas,Site Down,Beam Block,WQ Fouling,Program Update,Hardware Update,Other)
+MenuItem ("RecCalibData?",RecCalibData)
+MenuPick (Yes,No)
+MenuItem ("UpBeamOffSet",UpBeamOffset)
+MenuItem ("VMPressOffset",VMPressOffset)
+MenuItem ("PS1Offset",PS1Offset)
+MenuItem ("PS2Offset",PS2Offset)
+MenuItem ("SondeOffset",SondeOffset)
+MenuItem ("SelStgPrime =",SelStgPrime)
+MenuPick (UPbeam,VMpress,PSpress,PSpress2,WqPress)
+MenuItem ("SelStgSecnd =",SelStgSecnd)
+MenuPick (UPbeam,VMpress,PSpress,PSpress2,WqPress)
+MenuItem ("TruePS1Stg",TruePS1Stg)
+MenuItem ("TruePS2Stg",TruePS2Stg)
+MenuItem ("TrueUpBeamStg",TrueUpBeamStg)
+MenuItem ("TrueVMPressStg",TrueVMPressStg)
+MenuItem ("TrueYsiStg",TrueSondeStg)
+MenuItem ("StartBin",StartBin)
+MenuItem ("EndBin",EndBin)
+MenuItem ("StartEbbBin (Pos)",StartEbbBin)
+MenuItem ("EndEbbBin (Pos)",EndEbbBin)
+MenuItem ("StartFldBin (Neg)",StartFldBin)
+MenuItem ("EndFldBin (Neg)",EndFldBin)
+MenuItem ("Use Ebb/Fld Rating",BiRating)
+MenuPick (Yes,No)
+MenuItem ("Ebb-Flood Tran (vel)",BiRatTran)
+MenuItem ("MinExpVel",MinExpVel)
+MenuItem ("MaxExpVel",MaxExpVel)
+MenuItem ("MinExpStg",MinExpStg)
+MenuItem ("MaxExpStg",MaxExpStg)
+MenuItem ("Flow Sign",FlowSign)
+MenuPick (1,-1)
+MenuItem ("HighRatVel",HighRatVel)
+MenuItem ("LowRatVel",LowRatVel)
+MenuItem ("CalcQs?",CalcQ)
+MenuPick (Yes,No)
+MenuItem ("Use Y vel?",UseV2)
+MenuPick (Yes,No)
+MenuItem ("Use Pos flow angle (earth)",UseDir)
+MenuPick (Yes,No)
+MenuItem ("Positive Flow Angle",PosFlowDir)
+MenuItem ("Record All Vel Data",RecordAll)
+MenuPick (Yes,No)
+MenuItem ("Store all Variables",StoreVariablesFlg)
+MenuPick (Yes,No)
+MenuItem ("Read in Variables",GetVariablesFlg)
+MenuPick (Yes,No)
+MenuItem ("VM Power",VMPower)
+MenuPick (Yes,No)
+MenuItem ("WakeUpVM",WakeUpVM)
+MenuPick (Yes,No)
+MenuItem ("HrsCdmaOff",HrsCdmaOff)
+MenuPick (1,2,4,8,12)
+MenuItem ("CycleCdmaPwr",CycleCdmaPwr)
+MenuPick (Yes,No)
+#If (WqSonde <> "NONE") Then
+MenuItem ("CycleEXOPwr" ,WqManualCycle)
+MenuPick (Yes,No)
+#EndIf
+MenuItem ("KeepCDMAon",KeepCDMAon)
+MenuPick (Yes,No)
+MenuItem ("UseNCcdmaRelay?",IsCDMANClosed)
+MenuPick (Yes,No)
+MenuItem ("SelectFilter",SelectFilter)
+MenuPick (0,1)
+MenuItem ("RSSIThreshold",RSSIThreshold)
+MenuItem ("RSSI Avg Start Bin",AvgRSSIStartBin)
+MenuItem ("RSSI Avg End Bin",AvgRSSIEndBin)
+MenuItem ("StdCorrThreshold",StdCorrThreshold)
+MenuItem ("CorrThreshold",CorrThreshold)
+#If GetNoiseFloor = Yes Then
+MenuItem ("SendPT3",SendPT3)
+MenuPick (Yes,No)
+#EndIf
+EndSubMenu
+SubMenu ("AllBinData")
+DisplayValue ("Bin1",VMBinVel(1))
+DisplayValue ("Bin2",VMBinVel(2))
+DisplayValue ("Bin3",VMBinVel(3))
+DisplayValue ("Bin4",VMBinVel(4))
+DisplayValue ("Bin5",VMBinVel(5))
+DisplayValue ("Bin6",VMBinVel(6))
+DisplayValue ("Bin7",VMBinVel(7))
+DisplayValue ("Bin8",VMBinVel(8))
+DisplayValue ("Bin9",VMBinVel(9))
+DisplayValue ("Bin10",VMBinVel(10))
+DisplayValue ("Bin11",VMBinVel(11))
+DisplayValue ("Bin12",VMBinVel(12))
+DisplayValue ("Bin13",VMBinVel(13))
+DisplayValue ("Bin14",VMBinVel(14))
+DisplayValue ("Bin15",VMBinVel(15))
+DisplayValue ("Bin16",VMBinVel(16))
+DisplayValue ("Bin17",VMBinVel(17))
+DisplayValue ("Bin18",VMBinVel(18))
+DisplayValue ("Bin19",VMBinVel(19))
+DisplayValue ("Bin20",VMBinVel(20))
+DisplayValue ("Bin21",VMBinVel(21))
+DisplayValue ("Bin22",VMBinVel(22))
+DisplayValue ("Bin23",VMBinVel(23))
+DisplayValue ("Bin24",VMBinVel(24))
+DisplayValue ("Bin25",VMBinVel(25))
+DisplayValue ("Bin26",VMBinVel(26))
+DisplayValue ("Bin27",VMBinVel(27))
+EndSubMenu
+#If WqSonde = "WQ_SDI12" Then
+SubMenu ("RawSondeData")
+DisplayValue ("WqSDI12Sensor(1)",WqSDI12Sensor(1))
+DisplayValue ("WqSDI12Sensor(2)",WqSDI12Sensor(2))
+DisplayValue ("WqSDI12Sensor(3)",WqSDI12Sensor(3))
+DisplayValue ("WqSDI12Sensor(4)",WqSDI12Sensor(4))
+DisplayValue ("WqSDI12Sensor(5)",WqSDI12Sensor(5))
+DisplayValue ("WqSDI12Sensor(6)",WqSDI12Sensor(6))
+DisplayValue ("WqSDI12Sensor(7)",WqSDI12Sensor(7))
+DisplayValue ("WqSDI12Sensor(8)",WqSDI12Sensor(8))
+DisplayValue ("WqSDI12Sensor(9)",WqSDI12Sensor(9))
+DisplayValue ("WqSDI12Sensor(10)",WqSDI12Sensor(10))
+DisplayValue ("WqSDI12Sensor(11)",WqSDI12Sensor(11))
+DisplayValue ("WqSDI12Sensor(12)",WqSDI12Sensor(12))
+DisplayValue ("WqSDI12Sensor(13)",WqSDI12Sensor(13))
+DisplayValue ("WqSDI12Sensor(14)",WqSDI12Sensor(14))
+DisplayValue ("WqSDI12Sensor(15)",WqSDI12Sensor(15))
+DisplayValue ("WqSDI12Sensor(16)",WqSDI12Sensor(16))
+DisplayValue ("WqSDI12Sensor(17)",WqSDI12Sensor(17))
+DisplayValue ("WqSDI12Sensor(18)",WqSDI12Sensor(18))
+DisplayValue ("WqSDI12Sensor(19)",WqSDI12Sensor(19))
+DisplayValue ("WqSDI12Sensor(20)",WqSDI12Sensor(20))
+DisplayValue ("WqSDI12Sensor(21)",WqSDI12Sensor(21))
+DisplayValue ("WqSDI12Sensor(22)",WqSDI12Sensor(22))
+DisplayValue ("WqSDI12Sensor(23)",WqSDI12Sensor(23))
+EndSubMenu
+#ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST")
+SubMenu ("RawSondeData")
+DisplayValue ("WqData(1)",WqData(1))
+DisplayValue ("WqData(2)",WqData(2))
+DisplayValue ("WqData(3)",WqData(3))
+DisplayValue ("WqData(4)",WqData(4))
+DisplayValue ("WqData(5)",WqData(5))
+DisplayValue ("WqData(6)",WqData(6))
+DisplayValue ("WqData(7)",WqData(7))
+DisplayValue ("WqData(8)",WqData(8))
+DisplayValue ("WqData(9)",WqData(9))
+DisplayValue ("WqData(10)",WqData(10))
+DisplayValue ("WqData(11)",WqData(11))
+DisplayValue ("WqData(12)",WqData(12))
+DisplayValue ("WqData(13)",WqData(13))
+DisplayValue ("WqData(14)",WqData(14))
+DisplayValue ("WqData(15)",WqData(15))
+DisplayValue ("WqData(16)",WqData(16))
+DisplayValue ("WqData(17)",WqData(17))
+DisplayValue ("WqData(18)",WqData(18))
+DisplayValue ("WqData(19)",WqData(19))
+DisplayValue ("WqData(20)",WqData(20))
+DisplayValue ("WqData(21)",WqData(21))
+DisplayValue ("WqData(22)",WqData(22))
+DisplayValue ("WqData(23)",WqData(23))
+EndSubMenu
+#EndIf
+SubMenu ("StageRating")
+MenuItem ("StgOffset",StgOffset)
+MenuItem ("StgCoef",StgCoef)
+MenuItem ("StgCoef2",StgCoef2)
+EndSubMenu
+SubMenu ("meanvel_Rating")
+MenuItem ("VelOffset",VelOffset)
+MenuItem ("VelCoef",VelCoef)
+MenuItem ("VelCoef2",VelCoef2)
+MenuItem ("VelCoef3",VelCoef3)
+MenuItem ("Trans",Trans)
+MenuItem ("UpVelOffset",UpVelOffset)
+MenuItem ("UpVelCoef",UpVelCoef)
+MenuItem ("UpVelCoef2",UpVelCoef2)
+MenuItem ("UpVelCoef3",UpVelCoef3)
+MenuItem ("LowVelOffset",LowVelOffset)
+MenuItem ("LowVelCoef",LowVelCoef)
+MenuItem ("LowVelCoef2",LowVelCoef2)
+MenuItem ("LowVelCoef3",LowVelCoef3)
+EndSubMenu
+SubMenu ("SDI12_Setup")
+MenuItem ("PSPressPort",PSPressPort)
+MenuPick (3,5)
+MenuItem ("PSPressAddr",PSPressAddr)
+MenuPick (0,1,2,3,4)
+MenuItem ("PSpress2Port?",PSpress2Port)
+MenuPick (3,5)
+MenuItem ("PSpress2Addr?",PSpress2Addr)
+MenuPick (0,1,2,3,4)
+#If WqSonde ="WQ_SDI12" Then
+MenuItem ("WQ SDI Port?",WqSDIPort)
+MenuPick (3,5)
+MenuItem ("YSI Addr?",WqAddr)
+MenuPick (0,1,2,3,4)
+#EndIf
+EndSubMenu
+#If WqSonde = "WQ_SDI12" Then
+SubMenu ("WQSondeSetup")
+MenuItem ("MilliToMicro?",MilliToMicro)
+MenuPick (Yes,No)
+MenuItem ("LocTempC",LocTempC)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocSpCond",LocSpCond)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocVolts",LocVolts)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocDOmgL",LocDOmgL)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocDOSat",LocDOSat)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocPH",LocPH)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocORP",LocORP)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocDepth",LocDepth)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocTurbFNU",LocTurbFNU)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocFdomRFU",LocFdomRFU)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocFdomQSU",LocFdomQSU)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocChlorMGL",LocChlorMGL)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocChlorRFU",LocChlorRFU)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocBGA",LocBGA)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocAmmonium",LocAmmonium)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocNitrate",LocNitrate)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+MenuItem ("LocChloride",LocChloride)
+MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+EndSubMenu
+#EndIf
+EndMenu
+EndSub
+BeginProg
+MissedEns = 0
+ScanDiff = 0
+#If HasVM Then
+SpikeCounter = 0
+SendHeader = True
+#EndIf
+UseCommsZeroForADCP = False
+UseCommsOneForSonde = False
+UseCommsZeroForSonde = False
+WqUseCPort = False
+#If LoggerType = CR6 Then
+If (AdcpPort = ComC1) OR (AdcpPort = ComC3) Then
+UseCommsZeroForADCP = True
+EndIf
+If (WqSerialPort = ComC1) OR (WqSerialPort = ComC3) Then
+WQUseCPort = True
+EndIf
+If (IsWqMax232 = True) AND (WqUseCPort = True) Then
+UseCommsOneForSonde = True
+EndIf
+If (IsWqMax232 = False) AND (WqUseCPort = True) Then
+UseCommsZeroForSonde = True
+EndIf
+#EndIf
+PanelTemp(PTempC,250)
+PTempF = PTempC * 9/5 + 32
+Call GetStartup
+Call CalcLoopInterval
+Call Initialize
+SetVMTimeFlg = false
+RecDataFlag = No
+CMD = ""
+SendCMD = FALSE
+Scan (ScanRate,ScanUnit,5,0)
+Timer(5,mSec,2)
+RealTime DebugTime()
+CallTable DebugTimer
+Dim InCount As Long
+ScanStart = Timer(2,mSec,2)
+ScanStart = ScanStart/1000
+EnsBytes = 0
+Subscans = 0
+ScanNo = ScanNo + 1
+Call OpenADCPPort
+#If HasSlave = Yes Then
+If (VemcoRTR = True) OR (SendFlowData = True) Then
+SerialOpen (SlaveCom,19200,0,0,2000)
+EndIf
+#EndIf
+If GetVariablesFlg = True Then
+Call ReadVariables
+GetVariablesFlg = False
+EndIf
+If (SendCMD) Then Call SendSetup
+#If GetNoiseFloor = True Then
+If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) Then
+CMD = "PT3"
+SendCMD = True
+Call SendSetup
+EndIf
+If CMD = "PT3" Then CallTable NoiseFloor
+#EndIf
+CMD = ""
+#If HasSlave = Yes Then
+If SendFlowData = True Then Call SerialDataOut
+#EndIf
+Call ToggleVMPower
+Call TrueStage
+UpBeamStg = VMupBeam + UpBeamOffset
+VMPressStg = VMpressure + VMPressOffset
+PS1Stg = PsPress1Stg(1) + PS1Offset
+PS2Stg = PSpress2Stg(1) + PS2Offset
+#If WqSonde <> "NONE" Then
+SondeStg = WqDepthFt + SondeOffset
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+#If LoggerType = CR1000 Then
+If IsWQNClosed Then
+PortSet(WqSwitchPort,0)
+Else
+PortSet(WqSwitchPort,1)
+EndIf
+#ElseIf LoggerType = CR6 Then
+If UseSW12_2_forWQ Then
+SW12(2,1)
+Else
+If IsWQNClosed Then
+PortSet(WqSwitchPort,0)
+Else
+PortSet(WqSwitchPort,1)
+EndIf
+EndIf
+#EndIf
+#If WqSonde = "WQ_SERIAL_BURST" Then
+iCount=1
+Erase BurstIn
+Erase BurstArray()
+Erase BurstData()
+#EndIf
+#EndIf
+Call GetStage
+RealTime (rTime)
+RealSeconds = (Hour * 3600) + (Minute * 60) + Second
+Mod5Minutes = RealSeconds MOD 300
+Mod15Minutes = RealSeconds MOD 900
+Mod60Minutes = RealSeconds MOD 3600
+ModDay = RealSeconds MOD 86400
+If (ModDay > 300) AND (ModDay < 420) Then
+Call ZeroErrCounters
+#If HasVM Then
+SpikeCounter = 0
+#EndIf
+EndIf
+Numbytes = 0
+InCount=0
+#If HasVM Then
+If WakeUpVM Then
+Call WakeVM
+WakeUpVM = No
+EndIf
+#EndIf
+Call GetLastScan
+Call GetSysInfo
+Call KeypadMenu
+Call ExtPwrSource
+If Tech <> "" OR VisitReason <> "" OR TrueUpBeamStg <> NAN OR TrueVMPressStg <> NAN OR TruePS1Stg <> NAN OR TruePS2Stg <> NAN OR TrueSondeStg <> NAN Then
+ErrorEvent = "Tech Visit"
+CallTable SiteVisit
+Delay (0,200,mSec)
+Tech = ""
+VisitReason = ""
+TrueUpBeamStg = BadDataIndicator
+TrueVMPressStg = BadDataIndicator
+TruePS1Stg = BadDataIndicator
+TruePS2Stg = BadDataIndicator
+TrueSondeStg = BadDataIndicator
+EndIf
+If ModDay < 15 Then
+SetVMTimeFlg = Yes
+Rec24HrFlag = Yes
+CallTable QAQCInfo
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+SetEXOTimeFlg = True
+#EndIf
+StoreVariablesFlg = True
+Else
+Rec24HrFlag = No
+EndIf
+#If WqSonde = "WQ_SERIAL_BURST" Then
+BurstTimeReached = Timer(5,mSec,4)
+BurstReachedMod = Mod15Minutes
+If BurstPeriod = 0 OR BurstPeriod = -1 Then
+BurstPeriod = 1150
+ElseIf BurstPeriod < 250 Then
+BurstPeriod = 250
+EndIf
+If Mod15Minutes > 830 AND Mod15Minutes < 860 Then
+GetBurst = True
+Else
+GetBurst = False
+EndIf
+#EndIf
+If Mod15Minutes < 15 Then
+If RecordAll = Yes Then RecAllVelFlag = Yes
+#If WqSonde <> "NONE" Then
+If WqDead = True Then RecAQFlag = True
+#EndIf
+Rec15minFlag = Yes
+RecDataFlag = Yes
+RecBeamCheckFlag = Yes
+Else
+Rec15minFlag = No
+RecAllVelFlag = No
+RecBeamCheckFlag = No
+RecAQFlag = False
+EndIf
+If (Mod15Minutes < 35) AND (RecDataFlag = No) Then
+Rec15minFlag = Yes
+#If WqSonde <> "NONE" Then
+If WqDead = True Then RecAQFlag = Yes
+#EndIf
+If RecordAll = Yes Then RecAllVelFlag = Yes
+RecDataFlag = No
+EndIf
+If Mod15Minutes > 35 Then RecDataFlag = No
+If RecCalibData = True Then
+Rec1MinFlag = True
+Else
+Rec1MinFlag = False
+OneMinCount = 0
+EndIf
+If Rec1MinFlag = True Then
+OneMinCount = OneMinCount + 1
+If OneMinCount > 1439 Then
+RecCalibData = False
+Rec1MinFlag = False
+OneMinCount = 0
+EndIf
+EndIf
+ADCPDone = False
+#If HasVM = true Then
+For ADCPLoop = 1 To 2
+Do While SerialInChk(AdcpPort)
+InCount=InCount+1
+SerialInBlock(AdcpPort,Nums(1),1)
+MoveBytes(Longarray(InCount),3,Nums(1),0,1)
+If InCount > 5 Then
+If Longarray(1) <> 127 OR Longarray(2) <> 127
+FramingError = FramingError + 1
+InCount = InCount-2
+EndIf
+EndIf
+Numbytes = InCount
+If InCount > 4 Then
+LSB = Longarray(3)
+MSB = Longarray(4)
+EnsBytes = LSB + (MSB*256)
+EndIf
+If Numbytes > 4 AND EnsBytes = Numbytes - 2 Then
+SerialFlush(AdcpPort)
+ADCPDone = true
+ExitDo
+EndIf
+Delay (1,30,uSec)
+Loop
+If FramingError > 0 Then
+HeaderMismatch = HeaderMismatch + 1
+FramingError = 0
+EndIf
+Subscans = Subscans + 1
+If ADCPDone Then ExitFor
+Delay (1,5,Sec)
+Next
+#EndIf
+ADCPEnd = Timer(2,mSec,4)
+ADCPEnd = ADCPEnd/1000
+If Numbytes = ((EnsBytes *2) +4) Then MissedEns = MissedEns + 1
+CDMACheckStart = Timer(2,msec,4)
+CDMACheckStart = CDMACheckStart/1000
+Call CDMAcheck
+CDMACheckEnd = Timer(2,msec,4)
+CDMACheckEnd = CDMACheckEnd/1000
+CDMACheckTotTime = CDMACheckEnd-CDMACheckStart
+#If HasVM = True Then
+ZeroVMTimeStart = Timer(2,msec,4)
+ZeroVMTimeStart = ZeroVMTimeStart/1000
+If NumbytesZero > 7 Then
+BadEnsemble = BadEnsemble + 1
+Call ZeroVMArrays
+VMdataIn = No
+SerialFlush(AdcpPort)
+NumbytesZero = 0
+EndIf
+If Numbytes < 1 Then
+NumbytesZero = NumbytesZero + 1
+Else
+NumbytesZero = 0
+EndIf
+ReceivedBytes = Numbytes
+InCount = 0
+ZeroVMTimeEnd = Timer(2,msec,4)
+ZeroVMTimeEnd = ZeroVMTimeEnd/1000
+ZeroVMTotTime = ZeroVMTimeEnd - ZeroVMTimeStart
+ChkSumChkStart = Timer(2,msec,4)
+ChkSumChkStart = ChkSumChkStart/1000
+Call ChecksumCheck
+ChkSumChkEnd = Timer(2,msec,4)
+ChkSumChkEnd = ChkSumChkEnd/1000
+ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
+If (CalcCheckSum <> EnsChecksum) OR (CalcCheckSum = 0) Then
+BadEnsemble = BadEnsemble + 1
+BadChecksum = BadChecksum + 1
+VMdataIn = No
+Else
+VMdataIn = Yes
+EndIf
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+If (Mod15Minutes > 770) AND (Mod15Minutes < 790) Then
+Wipeflag = True
+Else
+Wipeflag = false
+EndIf
+#EndIf
+BeforeBurst = Timer(2,msec,4)
+BeforeBurst = BeforeBurst/1000
+#If WqSonde = "WQ_SDI12" Then
+Call GetWq_SDI12
+#ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+If WqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True
+If Redeploy = True Then
+Call ParamCheck
+Delay (1,1,Sec)
+Call DefineParamsOrder
+Delay (1,1,Sec)
+Call DefineLocs
+Delay (1,1,Sec)
+Call SetDelim
+Delay (1,1,Sec)
+Redeploy = False
+Else
+Call GetWQ_Serial
+Delay (1,30,mSec)
+Call ParseData
+EndIf
+Delay (1,50,mSec)
+If GetBurst AND NOT Redeploy Then
+#If WqSonde = "WQ_SERIAL_BURST" Then
+Call setburst
+Call GetBurstArray
+BurstDebugCount = BurstDebugCount+1
+BurstCount = 0
+TotalBurstVals = 0
+BurstErrCnt = 0
+GotToBurst = GotToBurst + 1
+jCount = 0
+kCount = 0
+For jCount = 1 To MaxBurstCnt
+For kCount = 1 To 23
+BurstData(kCount) = BurstArray(jCount,kCount)
+Next kCount
+Call parseburst
+If WqError Then
+WqBadData = true
+Else
+WqBadData = false
+EndIf
+BurstCount = BurstCount+1
+If WqError Then
+BurstErrCnt = BurstErrCnt + 1
+EndIf
+If BurstErrCnt > BurstMaxErrCnt Then
+TotalBurstVals = jCount - BurstErrCnt
+SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50)
+ExitFor
+EndIf
+If BurstCount >= MaxBurstCnt Then
+TotalBurstVals = jCount - BurstErrCnt
+BurstMissed = False
+RecBurstFlag = True
+CallTable SecBurst
+CallTable Burst
+ElseIf BurstCount < MaxBurstCnt AND WqError = True Then
+BurstMissed = False
+RecBurstFlag = False
+CallTable SecBurst
+ElseIf BurstCount < MaxBurstCnt AND WqError = False Then
+BurstMissed = False
+RecBurstFlag = False
+CallTable SecBurst
+CallTable Burst
+EndIf
+Delay(1,1,msec)
+Next jCount
+If BurstCount < MaxBurstCnt Then
+BurstMissed = True
+RecBurstFlag = True
+CallTable SecBurst
+CallTable Burst
+EndIf
+If TotalBurstVals >= MinBurstVals Then
+Call CopyMedBurstVals
+Else
+Call ResetBurstVars
+EndIf
+SerialFlush (WqSerialPort)
+BurstCount = 0
+#EndIf
+EndIf
+If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True)
+Call WQ_Mark_Bad
+Erase WqData()
+If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then
+Call CycleWQPower
+EndIf
+WqErrCount = WqErrCount + 1
+WqPwrCycleCnt = WqPwrCycleCnt + 1
+If WqErrCount >= WQDeadCntMax Then
+WqDead = True
+EndIf
+EndIf
+#EndIf
+AfterBurst = Timer(2,msec,4)
+AfterBurst = AfterBurst/1000
+If VMdataIn = Yes Then
+VmDeadCount = 0
+MainDecodeStart = Timer(2,msec,4)
+MainDecodeStart = MainDecodeStart/1000
+Call MainDecode
+MainDecodeEnd = Timer(2,msec,4)
+MainDecodeEnd = MainDecodeEnd/1000
+MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
+#If WqSonde <>"NONE" Then
+TempDiff = WqTempC - VMtempC
+#EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+If WqError = true Then
+WqBadData = True
+Else
+WqBadData = False
+EndIf
+#ElseIf WqSonde = "WQ_SDI12" Then
+If WqError = true Then
+WqBadData = True
+Else
+WqBadData = False
+EndIf
+#EndIf
+#If UseAutoRange = true
+CalcRangeStart = Timer(2,msec,4)
+CalcRangeStart = CalcRangeStart/1000
+Call CalcRangebin
+EndBin = RangedBin
+CalcRangeEnd = Timer(2,msec,4)
+CalcRangeEnd = CalcRangeEnd/1000
+CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
+#EndIf
+OneMinCalcStart = Timer(2,msec,4)
+OneMinCalcStart = OneMinCalcStart/1000
+Call OneMinuteCalcs
+OneMinCalcEnd = Timer(2,msec,4)
+OneMinCalcEnd = OneMinCalcEnd/1000
+OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
+CalcQStart = Timer(2,msec,4)
+CalcQStart = CalcQStart/1000
+Call SubCalcQ
+CalcQEnd = Timer(2,msec,4)
+CalcQEnd = CalcQEnd/1000
+CalcQTotTime = CalcQEnd-CalcQStart
+GetVMMemStart = Timer(2,msec,4)
+GetVMMemStart = GetVMMemStart/1000
+Call GetVMFreeMem
+GetVMMemEnd = Timer(2,msec,4)
+GetVMMemEnd = GetVMMemEnd/1000
+GetVMMemTotTime = GetVMMemEnd-GetVMMemStart
+#If HasVM Then
+#If IsSpecStudy = Yes Then
+CallTable VelData
+#EndIf
+RecAllVelFlag = false
+If ScanNo >= 20 Then
+ChkSpikeStart = Timer(2,msec,4)
+ChkSpikeStart = ChkSpikeStart/1000
+Call CheckSpikes
+ChkSpikeEnd = Timer(2,msec,4)
+ChkSpikeEnd = ChkSpikeEnd/1000
+ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
+#If StoreAllToCard Then
+StoreToCrdStart = Timer(2,msec,4)
+StoreToCrdStart = StoreToCrdStart/1000
+Call StoreAllData
+StoreToCrdEnd = Timer(2,msec,4)
+StoreToCrdEnd = StoreToCrdEnd/1000
+StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
+#EndIf
+EndIf
+AddSpikeStart = Timer(2,msec,4)
+AddSpikeStart = AddSpikeStart/1000
+Call AddSpikes
+AddSpikeEnd = Timer(2,msec,4)
+AddSpikeEnd = AddSpikeEnd/1000
+AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
+#EndIf
+Else
+VmDeadCount = VmDeadCount + 1
+EndIf
+If VmDeadCount >= VMDeadCntMax Then
+WakeUpVM = True
+EndIf
+DataTabsEnd = Timer(2,msec,4)
+DataTabsEnd = DataTabsEnd/1000
+DataTabsTotTime = DataTabsEnd - DataTabsStart
+Call StageDiff
+Call ResetMeasFlags
+Call GetSN
+If SetVMTimeFlg Then
+Call SetVMTime
+EndIf
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+If Wipeflag = true Then
+Call WipeWQ
+Delay (1,1,Sec)
+WipeTime = Status.TimeStamp(0,1)
+EndIf
+If SetEXOTimeFlg = True Then
+Call SetEXOTime
+EndIf
+If WqManualCycle = true Then
+Call CycleWQpower
+EndIf
+#EndIf
+DataTabsStart = Timer(2,msec,4)
+DataTabsStart = DataTabsStart/1000
+CallTable DataOut
+DataOutCount = DataOutCount + 1
+DataOutEnd = Timer (2,msec,4)
+DataOutEnd = DataOutEnd/1000
+DataOutTotTime = DataOutEnd - DataOutStart
+Data1mStart = Timer (2,msec,4)
+Data1mStart = Data1mStart/1000
+CallTable Data1m
+Data1mCount = Data1mCount + 1
+Data1mEnd = Timer(2,msec,4)
+Data1mEnd = Data1mEnd/1000
+Data1mTotTime = Data1mEnd - Data1mStart
+AQTabStart = Timer(2,msec,4)
+AQTabStart = AQTabStart/1000
+AvgIndexVel = DataOut.IndexVel_Avg
+AvgVMTemp = DataOut.VMtempC_Avg
+AvgVMPitch = DataOut.VMpitch_Avg
+AvgVMRoll = DataOut.VMroll_Avg
+AvgPS1Stg = DataOut.PS1Stg_Avg
+AvgPS2Stg = DataOut.PS2Stg_Avg
+AvgUpBeamStg = DataOut.UpBeamStg_Avg
+Delay (1,3,mSec)
+CallTable Aquarius
+#If WqSonde = "WQ_SERIAL_BURST" Then
+If Rec15minFlag = True Then
+Call ResetBurstVars
+EndIf
+#EndIf
+AQcount = AQcount + 1
+AQTabEnd = Timer (2,msec,4)
+AQTabEnd = AQTabEnd/1000
+AQTabTotTime = AQTabEnd - AQTabStart
+CallBmChkStart = Timer(2,msec,4)
+CallBmChkStart = CallBmChkStart/1000
+CallTable BeamCheck
+CallBmChkEnd = Timer(2,msec,4)
+CallBmChkEnd = CallBmChkEnd/1000
+CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
+Rec15minFlag = false
+RecBurstFlag = False
+RecAQFlag = False
+If StoreVariablesFlg = true Then Call StoreVariables
+ScanEnd = Timer(2,mSec,4)
+ScanEnd = ScanEnd/1000
+ProcessTime = ScanEnd - ScanStart
+CallTable Debugger
+CallTable SVMaq
+NextScan
+EndProg
