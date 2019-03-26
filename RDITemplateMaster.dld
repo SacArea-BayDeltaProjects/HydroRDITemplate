@@ -281,6 +281,9 @@ Const WqSonde = "WQ_SERIAL_BURST"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
 'Value = "NONE"
+Const DWRSonde = True
+'value = True
+'value = False
 Const WqBaud = 38400
 'value = 9600
 'value = 38400
@@ -2746,7 +2749,11 @@ EndSub
     Public SendEXOSec As String
     Public CalcHour As Float
     CalcHour = SplitTime(4)
+    If DWRSonde = False Then
     CalcHour = CalcHour + 8
+    Else
+    CalcHour = CalcHour
+    EndIf
     If CalcHour >= 24 Then CalcHour = CalcHour - 24
 
     If CalcHour < 10 Then 'add leading zero to hour
