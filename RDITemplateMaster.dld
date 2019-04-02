@@ -276,7 +276,7 @@ Const No = False
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "WQ_SERIAL_BURST"
+Const WqSonde = "WQ_SERIAL"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
@@ -333,7 +333,7 @@ Const VMDeadCntMax = 20
 Const StoreAllToCard = True
 'value = True
 'value = False
-Const Debugging = True
+Const Debugging = False
 'Value = True
 'Value = False
 Const SeeAllVel = False
