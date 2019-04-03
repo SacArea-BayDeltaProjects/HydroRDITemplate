@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190325
-'Last Modified by: Trevor Violette and Mark Inc
+Const ProgramVersionDate = 20190401
+'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -242,6 +242,7 @@ Const ProgramVersionDate = 20190325
 '           TAV updated the burst loop to exclude zeroes from the median calculation in the Burst table if there were issues with the communication. Total number of values used in the calculation also seems to be working correctly now.
 '20190320 - MRI Added statement to conditional compile out the ADCPLoop if the HasVM is false to avoid potential timing problems
 '20190325 - MRI Added BurstPeriod variable in public table so user can adjust the period length that is sent to the sonde during serial burst communication. Had it set to standard 1150 unless otherwise declared. Minimum value is 250. Presereve in USR file too.
+'20190401 - TAV Added logic to record Turbidity NTUs (in addition to FNU) if it's a DWR sonde. Also added logic to set the time in PST if instead of UTC if it's a DWR sonde. They are using KOR 2, which makes the time output in local time (PST)
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -281,6 +282,9 @@ Const WqSonde = "WQ_SERIAL_BURST"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
 'Value = "NONE"
+Const DWRSonde = False
+'value = True
+'value = False
 Const WqBaud = 38400
 'value = 9600
 'value = 38400
@@ -330,7 +334,7 @@ Const VMDeadCntMax = 20
 Const StoreAllToCard = True
 'value = True
 'value = False
-Const Debugging = True
+Const Debugging = False
 'Value = True
 'Value = False
 Const SeeAllVel = False
@@ -821,7 +825,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 '                           Float was used, changed to a 3 character string in case someone accidentally types a number in, this will allow user to revert back to "NAN" -TAV 20141208
 'declare variables for EXO and SDI
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-  Public WqNparams = 23
+  Public WqNparams = 24
   Public Redeploy As Boolean
   Public NoSondeTrig
   Public GetBurst As Boolean
@@ -838,7 +842,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Dim TempCCode = 1
   Dim TempFCode = 2
   Dim CondCode = 7
-  Dim TurbCode = 223
+  Dim TurbFNUCode = 223
+  Dim TurbNTUCode = 37
   Dim DoSatCode = 211
   Dim DOmgLCode = 212
   Dim DepthCode = 23
@@ -858,8 +863,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Dim WiperPos = 229
 
   #If WqSonde = "WQ_SERIAL_BURST" Then
-    Public BurstData(23)
-    Dim BurstArray(30,23)
+    Public BurstData(24)
+    Dim BurstArray(30,24)
     Public BurstIn As String * 256 'Raw EXO burst data string
     Public jCount As Long 'Counter
     Public kCount As Long 'Counter
@@ -877,6 +882,11 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BurstTempF
     Public BurstSpCond
     Public BurstTurbFNU
+    #If DWRSonde = True Then
+    Public BurstTurbNTU
+    #Else
+      Dim BurstTurbNTU
+      #EndIf
     Public BurstDOSat
     Public BurstDOmgL
     Public BurstORP
@@ -902,6 +912,11 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MedTempF
     Public MedSpCond
     Public MedTurbFNU
+    #If DWRSonde = True Then
+    Public MedTurbNTU
+    #Else
+      Dim MedTurbNTU
+      #EndIf
     Public MedDOSat
     Public MedDOmgL
     Public MedORP
@@ -921,14 +936,14 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MedWiperPos
   #EndIf 'EXO data that's been parsed
   #If SeeRawWQ = True OR Debugging = True Then
-    Public t(23)
-    Public WqData(23)
+    Public t(24)
+    Public WqData(24)
     Public WqIn As String * 256 'Raw EXO data string
     Public WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
     Public RecBurstFlag As Boolean
   #Else
-    Dim t(23)
-    Dim WqData(23)
+    Dim t(24)
+    Dim WqData(24)
     Dim WqIn As String * 256 'Raw EXO data string
     Dim WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
     Dim RecBurstFlag As Boolean
@@ -937,13 +952,18 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   #EndIf
   'Dim TempLong As Long 'Placerholder for timer
   Public WipeTime As String * 25 'Time/Date that the wiper finishes its wipe
-  Public WqParamOrder(23) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+  Public WqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
   Public WqLocDate
   Public WqLocTime
   Public WqLocTempC
   Public WqLocTempF
   Public WqLocCond
-  Public WqLocTurb
+  Public WqLocTurbFNU
+  #If DWRSonde = True Then
+  Public WqLocTurbNTU
+  #Else
+  Dim WqLocTurbNTU
+  #EndIf  
   Public WqLocDoSat
   Public WqLocDOmgL
   Public WqLocORP
@@ -971,7 +991,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 'Data from YSIsond comes into the wqSDI12Sensor array (in a certain order, based on YSI settings),
 'user selects which order they come in using these variables. Datalogger puts values in correct location
 #If WqSonde = "WQ_SDI12" Then
-  Public WqSDI12Sensor(23)
+  Public WqSDI12Sensor(24)
   Public Wiper1Min As Float
   Public WiperTestCount As Float
   Public WiperInCount As Float
@@ -980,6 +1000,11 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public LocTempC As Long
   Public LocSpCond As Long
   Public LocTurbFNU As Long
+  #If DWRSonde = True Then
+  Public LocTurbNTU As Long
+  #Else
+  Dim LocTurbNTU As Long
+  #EndIf
   Public LocVolts As Long
   Public LocDOmgL As Long
   Public LocDOSat As Long
@@ -1019,6 +1044,11 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public WqTempF As Float
   Public WqSpCond As Float
   Public WqTurbFNU As Float
+  #If DWRSonde = True Then
+  Public WqTurbNTU As Float
+  #Else
+  Dim WqTurbNTU As Float
+  #EndIf
   Public WqChlugL As Float
   Public WqChlRFU As Float
   Public WqDOMgl As Float
@@ -1337,6 +1367,9 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,WqDOMgl,FP2)
     Sample (1,WqPH,FP2)
     Sample (1,WqTurbFNU,FP2)
+    #If DWRSonde = True Then
+    Sample (1,WqTurbNTU,FP2)
+    #EndIf
     Sample (1,WqChlugL,FP2)
     Sample (1,WqChlRFU,FP2)
     Average (1,WqDepthFt,FP2,WqBadData)
@@ -1413,6 +1446,9 @@ SetStatus ("USRDriveSize",16384)
     Median (1,BurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
     Median (1,BurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
     Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
+    #If DWRSonde = True Then
+    Median (1,BurstTurbNTU,MaxBurstCnt,IEEE4,BurstMissed)
+    #EndIf
     Median (1,BurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
     Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
     Median (1,BurstORP,MaxBurstCnt,IEEE4,BurstMissed)
@@ -1439,6 +1475,11 @@ SetStatus ("USRDriveSize",16384)
     StdDev (1,BurstTurbFNU,IEEE4,False)
     Minimum (1,BurstTurbFNU,IEEE4,False,0)
     Maximum (1,BurstTurbFNU,IEEE4,False,0)
+    #If DWRSonde = True Then
+    StdDev (1,BurstTurbNTU,IEEE4,False)
+    Minimum (1,BurstTurbNTU,IEEE4,False,0)
+    Maximum (1,BurstTurbNTU,IEEE4,False,0)
+    #EndIf
     StdDev (1,BurstDOSat,IEEE4,False)
     Minimum (1,BurstDOSat,IEEE4,False,0)
     Maximum (1,BurstDOSat,IEEE4,False,0)
@@ -1509,6 +1550,9 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstTempF,IEEE4)
     Sample (1,BurstSpCond,IEEE4)
     Sample (1,BurstTurbFNU,IEEE4)
+    #If DWRSonde = True Then
+    Sample (1,BurstTurbNTU,IEEE4)
+    #EndIf
     Sample (1,BurstDOSat,IEEE4)
     Sample (1,BurstDOmgL,IEEE4)
     Sample (1,BurstORP,IEEE4)
@@ -1574,6 +1618,9 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
+    #If DWRSonde = True Then
+      Sample (1,MedTurbNTU,IEEE4)
+    #EndIf
     '    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then
@@ -1607,6 +1654,9 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,AvgVMTemp,IEEE4)
     Sample (1,AvgVMPitch,IEEE4)
     Sample (1,AvgVMRoll,IEEE4)
+    #If DWRSonde = True Then
+      Sample (1,WqTurbNTU,IEEE4)
+    #EndIf
     '    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
 #EndIf
@@ -1795,6 +1845,9 @@ DataTable(SiteVisit,True,-1)
     Sample (1,WqTempC,FP2)
     Sample (1,WqSpCond,IEEE4)
     Sample (1,WqTurbFNU,FP2)
+    #If DWRSonde = True Then
+    Sample (1,WqTurbNTU,FP2)
+    #EndIf
     Sample (1,WqDOMgl,FP2)
     Sample (1,WqPH,FP2)
     Sample (1,WqChlugL,FP2)
@@ -1832,6 +1885,9 @@ DataTable (Data1m,Rec1MinFlag,-1)
     Sample (1,WqTempC,FP2)
     Sample (1,WqSpCond,IEEE4)
     Sample (1,WqTurbFNU,FP2)
+    #If DWRSonde = True Then
+    Sample (1,WqTurbNTU,FP2)
+    #EndIf
     Sample (1,WqDOMgl,FP2)
     Sample (1,WqPH,FP2)
     Sample (1,WqPHmv,FP2)
@@ -1918,6 +1974,9 @@ DataTable (SVMaq,True,1)
     Sample (1,WqTempC,FP2)
     Sample (1,WqSpCond,IEEE4)
     Sample (1,WqTurbFNU,FP2)
+    #If DWRSonde = True Then
+    Sample (1,WqTurbNTU,FP2)
+    #EndIf
     Sample (1,WqDOMgl,FP2)
     Sample (1,WqPH,FP2)
     Sample (1,WqPHmv,FP2)
@@ -2051,19 +2110,19 @@ Sub GetStartup
   LastScan = "00:00"
   '******************Below are the default stations Parameters (~ line 740) *********************
   Tech = "TAV"
-  SiteID = "ODM"
-  SiteNum = "11455315"
+  SiteID = "OBI2"
+  SiteNum = "11313405"
   VisitReason = "Program update"
   'Default Flow setup values
   'Note if using bi-rating start and end must include all EBB and FLOOD bins
-  StartBin = 2
-  EndBin = 13
-  StartEbbBin = 1 'used for bi-directional rating
-  EndEbbBin = MaxBins 'used for bi-directional rating
+  StartBin = 1
+  EndBin = 27
+  StartEbbBin = 23 'used for bi-directional rating
+  EndEbbBin = 26 'used for bi-directional rating
   StartFldBin = 1 'used for bi-directional rating
-  EndFldBin = MaxBins  'used for bi-directional rating
-  BiRating = False 'set to true if using bi-directional rating
-  BiRatTran = 0 'set to transition velocity for bi-directional rating
+  EndFldBin = 5  'used for bi-directional rating
+  BiRating = True 'set to true if using bi-directional rating
+  BiRatTran = -0.5 'set to transition velocity for bi-directional rating
   MinExpStg = 0
   MaxExpStg = 30
   MinExpVel = -5
@@ -2090,6 +2149,9 @@ Sub GetStartup
     LocTempC = 3
     LocSpCond = 4
     LocTurbFNU = 5
+    #If DWRSonde = True Then
+    LocTurbNTU = 0
+    #EndIf
     LocVolts = 9
     LocChlorMGL = 11
     LocChlorRFU = 12
@@ -2109,12 +2171,12 @@ Sub GetStartup
   'Default rating variables
   CalcQ = Yes 'change to yes if Q calculations are needed
   'Area Rating:
-  StgOffset = 0
-  StgCoef = 0
-  StgCoef2 = 0
+  StgOffset = 9338
+  StgCoef = 558.3
+  StgCoef2 = 2.91
   'meanvel rating:
-  VelOffset = 0
-  VelCoef = 0
+  VelOffset = 0.0745
+  VelCoef = 0.8272
   VelCoef2 = 0
   VelCoef3 = 0
   UpVelOffset = 0
@@ -2294,6 +2356,7 @@ Sub Initialize
     WqTempF = 0
     WqSpCond = 0
     WqTurbFNU = 0
+    WqTurbNTU = 0
     WqChlugL = 0
     WqChlRFU = 0
     WqDOMgl = 0
@@ -2746,7 +2809,11 @@ EndSub
     Public SendEXOSec As String
     Public CalcHour As Float
     CalcHour = SplitTime(4)
+    If DWRSonde = False Then
     CalcHour = CalcHour + 8
+    Else
+    CalcHour = CalcHour
+    EndIf
     If CalcHour >= 24 Then CalcHour = CalcHour - 24
 
     If CalcHour < 10 Then 'add leading zero to hour
@@ -2884,24 +2951,25 @@ EndSub
     WqLocTempC = t(3)
     WqLocTempF = t(4)
     WqLocCond = t(5)
-    WqLocTurb = t(6)
-    WqLocDoSat = t(7)
-    WqLocDOmgL = t(8)
-    WqLocDepth = t(9)
-    WqLocBatt = t(10)
-    WqLocpH = t(11)
-    WqLocpHmV = t(12)
-    WqLocORP = t(13)
-    WqLocChlugL = t(14)
-    WqLocChlRFU = t(15)
-    WqLocBGApcRFU = t(16)
-    WqLocBGApcugL = t(17)
-    WqLocFDomRFU = t(18)
-    WqLocFDomQSU = t(19)
-    WqLocNH4 = t(20)
-    WqLocNO3 = t(21)
-    WqLocCL = t(22)
-    WqLocWiperPos = t(23)
+    WqLocTurbFNU = t(6)
+    WqLocTurbNTU = t(7)
+    WqLocDoSat = t(8)
+    WqLocDOmgL = t(9)
+    WqLocDepth = t(10)
+    WqLocBatt = t(11)
+    WqLocpH = t(12)
+    WqLocpHmV = t(13)
+    WqLocORP = t(14)
+    WqLocChlugL = t(15)
+    WqLocChlRFU = t(16)
+    WqLocBGApcRFU = t(17)
+    WqLocBGApcugL = t(18)
+    WqLocFDomRFU = t(19)
+    WqLocFDomQSU = t(20)
+    WqLocNH4 = t(21)
+    WqLocNO3 = t(22)
+    WqLocCL = t(23)
+    WqLocWiperPos = t(24)
   EndSub
 #EndIf
 '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
@@ -2975,7 +3043,8 @@ EndSub
     If WqLocTempC > 0 Then WqTempC = WqData(WqLocTempC)
     If WqLocTempF > 0 Then WqTempF = WqData(WqLocTempF)
     If WqLocCond > 0 Then WqSpCond = WqData(WqLocCond)
-    If WqLocTurb > 0 Then WqTurbFNU = WqData(WqLocTurb)
+    If WqLocTurbFNU > 0 Then WqTurbFNU = WqData(WqLocTurbFNU)
+    If WqLocTurbNTU > 0 Then WqTurbNTU = WqData(WqLocTurbNTU)
     If WqLocDoSat > 0 Then WqDOSat = WqData(WqLocDoSat)
     If WqLocDOmgL > 0 Then WqDOMgl = WqData(WqLocDOmgL)
     If WqLocDepth > 0 Then WqDepthFt = WqData(WqLocDepth)
@@ -3003,24 +3072,25 @@ EndSub
     t(3) = FindSpa (TempCCode,TempCCode,1,WqParamOrder())
     t(4) = FindSpa (TempFCode,TempFCode,1,WqParamOrder())
     t(5) = FindSpa (CondCode,CondCode,1,WqParamOrder())
-    t(6) = FindSpa (TurbCode,TurbCode,1,WqParamOrder())
-    t(7) = FindSpa (DoSatCode,DoSatCode,1,WqParamOrder())
-    t(8) = FindSpa (DOmgLCode,DOmgLCode,1,WqParamOrder())
-    t(9) = FindSpa (DepthCode,DepthCode,1,WqParamOrder())
-    t(10) = FindSpa (BattCode,BattCode,1,WqParamOrder())
-    t(11) = FindSpa (pHCode,pHCode,1,WqParamOrder())
-    t(12) = FindSpa (pHmVCode,pHmVCode,1,WqParamOrder())
-    t(13) = FindSpa (ORPCode,ORPCode,1,WqParamOrder())
-    t(14) = FindSpa (ChlugLCode,ChlugLCode,1,WqParamOrder())
-    t(15) = FindSpa (ChlRFUCode,ChlRFUCode,1,WqParamOrder())
-    t(16) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,WqParamOrder())
-    t(17) = FindSpa (BGApcugLCode,BGApcugLCode,1,WqParamOrder())
-    t(18) = FindSpa (FDomRFU,FDomRFU,1,WqParamOrder())
-    t(19) = FindSpa (FDomQSU,FDomQSU,1,WqParamOrder())
-    t(20) = FindSpa (NH4Code,NH4Code,1,WqParamOrder())
-    t(21) = FindSpa (NO3Code,NO3Code,1,WqParamOrder())
-    t(22) = FindSpa (CLCode,CLCode,1,WqParamOrder())
-    t(23) = FindSpa (WiperPos,WiperPos,1,WqParamOrder())
+    t(6) = FindSpa (TurbFNUCode,TurbFNUCode,1,WqParamOrder())
+    t(7) = FindSpa (TurbNTUCode,TurbNTUCode,1,WqParamOrder())
+    t(8) = FindSpa (DoSatCode,DoSatCode,1,WqParamOrder())
+    t(9) = FindSpa (DOmgLCode,DOmgLCode,1,WqParamOrder())
+    t(10) = FindSpa (DepthCode,DepthCode,1,WqParamOrder())
+    t(11) = FindSpa (BattCode,BattCode,1,WqParamOrder())
+    t(12) = FindSpa (pHCode,pHCode,1,WqParamOrder())
+    t(13) = FindSpa (pHmVCode,pHmVCode,1,WqParamOrder())
+    t(14) = FindSpa (ORPCode,ORPCode,1,WqParamOrder())
+    t(15) = FindSpa (ChlugLCode,ChlugLCode,1,WqParamOrder())
+    t(16) = FindSpa (ChlRFUCode,ChlRFUCode,1,WqParamOrder())
+    t(17) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,WqParamOrder())
+    t(18) = FindSpa (BGApcugLCode,BGApcugLCode,1,WqParamOrder())
+    t(19) = FindSpa (FDomRFU,FDomRFU,1,WqParamOrder())
+    t(20) = FindSpa (FDomQSU,FDomQSU,1,WqParamOrder())
+    t(21) = FindSpa (NH4Code,NH4Code,1,WqParamOrder())
+    t(22) = FindSpa (NO3Code,NO3Code,1,WqParamOrder())
+    t(23) = FindSpa (CLCode,CLCode,1,WqParamOrder())
+    t(24) = FindSpa (WiperPos,WiperPos,1,WqParamOrder())
 
   EndSub
 #EndIf
@@ -3091,7 +3161,8 @@ EndSub
     If WqLocTempC > 0 Then BurstTempC = BurstData(WqLocTempC)
     If WqLocTempF > 0 Then BurstTempF = BurstData(WqLocTempF)
     If WqLocCond > 0 Then BurstSpCond = BurstData(WqLocCond)
-    If WqLocTurb > 0 Then BurstTurbFNU = BurstData(WqLocTurb)
+    If WqLocTurbFNU > 0 Then BurstTurbFNU = BurstData(WqLocTurbFNU)
+    If WqLocTurbNTU > 0 Then BurstTurbNTU = BurstData(WqLocTurbNTU)
     If WqLocDoSat > 0 Then BurstDOSat = BurstData(WqLocDoSat)
     If WqLocDOmgL > 0 Then BurstDOmgL = BurstData(WqLocDOmgL)
     If WqLocDepth > 0 Then BurstDepthFt = BurstData(WqLocDepth)
@@ -3122,6 +3193,7 @@ EndSub
     MedTempF = BadDataIndicator
     MedSpCond = BadDataIndicator
     MedTurbFNU = BadDataIndicator
+    MedTurbNTU = BadDataIndicator
     MedDOSat = BadDataIndicator
     MedDOmgL= BadDataIndicator
     MedORP= BadDataIndicator
@@ -3150,6 +3222,7 @@ Sub CopyMedBurstVals
           MedTempF = Burst.BurstTempF_Med
           MedSpCond = Burst.BurstSpCond_Med
           MedTurbFNU = Burst.BurstTurbFNU_Med
+          MedTurbNTU = Burst.BurstTurbNTU_Med
           MedDOSat = Burst.BurstDOSat_Med
           MedDOmgL= Burst.BurstDOmgL_Med
           MedORP= Burst.BurstORP_Med
@@ -3249,6 +3322,7 @@ Sub CopyMedBurstVals
       If LocORP > 0 Then WqORP = WqSDI12Sensor(LocORP)
       If LocDepth > 0 Then WqDepthFt = WqSDI12Sensor(LocDepth)
       If LocTurbFNU > 0 Then WqTurbFNU = WqSDI12Sensor(LocTurbFNU)
+      If LocTurbNTU > 0 Then WqTurbNTU = WqSDI12Sensor(LocTurbNTU)
       If LocFdomRFU > 0 Then WqFDOMrfu = WqSDI12Sensor(LocFdomRFU)
       If LocFdomQSU > 0 Then WqFDOMqsu = WqSDI12Sensor(LocFdomQSU)
       If LocChlorMGL > 0 Then WqChlugL = WqSDI12Sensor(LocChlorMGL)
@@ -3329,6 +3403,7 @@ Sub CopyMedBurstVals
     WqTempF = BadDataIndicator
     WqSpCond = BadDataIndicator
     WqTurbFNU = BadDataIndicator
+    WqTurbNTU = BadDataIndicator
     WqChlugL = BadDataIndicator
     WqChlRFU = BadDataIndicator
     WqDOMgl = BadDataIndicator
@@ -5023,6 +5098,7 @@ Sub KeypadMenu
         DisplayValue ("WqTempC",WqTempC)
         DisplayValue ("ExoSpCond",WqSpCond)
         DisplayValue ("ExoTurbFNU",WqTurbFNU)
+        DisplayValue ("ExoTurbNTU",WqTurbNTU)
         DisplayValue ("WQChlugL",WqChlugL)
         DisplayValue ("WQChlRFU",WqChlRFU)
         DisplayValue ("WQDOmgL",WqDOMgl)
@@ -5178,6 +5254,7 @@ Sub KeypadMenu
         DisplayValue ("WqSDI12Sensor(21)",WqSDI12Sensor(21))
         DisplayValue ("WqSDI12Sensor(22)",WqSDI12Sensor(22))
         DisplayValue ("WqSDI12Sensor(23)",WqSDI12Sensor(23))
+        DisplayValue ("WqSDI12Sensor(24)",WqSDI12Sensor(24))
       EndSubMenu
     #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST")
       SubMenu ("RawSondeData")
@@ -5204,6 +5281,7 @@ Sub KeypadMenu
         DisplayValue ("WqData(21)",WqData(21))
         DisplayValue ("WqData(22)",WqData(22))
         DisplayValue ("WqData(23)",WqData(23))
+        DisplayValue ("WqData(24)",WqData(24))
         ' put exo serial stuff here
       EndSubMenu
     #EndIf
@@ -5249,39 +5327,41 @@ Sub KeypadMenu
         MenuItem ("MilliToMicro?",MilliToMicro)
         MenuPick (Yes,No)
         MenuItem ("LocTempC",LocTempC)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocSpCond",LocSpCond)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocVolts",LocVolts)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocDOmgL",LocDOmgL)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocDOSat",LocDOSat)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocPH",LocPH)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocORP",LocORP)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocDepth",LocDepth)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocTurbFNU",LocTurbFNU)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
+        MenuItem ("LocTurbNTU",LocTurbNTU)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocFdomRFU",LocFdomRFU)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocFdomQSU",LocFdomQSU)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocChlorMGL",LocChlorMGL)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocChlorRFU",LocChlorRFU)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocBGA",LocBGA)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocAmmonium",LocAmmonium)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocNitrate",LocNitrate)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
         MenuItem ("LocChloride",LocChloride)
-        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+        MenuPick (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)
       EndSubMenu
     #EndIf
   EndMenu
@@ -5686,7 +5766,7 @@ BeginProg
             jCount = 0 'reset j Loop counter
             kCount = 0 'reset k Loop counter
             For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
-              For kCount = 1 To 23 'this is the loop to pull the parameters
+              For kCount = 1 To 24 'this is the loop to pull the parameters
                 BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
               Next kCount 'pull all 23 parameters within the n-th part of the j-loop and store in the array
               Call parseburst 'parse array into proper fields
