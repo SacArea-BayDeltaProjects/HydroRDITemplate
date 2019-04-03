@@ -243,6 +243,7 @@ Const ProgramVersionDate = 20190401
 '20190320 - MRI Added statement to conditional compile out the ADCPLoop if the HasVM is false to avoid potential timing problems
 '20190325 - MRI Added BurstPeriod variable in public table so user can adjust the period length that is sent to the sonde during serial burst communication. Had it set to standard 1150 unless otherwise declared. Minimum value is 250. Presereve in USR file too.
 '20190401 - TAV Added logic to record Turbidity NTUs (in addition to FNU) if it's a DWR sonde. Also added logic to set the time in PST if instead of UTC if it's a DWR sonde. They are using KOR 2, which makes the time output in local time (PST)
+
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
 'IMPORTANT - For EXO2 serial operation, A MAX232 adapter must be used on CR6 "U" ports or CR1000 Com1.Com2,Com3 or Com4. An ADCP can run on all ports, but
@@ -276,12 +277,12 @@ Const No = False
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "WQ_SERIAL"
+Const WqSonde = "WQ_SERIAL_BURST"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
 'Value = "NONE"
-Const DWRSonde = True
+Const DWRSonde = False
 'value = True
 'value = False
 Const WqBaud = 38400
@@ -862,8 +863,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Dim WiperPos = 229
 
   #If WqSonde = "WQ_SERIAL_BURST" Then
-    Public BurstData(23)
-    Dim BurstArray(30,23)
+    Public BurstData(24)
+    Dim BurstArray(30,24)
     Public BurstIn As String * 256 'Raw EXO burst data string
     Public jCount As Long 'Counter
     Public kCount As Long 'Counter
