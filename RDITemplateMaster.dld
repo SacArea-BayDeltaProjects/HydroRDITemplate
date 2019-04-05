@@ -2109,20 +2109,20 @@ Sub GetStartup
   ProgVersDate = ProgramVersionDate
   LastScan = "00:00"
   '******************Below are the default stations Parameters (~ line 740) *********************
-  Tech = "TAV"
-  SiteID = "OBI2"
-  SiteNum = "11313405"
+  Tech = "TEC"
+  SiteID = "xxx"
+  SiteNum = "12345678"
   VisitReason = "Program update"
   'Default Flow setup values
   'Note if using bi-rating start and end must include all EBB and FLOOD bins
   StartBin = 1
   EndBin = 27
-  StartEbbBin = 23 'used for bi-directional rating
-  EndEbbBin = 26 'used for bi-directional rating
+  StartEbbBin = 1 'used for bi-directional rating
+  EndEbbBin = 27 'used for bi-directional rating
   StartFldBin = 1 'used for bi-directional rating
-  EndFldBin = 5  'used for bi-directional rating
-  BiRating = True 'set to true if using bi-directional rating
-  BiRatTran = -0.5 'set to transition velocity for bi-directional rating
+  EndFldBin = 27  'used for bi-directional rating
+  BiRating = False 'set to true if using bi-directional rating
+  BiRatTran = 0 'set to transition velocity for bi-directional rating
   MinExpStg = 0
   MaxExpStg = 30
   MinExpVel = -5
@@ -2171,12 +2171,12 @@ Sub GetStartup
   'Default rating variables
   CalcQ = Yes 'change to yes if Q calculations are needed
   'Area Rating:
-  StgOffset = 9338
-  StgCoef = 558.3
-  StgCoef2 = 2.91
+  StgOffset = 0
+  StgCoef = 0
+  StgCoef2 = 0
   'meanvel rating:
-  VelOffset = 0.0745
-  VelCoef = 0.8272
+  VelOffset = 0
+  VelCoef = 0
   VelCoef2 = 0
   VelCoef3 = 0
   UpVelOffset = 0
