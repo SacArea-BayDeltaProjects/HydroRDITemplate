@@ -20,6 +20,9 @@ Before Compiling/Sending to Datalogger:
    Description of constants:
   
     **WqSonde:** If sonde is present, select which communication type is being used and whether "Burst" sampling should occur.
+
+    **DWRSonde:** Is the sonde maintained by DWR? If so, this adds Turbidity NTUs to tables and forces the sonde time update to happen to PST rather
+than to UTC.
     
     **WqBaud:** If sonde is present, select baud rate for SERIAL communications. Most likely, 38400 is correct.
     
