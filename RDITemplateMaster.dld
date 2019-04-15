@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190408
+Const ProgramVersionDate = 20190409
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -244,6 +244,7 @@ Const ProgramVersionDate = 20190408
 '20190325 - MRI Added BurstPeriod variable in public table so user can adjust the period length that is sent to the sonde during serial burst communication. Had it set to standard 1150 unless otherwise declared. Minimum value is 250. Presereve in USR file too.
 '20190401 - TAV Added logic to record Turbidity NTUs (in addition to FNU) if it's a DWR sonde. Also added logic to set the time in PST if instead of UTC if it's a DWR sonde. They are using KOR 2, which makes the time output in local time (PST)
 '20190408 - TAV Removed NTU logic per discussions and findings about how the YSI EXO reports the values. Reading is actually FNU. The only thing that changes is the 3 letter acronym, so it is inaccurate to report "NTU".
+'20190409 - TAV Made the "Wq_Mark_Bad" function only occur if its a USGS sonde, not a DWR sonde in Sample and Hold mode.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -2039,7 +2040,9 @@ DataTable (Debugger,True,-1)
   Sample (1,CardBadCount,FP2)
   Sample (1,CardOkCount,FP2)
   Sample (1,OneMinCount,FP2)
+  #If WqSonde <> "WQ_SDI12" AND WqSonde <> "NONE" Then
   Sample (1,BurstComs,String)
+  #EndIf
 EndTable
 
 DataTable (DebugTimer,True,2880)
@@ -2976,8 +2979,10 @@ EndSub
     Else
       WqError = True
       OldEXOTime = WqData(WqLocTime)
+      #If DWRSonde = False Then 
       Call WQ_Mark_Bad
       Exit Sub
+      #EndIf
     EndIf
     If WqLocDate > 0 Then WqDate = WqData(WqLocDate)
     If WqLocTime > 0 Then WqTime = WqData(WqLocTime)
@@ -5187,7 +5192,6 @@ Sub KeypadMenu
         DisplayValue ("WqSDI12Sensor(21)",WqSDI12Sensor(21))
         DisplayValue ("WqSDI12Sensor(22)",WqSDI12Sensor(22))
         DisplayValue ("WqSDI12Sensor(23)",WqSDI12Sensor(23))
-        DisplayValue ("WqSDI12Sensor(24)",WqSDI12Sensor(24))
       EndSubMenu
     #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST")
       SubMenu ("RawSondeData")
@@ -5931,10 +5935,10 @@ BeginProg
   CallBmChkEnd = CallBmChkEnd/1000
   CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
   Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
-  '      #If WqSonde = "WQ_SERIAL_BURST" Then
+        #If WqSonde = "WQ_SERIAL_BURST" Then
   RecBurstFlag = False
   '        Call ClearBurstVars
-  '      #EndIf
+       #EndIf
   RecAQFlag = False
   If StoreVariablesFlg = true Then Call StoreVariables
   ScanEnd = Timer(2,mSec,4)
