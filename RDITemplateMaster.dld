@@ -5758,9 +5758,11 @@ BeginProg
     EndIf 'getburst and not redeploy
     '      EndIf 'Redeploy = true
 
-    If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True)'unable to initialize or bad data
+    If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True) Then'unable to initialize or bad data
+      #If DWRSonde = False Then
       Call WQ_Mark_Bad
       Erase WqData()
+      #EndIf
       If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the Sonde
         Call CycleWQPower
       EndIf
