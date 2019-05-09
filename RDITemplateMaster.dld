@@ -288,6 +288,9 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
+Const TopBottom = True 'Is there a second EXO daisy-chained in the system
+'value = True
+'value = False
 Const WqBaud = 38400
 'value = 9600
 'value = 38400
@@ -334,7 +337,7 @@ Const VMDeadCntMax = 20
 'Min = 5
 'Max = 120
 'Inc = 5
-Const RadioNetwork = True 'Is the datalogger part of a radio network
+Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF TRUE THIS WILL ONLY COMPILE ON CR6-RF451!!
 'value = True
 'value = False
 Const IsMaster = False  'Is the datalogger the Master in a radio network?
@@ -854,6 +857,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 'declare variables for EXO and SDI
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
   Public WqNparams = 23
+  #If TopBottom Then
+    Public BtmWqNparams = 23
+  #EndIf
   Public Redeploy As Boolean
   Public NoSondeTrig
   Public GetBurst As Boolean
@@ -864,6 +870,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   '  Public OldBurstTime
   '  Public NewBurstTime
   Public OldEXOTime As Long
+  #If TopBottom Then
+    Public BtmOldEXOTime As Long
+  #EndIf
   'Exo Parameter Codes from EXO manual. These are used to determine where to put the EXO sensor data.
   Dim DateCode = 52
   Dim TimeCode = 54
@@ -926,7 +935,43 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BurstNO3Nmgl
     Public BurstCLmgl
     Public BurstWiperPos
-
+    #If TopBottom Then
+    Public BtmBurstData(23)
+    Dim BtmBurstArray(30,23)
+    Public BtmBurstIn As String * 256 'Raw EXO burst data string
+    Public BtmjCount As Long 'Counter
+    Public BtmkCount As Long 'Counter
+    Public BtmBurstCount As Long 'number of burst measurements collected
+    '    Public BurstCount_Mid
+    Public BtmTotalBurstVals 'how many values are actually used to calculate the burst math functions
+    Public BtmBurstErrCnt 'how many times during the burst loop did we miss data
+    Public BtmBurstMaxErrCnt = 3 'threshold for how many times we can miss before exiting the burst loop
+    Public BtmBurstMissed As Boolean 'flag if we missed the burst due to missing too many values
+    Public BtmBurstDebugCount As Long 'Debugging EXO burst!----------------------------------------------
+    Public BtmBurstDate
+    Public BtmBurstTime
+    Public BtmBurstTempC
+    Public BtmBurstTempF
+    Public BtmBurstSpCond
+    Public BtmBurstTurbFNU
+    Public BtmBurstDOSat
+    Public BtmBurstDOmgL
+    Public BtmBurstORP
+    Public BtmBurstDepthFt
+    Public BtmBurstBattV
+    Public BtmBurstpH
+    Public BtmBurstpHmV
+    Public BtmBurstChlugL
+    Public BtmBurstChlRFU
+    Public BtmBurstBGApcRFU
+    Public BtmBurstBGApcugL
+    Public BtmBurstFdomRFU
+    Public BtmBurstFDomQSU
+    Public BtmBurstNH4Amgl
+    Public BtmBurstNO3Nmgl
+    Public BtmBurstCLmgl
+    Public BtmBurstWiperPos
+#EndIf
     '____________________________Median variables to be pulled from Burst table and stored to output in AQ Table_____________
     Public MedBurstDate
     Public MedBurstTime
@@ -951,6 +996,31 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MedNO3Nmgl
     Public MedCLmgl
     Public MedWiperPos
+    #If TopBottom Then
+     Public BtmMedBurstDate
+     Public BtmMedBurstTime
+     Public BtmMedTempC
+     Public BtmMedTempF
+     Public BtmMedSpCond
+     Public BtmMedTurbFNU
+     Public BtmMedDOSat
+     Public BtmMedDOmgL
+     Public BtmMedORP
+     Public BtmMedDepthFt
+     Public BtmMedBattV
+     Public BtmMedpH
+     Public BtmMedpHmV
+     Public BtmMedChlugL
+     Public BtmMedChlRFU
+     Public BtmMedBGApcRFU
+     Public BtmMedBGApcugL
+     Public BtmMedFdomRFU
+     Public BtmMedFDomQSU
+     Public BtmMedNH4Amgl
+     Public BtmMedNO3Nmgl
+     Public BtmMedCLmgl
+     Public BtmMedWiperPos
+    #EndIf
   #EndIf 'EXO data that's been parsed
   #If SeeRawWQ = True OR Debugging = True Then
     Public t(23)
@@ -958,12 +1028,24 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public WqIn As String * 256 'Raw EXO data string
     Public WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
     Public RecBurstFlag As Boolean
+    #If TopBottom Then
+      Public BTM_t(23)
+      Public BtmWqData(23)
+      Public BtmWqIn As String * 256
+      Public BtmWqDelay
+     #EndIf
   #Else
     Dim t(23)
     Dim WqData(23)
     Dim WqIn As String * 256 'Raw EXO data string
     Dim WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
     Dim RecBurstFlag As Boolean
+        #If TopBottom Then
+      Dim BTM_t(23)
+      Dim BtmWqData(23)
+      Dim BtmWqIn As String * 256
+      Dim BtmWqDelay
+     #EndIf
     'Public RecAquariusFlag As Boolean
     'Dim ExoBaud 'Variable to use in the "SerialOpen" instruction for the EXO
   #EndIf
@@ -998,6 +1080,33 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   '  Public ExoError As Boolean
   '  Public ExoDead As Boolean
   '  Public ExoErrorCnt
+  #If TopBottom Then
+      Public BtmWipeTime As String * 25 'Time/Date that the wiper finishes its wipe
+      Public BtmWqParamOrder(23) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+      Public BtmWqLocDate
+      Public BtmWqLocTime
+      Public BtmWqLocTempC
+      Public BtmWqLocTempF
+      Public BtmWqLocCond
+      Public BtmWqLocTurbFNU  
+      Public BtmWqLocDoSat
+      Public BtmWqLocDOmgL
+      Public BtmWqLocORP
+      Public BtmWqLocDepth
+      Public BtmWqLocBatt
+      Public BtmWqLocpH
+      Public BtmWqLocpHmV
+      Public BtmWqLocChlugL
+      Public BtmWqLocChlRFU
+      Public BtmWqLocBGApcRFU
+      Public BtmWqLocBGApcugL
+      Public BtmWqLocFDomRFU
+      Public BtmWqLocFDomQSU
+      Public BtmWqLocNH4
+      Public BtmWqLocNO3
+      Public BtmWqLocCL
+      Public BtmWqLocWiperPos
+      Public BtmWipeflag As Boolean
 #EndIf
 'Declare Variables for SDI12 Sonde
 'Data from YSIsond comes into the wqSDI12Sensor array (in a certain order, based on YSI settings),
@@ -1071,6 +1180,39 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public WqErrCount As Long
   Public WqPwrCycleCnt As Long
   Public WqManualCycle As Boolean
+  #If TopBottom Then
+  Public BtmWqError As Boolean
+  Public BtmWqDead As Boolean
+  'Public WqDeadCnt As Long
+  Public BtmWqBadData As Boolean
+  Public BtmWqDate As String
+  Public BtmWqTime As String
+  'Public WqNparams As Long
+  Public BtmWqTempC As Float
+  Public BtmWqTempF As Float
+  Public BtmWqSpCond As Float
+  Public BtmWqTurbFNU As Float
+  Public BtmWqChlugL As Float
+  Public BtmWqChlRFU As Float
+  Public BtmWqDOMgl As Float
+  Public BtmWqDOSat As Float
+  Public BtmWqPH As Float
+  Public BtmWqPHmv As Float
+  Public BtmWqORP As Float
+  Public BtmWqDepthFt As Float
+  Public BtmWqBattV As Float
+  Public BtmWqBGAugl As Float
+  Public BtmWqBGArfu As Float
+  Public BtmWqFDOMrfu As Float
+  Public BtmWqFDOMqsu As Float
+  Public BtmWqNH4mgl As Float
+  Public BtmWqNO3mgl As Float
+  Public BtmWqCLmgl As Float
+  Public BtmWqWiperPos As Float
+  Public BtmWqErrCount As Long
+  Public BtmWqPwrCycleCnt As Long
+  Public BtmWqManualCycle As Boolean
+#EndIf
 #EndIf
 Public IsWQNClosed As Boolean 'Keep this outside conditional compile until we take time to actually fix it. Works like this though.
 'variables for aquarius table
@@ -1491,19 +1633,18 @@ SetStatus ("USRDriveSize",16384)
     Minimum (1,ExtSolarVolt,FP2,False,False)
     Average (1,RangedBin,FP2,False)
     'WQ data
-    Sample (1,WqTempC,FP2)
     Average (1,TempDiff,IEEE4,False)
+    Sample (1,WqTempC,FP2)
     Sample (1,WqSpCond,IEEE4)
     Sample (1,WqBattV,FP2)
     Sample (1,WqDOMgl,FP2)
     Sample (1,WqPH,FP2)
     Sample (1,WqTurbFNU,FP2)
+    Average (1,WqTurbFNU,FP2,WqBadData)
+    Median (1,WqTurbFNU,15,FP2,WqBadData)
     Sample (1,WqChlugL,FP2)
     Sample (1,WqChlRFU,FP2)
     Average (1,WqDepthFt,FP2,WqBadData)
-    Average (1,WqTurbFNU,FP2,WqBadData)
-    Median (1,WqTurbFNU,15,FP2,WqBadData)
-    'Maximum (1,LastGoodBin,FP2,False,False)
     Sample (1,WqDOSat,FP2)
     Sample (1,WqORP,FP2)
     Sample (1,WqFDOMrfu,FP2)
@@ -1513,6 +1654,28 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,WqNO3mgl,FP2)
     Sample (1,WqCLmgl,FP2)
     Sample (1,WqWiperPos,FP2)
+    #If TopBottom Then
+    Sample (1,BtmWqTempC,FP2)
+    Sample (1,BtmWqSpCond,IEEE4)
+    Sample (1,BtmWqBattV,FP2)
+    Sample (1,BtmWqDOMgl,FP2)
+    Sample (1,BtmWqPH,FP2)
+    Sample (1,BtmWqTurbFNU,FP2)
+    Average (1,BtmWqTurbFNU,FP2,BtmWqBadData)
+    Median (1,BtmWqTurbFNU,15,FP2,BtmWqBadData)
+    Sample (1,BtmWqChlugL,FP2)
+    Sample (1,BtmWqChlRFU,FP2)
+    Average (1,BtmWqDepthFt,FP2,BtmWqBadData)
+    Sample (1,BtmWqDOSat,FP2)
+    Sample (1,BtmWqORP,FP2)
+    Sample (1,BtmWqFDOMrfu,FP2)
+    Sample (1,BtmWqFDOMqsu,FP2)
+    Sample (1,BtmWqBGAugl,FP2)
+    Sample (1,BtmWqNH4mgl,FP2)
+    Sample (1,BtmWqNO3mgl,FP2)
+    Sample (1,BtmWqCLmgl,FP2)
+    Sample (1,BtmWqWiperPos,FP2)
+    #EndIf
   EndTable
 #EndIf
 
@@ -1693,6 +1856,143 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BurstErrCnt,FP2)
   EndTable
 
+'__________________________Bottom Sonde Burst Data Tables_________________________________
+  DataTable(BtmBurst,RecBurstFlag,-1)
+    'DataInterval(0,1,Min,-1)
+    CardOut (0,17280)
+    OpenInterval
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,BtmBurstDate,IEEE4)
+    Sample (1,BtmBurstTime,IEEE4)
+    Sample (1,BurstPeriod, IEEE4)
+    '    Sample (1,BurstMedDate,IEEE4)
+    '    Sample (1,BurstMedTime,IEEE4)
+    Median (1,BtmBurstDate,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstTime,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstORP,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstBattV,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BtmBurstpH,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BtmBurstpHmV,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BtmBurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
+    StdDev (1,BtmBurstTempC,IEEE4,False)
+    Minimum (1,BtmBurstTempC,IEEE4,False,0)
+    Maximum (1,BtmBurstTempC,IEEE4,False,0)
+    StdDev (1,BtmBurstSpCond,IEEE4,False)
+    Minimum (1,BtmBurstSpCond,IEEE4,False,0)
+    Maximum (1,BtmBurstSpCond,IEEE4,False,0)
+    StdDev (1,BtmBurstTurbFNU,IEEE4,False)
+    Minimum (1,BtmBurstTurbFNU,IEEE4,False,0)
+    Maximum (1,BtmBurstTurbFNU,IEEE4,False,0)
+    StdDev (1,BtmBurstDOSat,IEEE4,False)
+    Minimum (1,BtmBurstDOSat,IEEE4,False,0)
+    Maximum (1,BtmBurstDOSat,IEEE4,False,0)
+    StdDev (1,BtmBurstDOmgL,IEEE4,False)
+    Minimum (1,BtmBurstDOmgL,IEEE4,False,0)
+    Maximum (1,BtmBurstDOmgL,IEEE4,False,0)
+    StdDev (1,BtmBurstORP,IEEE4,False)
+    Minimum (1,BtmBurstORP,IEEE4,False,0)
+    Maximum (1,BtmBurstORP,IEEE4,False,0)
+    StdDev (1,BtmBurstDepthFt,IEEE4,False)
+    Minimum (1,BtmBurstDepthFt,IEEE4,False,0)
+    Maximum (1,BtmBurstDepthFt,IEEE4,False,0)
+    StdDev (1,BtmBurstBattV,FP2,False)
+    Minimum (1,BtmBurstBattV,FP2,False,0)
+    Maximum (1,BtmBurstBattV,FP2,False,0)
+    StdDev (1,BtmBurstpH,FP2,False)
+    Minimum (1,BtmBurstpH,FP2,False,0)
+    Maximum (1,BtmBurstpH,FP2,False,0)
+    StdDev (1,BtmBurstpHmV,FP2,False)
+    Minimum (1,BtmBurstpHmV,FP2,False,0)
+    Maximum (1,BtmBurstpHmV,FP2,False,0)
+    StdDev (1,BtmBurstChlugL,IEEE4,False)
+    Minimum (1,BtmBurstChlugL,IEEE4,False,0)
+    Maximum (1,BtmBurstChlugL,IEEE4,False,0)
+    StdDev (1,BtmBurstChlRFU,IEEE4,False)
+    Minimum (1,BtmBurstChlRFU,IEEE4,False,0)
+    Maximum (1,BtmBurstChlRFU,IEEE4,False,0)
+    StdDev (1,BtmBurstBGApcRFU,IEEE4,False)
+    Minimum (1,BtmBurstBGApcRFU,IEEE4,False,0)
+    Maximum (1,BtmBurstBGApcRFU,IEEE4,False,0)
+    StdDev (1,BtmBurstBGApcugL,IEEE4,False)
+    Minimum (1,BtmBurstBGApcugL,IEEE4,False,0)
+    Maximum (1,BtmBurstBGApcugL,IEEE4,False,0)
+    StdDev (1,BtmBurstFdomRFU,IEEE4,False)
+    Minimum (1,BtmBurstFdomRFU,IEEE4,False,0)
+    Maximum (1,BtmBurstFdomRFU,IEEE4,False,0)
+    StdDev (1,BtmBurstFDomQSU,IEEE4,False)
+    Minimum (1,BtmBurstFDomQSU,IEEE4,False,0)
+    Maximum (1,BtmBurstFDomQSU,IEEE4,False,0)
+    StdDev (1,BtmBurstNH4Amgl,IEEE4,False)
+    Minimum (1,BtmBurstNH4Amgl,IEEE4,False,0)
+    Maximum (1,BtmBurstNH4Amgl,IEEE4,False,0)
+    StdDev (1,BtmBurstNO3Nmgl,IEEE4,False)
+    Minimum (1,BtmBurstNO3Nmgl,IEEE4,False,0)
+    Maximum (1,BtmBurstNO3Nmgl,IEEE4,False,0)
+    StdDev (1,BtmBurstCLmgl,IEEE4,False)
+    Minimum (1,BtmBurstCLmgl,IEEE4,False,0)
+    Maximum (1,BtmBurstCLmgl,IEEE4,False,0)
+    StdDev (1,BtmBurstWiperPos,FP2,False)
+    Minimum (1,BtmBurstWiperPos,FP2,False,0)
+    Maximum (1,BtmBurstWiperPos,FP2,False,0)
+    Sample (1,BtmTotalBurstVals,FP2)
+    Sample (1,BtmBurstMissed,Boolean)
+    Sample (1,BtmBurstErrCnt,FP2)
+  EndTable
+  
+'__________________________________________Metadata for each burst sample_____________________________________
+'_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
+  DataTable(BtmSecBurst,True,-1)
+    'DataInterval(0,1,Min,-1)
+    CardOut (0,350000)
+    OpenInterval
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,BtmBurstDate,IEEE4)
+    Sample (1,BtmBurstTime,IEEE4)
+    Sample (1,BtmBurstTempC,IEEE4)
+    Sample (1,BtmBurstTempF,IEEE4)
+    Sample (1,BtmBurstSpCond,IEEE4)
+    Sample (1,BtmBurstTurbFNU,IEEE4)
+    Sample (1,BtmBurstDOSat,IEEE4)
+    Sample (1,BtmBurstDOmgL,IEEE4)
+    Sample (1,BtmBurstORP,IEEE4)
+    Sample (1,BtmBurstDepthFt,IEEE4)
+    Sample (1,BtmBurstBattV,FP2)
+    Sample (1,BtmBurstpH,FP2)
+    Sample (1,BtmBurstpHmV,FP2)
+    Sample (1,BtmBurstChlugL,IEEE4)
+    Sample (1,BtmBurstChlRFU,IEEE4)
+    Sample (1,BtmBurstBGApcRFU,IEEE4)
+    Sample (1,BtmBurstBGApcugL,IEEE4)
+    Sample (1,BtmBurstFdomRFU,IEEE4)
+    Sample (1,BtmBurstFDomQSU,IEEE4)
+    Sample (1,BtmBurstNH4Amgl,IEEE4)
+    Sample (1,BtmBurstNO3Nmgl,IEEE4)
+    Sample (1,BtmBurstCLmgl,IEEE4)
+    Sample (1,BtmBurstWiperPos,FP2)
+    Sample (1,BtmTotalBurstVals,FP2)
+    Sample (1,jCount,FP2)
+    Sample (1,BtmBurstMissed,Boolean)
+    Sample (1,BtmBurstErrCnt,FP2)
+  EndTable
+  #EndIf
   DataTable (Aquarius,Rec15minFlag,-1) 'guaruntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
     OpenInterval
@@ -1713,6 +2013,23 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,MedChlRFU,IEEE4)
     Sample (1,MedFdomRFU,IEEE4)
     Sample (1,MedFDomQSU,IEEE4)
+    #If TopBottom Then
+    Sample (1,BtmMedBurstDate,IEEE4)
+    Sample (1,BTMMedBurstTime,IEEE4)
+    Minimum (1,BtmWqBattV,FP2,False,False)
+    Sample (1,BTMMedTempC,IEEE4) 'the "Med..." values are pulled from the burst table via "Med... = Burst.BurstMed..."
+    Sample (1,BTMMedSpCond,IEEE4)
+    Sample (1,BTMMedTurbFNU,IEEE4)
+    Sample (1,BTMMedDOSat,IEEE4)
+    Sample (1,BTMMedDOmgL,IEEE4)
+    Sample (1,BTMMedDepthFt,IEEE4)
+    Sample (1,BTMMedBattV,FP2)
+    Sample (1,BTMMedpH,IEEE4)
+    Sample (1,BTMMedChlugL,IEEE4)
+    Sample (1,BTMMedChlRFU,IEEE4)
+    Sample (1,BTMMedFdomRFU,IEEE4)
+    Sample (1,BTMMedFDomQSU,IEEE4)
+    #EndIf
     '    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
     '    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
     '    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
@@ -1758,6 +2075,23 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,WqChlRFU,IEEE4)
     Sample (1,WqFDOMrfu,IEEE4)
     Sample (1,WqFDOMqsu,IEEE4)
+    #If TopBottom Then
+    Sample (1,BtmWqDate,IEEE4)
+    Sample (1,BtmWqTime,IEEE4)
+    Minimum (1,BtmWqBattV,FP2,False,False)
+    Sample (1,BtmWqTempC,IEEE4)
+    Sample (1,BtmWqSpCond,IEEE4)
+    Sample (1,BtmWqTurbFNU,IEEE4)
+    Sample (1,BtmWqDOSat,IEEE4)
+    Sample (1,BtmWqDOMgl,IEEE4)
+    Sample (1,BtmWqDepthFt,IEEE4)
+    Sample (1,BtmWqBattV,IEEE4)
+    Sample (1,BtmWqPH,IEEE4)
+    Sample (1,BtmWqChlugL,IEEE4)
+    Sample (1,BtmWqChlRFU,IEEE4)
+    Sample (1,BtmWqFDOMrfu,IEEE4)
+    Sample (1,BtmWqFDOMqsu,IEEE4)
+    #EndIf
     Sample (1,AvgPS1Stg,IEEE4)
     Sample (1,AvgPS2Stg,IEEE4)
     Sample (1,AvgUpBeamStg,IEEE4)
@@ -1970,6 +2304,26 @@ DataTable(SiteVisit,True,-1)
     Sample (1,WqNO3mgl,FP2)
     Sample (1,WqCLmgl,FP2)
     Sample (1,WqErrCount,Long)
+    #If TopBottom Then
+    Sample (1,BtmWqBattV,FP2)
+    Sample (1,BtmWqTempC,FP2)
+    Sample (1,BtmWqSpCond,IEEE4)
+    Sample (1,BtmWqTurbFNU,FP2)
+    Sample (1,BtmWqDOMgl,FP2)
+    Sample (1,BtmWqPH,FP2)
+    Sample (1,BtmWqChlugL,FP2)
+    Sample (1,BtmWqChlRFU,FP2)
+    Sample (1,BtmWqDepthFt,FP2)
+    Sample (1,BtmWqDOSat,FP2)
+    Sample (1,BtmWqFDOMrfu,FP2)
+    Sample (1,BtmWqFDOMqsu,FP2)
+    Sample (1,BtmWqBGArfu,FP2)
+    Sample (1,BtmWqBGAugl,FP2)
+    Sample (1,BtmWqNH4mgl,FP2)
+    Sample (1,BtmWqNO3mgl,FP2)
+    Sample (1,BtmWqCLmgl,FP2)
+    Sample (1,BtmWqErrCount,Long) 
+    #EndIf
   #EndIf
   Sample (1,BadQCount,Long)
   Sample (1,LithBat,FP2)
@@ -2008,6 +2362,26 @@ DataTable (Data1m,Rec1MinFlag,-1)
     Sample (1,WqNO3mgl,FP2)
     Sample (1,WqCLmgl,FP2)
     Sample (1,WqWiperPos,FP2)
+        #If TopBottom Then
+    Sample (1,BtmWqBattV,FP2)
+    Sample (1,BtmWqTempC,FP2)
+    Sample (1,BtmWqSpCond,IEEE4)
+    Sample (1,BtmWqTurbFNU,FP2)
+    Sample (1,BtmWqDOMgl,FP2)
+    Sample (1,BtmWqPH,FP2)
+    Sample (1,BtmWqChlugL,FP2)
+    Sample (1,BtmWqChlRFU,FP2)
+    Sample (1,BtmWqDepthFt,FP2)
+    Sample (1,BtmWqDOSat,FP2)
+    Sample (1,BtmWqFDOMrfu,FP2)
+    Sample (1,BtmWqFDOMqsu,FP2)
+    Sample (1,BtmWqBGArfu,FP2)
+    Sample (1,BtmWqBGAugl,FP2)
+    Sample (1,BtmWqNH4mgl,FP2)
+    Sample (1,BtmWqNO3mgl,FP2)
+    Sample (1,BtmWqCLmgl,FP2)
+    Sample (1,BtmWqWiperPos,FP2) 
+    #EndIf
   #EndIf
   Sample (MaxBins,VMBinVel(),IEEE4)
   Sample (MaxBins,V1(),IEEE4)
@@ -2094,6 +2468,26 @@ DataTable (SVMaq,True,1)
     Sample (1,WqNO3mgl,FP2)
     Sample (1,WqCLmgl,FP2)
     Sample (1,WqWiperPos,FP2)
+            #If TopBottom Then
+    Sample (1,BtmWqBattV,FP2)
+    Sample (1,BtmWqTempC,FP2)
+    Sample (1,BtmWqSpCond,IEEE4)
+    Sample (1,BtmWqTurbFNU,FP2)
+    Sample (1,BtmWqDOMgl,FP2)
+    Sample (1,BtmWqPH,FP2)
+    Sample (1,BtmWqChlugL,FP2)
+    Sample (1,BtmWqChlRFU,FP2)
+    Sample (1,BtmWqDepthFt,FP2)
+    Sample (1,BtmWqDOSat,FP2)
+    Sample (1,BtmWqFDOMrfu,FP2)
+    Sample (1,BtmWqFDOMqsu,FP2)
+    Sample (1,BtmWqBGArfu,FP2)
+    Sample (1,BtmWqBGAugl,FP2)
+    Sample (1,BtmWqNH4mgl,FP2)
+    Sample (1,BtmWqNO3mgl,FP2)
+    Sample (1,BtmWqCLmgl,FP2)
+    Sample (1,BtmWqWiperPos,FP2) 
+    #EndIf
   #EndIf
 EndTable
 
@@ -2472,6 +2866,9 @@ Sub Initialize
     #If WqSonde = "WQ_SERIAL_BURST" Then
       Public iCount As Long = 0
       ResetTable(burst)
+      #If TopBottom Then
+        ResetTable(BtmBurst)
+      #EndIf
       RecBurstFlag = False
       GetBurst = Yes
     #Else
@@ -2483,6 +2880,9 @@ Sub Initialize
     Wipeflag = False
     WqManualCycle = False
     OldEXOTime = 0
+    #If TopBottom Then
+      BtmOldEXOTime = 0
+    #EndIf
   #EndIf
 
   'An array of longs is needed to collect the data because the campbell cannot read the
@@ -2527,7 +2927,37 @@ Sub Initialize
     WqPwrCycleCnt = 0
     WqError = False
     WqDead = False
+    #If TopBottom Then
+    BtmWqDate = ""
+    BtmWqTime =""
+    'Public WqNparams As Long
+    BtmWqTempC = 0
+    BtmWqTempF = 0
+    BtmWqSpCond = 0
+    BtmWqTurbFNU = 0
+    BtmWqChlugL = 0
+    BtmWqChlRFU = 0
+    BtmWqDOMgl = 0
+    BtmWqDOSat = 0
+    BtmWqPH = 0
+    BtmWqPHmv = 0
+    BtmWqORP = 0
+    BtmWqDepthFt = 0
+    BtmWqBattV = 0
+    BtmWqBGAugl = 0
+    BtmWqBGArfu = 0
+    BtmWqFDOMrfu = 0
+    BtmWqFDOMqsu = 0
+    BtmWqNH4mgl = 0
+    BtmWqNO3mgl = 0
+    BtmWqCLmgl = 0
+    BtmWqWiperPos = 0
+    BtmWqErrCount = 0
+    BtmWqPwrCycleCnt = 0
+    BtmWqError = False
+    BtmWqDead = False
     'WqDeadCnt = 0
+    #EndIf
   #EndIf
 End Sub
 
@@ -2984,9 +3414,20 @@ EndSub
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 0" + CHR(13) + CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
     SerialOut (WqSerialPort,"time " + EXOTimeString + CHR(13) + CHR(10),"OK",3,50)
     Delay (1,200,mSec)
     SerialFlush(WqSerialPort)
+    #If TopBottom Then
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 1" + CHR(13) + CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"time " + EXOTimeString + CHR(13) + CHR(10),"OK",3,50)
+    Delay (1,200,mSec)
+    SerialFlush(WqSerialPort)
+    #EndIf
     SerialClose(WqSerialPort)
     SetEXOTimeFlg = False
   End Sub
@@ -3118,6 +3559,31 @@ EndSub
     WqLocNO3 = t(21)
     WqLocCL = t(22)
     WqLocWiperPos = t(23)
+    #If TopBottom Then
+    BtmWqLocDate = BTM_t(1)
+    BtmWqLocTime = BTM_t(2)
+    BtmWqLocTempC = BTM_t(3)
+    BtmWqLocTempF = BTM_t(4)
+    BtmWqLocCond = BTM_t(5)
+    BtmWqLocTurbFNU = BTM_t(6)
+    BtmWqLocDoSat = BTM_t(7)
+    BtmWqLocDOmgL = BTM_t(8)
+    BtmWqLocDepth = BTM_t(9)
+    BtmWqLocBatt = BTM_t(10)
+    BtmWqLocpH = BTM_t(11)
+    BtmWqLocpHmV = BTM_t(12)
+    BtmWqLocORP = BTM_t(13)
+    BtmWqLocChlugL = BTM_t(14)
+    BtmWqLocChlRFU = BTM_t(15)
+    BtmWqLocBGApcRFU = BTM_t(16)
+    BtmWqLocBGApcugL = BTM_t(17)
+    BtmWqLocFDomRFU = BTM_t(18)
+    BtmWqLocFDomQSU = BTM_t(19)
+    BtmWqLocNH4 = BTM_t(20)
+    BtmWqLocNO3 = BTM_t(21)
+    BtmWqLocCL = BTM_t(22)
+    BtmWqLocWiperPos = BTM_t(23)
+    #EndIf
   EndSub
 #EndIf
 '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
@@ -3125,6 +3591,8 @@ EndSub
   Sub ParamCheck 'gets the parameter codes from the EXO in whichever order they are being output
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
     Delay (1,300,mSec)
@@ -3134,6 +3602,20 @@ EndSub
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,200,mSec)
     SerialFlush(WqSerialPort)
+    #If TopBottom Then
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
+    Delay (1,300,mSec)
+    SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
+    BtmWqIn = Trim(BtmWqIn)
+    SplitStr (BtmWqParamOrder,BtmWqIn,CHR(32),BtmWqNparams,0)
+    BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
+    Delay (1,200,mSec)
+    SerialFlush(WqSerialPort)
+    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3143,12 +3625,26 @@ EndSub
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)    
     SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
     Delay (1,300,mSec)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
+    #If TopBottom Then
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)    
+    SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
+    Delay (1,300,mSec)
+    SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
+    BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
+    Delay (1,20,mSec)
+    SerialFlush(WqSerialPort)
+    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3157,6 +3653,8 @@ EndSub
   Sub GetWQ_Serial 'gets single data point from EXO
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
     Delay (1,200,mSec)
@@ -3167,6 +3665,21 @@ EndSub
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
+    #If TopBottom Then
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
+    Delay (1,200,mSec)
+    SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
+    Erase BtmWqData()
+    BtmWqIn = Trim(BtmWqIn)
+    SplitStr (BtmWqData,BtmWqIn,",",BtmWqNparams,0)
+    BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
+    Delay (1,20,mSec)
+    SerialFlush(WqSerialPort)
+    #EndIf      
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3211,6 +3724,46 @@ EndSub
     If WqLocNO3 > 0 Then WqNO3mgl = WqData(WqLocNO3)
     If WqLocCL > 0 Then WqCLmgl = WqData(WqLocCL)
     If WqLocWiperPos > 0 Then WqWiperPos = WqData(WqLocWiperPos)
+  #If TopBottom Then
+        If (BtmWqData(BtmWqLocDate) <> NAN) AND (BtmWqData(BtmWqLocDate)<> 0) AND (BtmWqData(BtmWqLocTime)<> BtmOldEXOTime)  Then
+      BtmOldEXOTime = BtmWqData(BtmWqLocTime)
+      BtmWqError = False
+      BtmWqDead = False
+      'WqDeadCnt = 0
+      BtmWqErrCount = 0
+      BtmWqPwrCycleCnt = 0
+    Else
+      BtmWqError = True
+      BtmOldEXOTime = BtmWqData(BtmWqLocTime)
+      #If DWRSonde = False Then 
+      Call WQ_Mark_Bad_Btm
+      Exit Sub
+      #EndIf
+    EndIf
+    If BtmWqLocDate > 0 Then BtmWqDate = BtmWqData(BtmWqLocDate)
+    If BtmWqLocTime > 0 Then BtmWqTime = BtmWqData(BtmWqLocTime)
+    If BtmWqLocTempC > 0 Then BtmWqTempC = BtmWqData(BtmWqLocTempC)
+    If BtmWqLocTempF > 0 Then BtmWqTempF = BtmWqData(BtmWqLocTempF)
+    If BtmWqLocCond > 0 Then BtmWqSpCond = BtmWqData(BtmWqLocCond)
+    If BtmWqLocTurbFNU > 0 Then BtmWqTurbFNU = BtmWqData(BtmWqLocTurbFNU)
+    If BtmWqLocDoSat > 0 Then BtmWqDOSat = BtmWqData(BtmWqLocDoSat)
+    If BtmWqLocDOmgL > 0 Then BtmWqDOMgl = BtmWqData(BtmWqLocDOmgL)
+    If BtmWqLocDepth > 0 Then BtmWqDepthFt = BtmWqData(BtmWqLocDepth)
+    If BtmWqLocBatt > 0 Then BtmWqBattV = BtmWqData(BtmWqLocBatt)
+    If BtmWqLocpH > 0 Then BtmWqPH = BtmWqData(BtmWqLocpH)
+    If BtmWqLocpHmV > 0 Then BtmWqPHmv = BtmWqData(BtmWqLocpHmV)
+    If BtmWqLocORP > 0 Then BtmWqORP = BtmWqData(BtmWqLocORP)
+    If BtmWqLocChlugL > 0 Then BtmWqChlugL = BtmWqData(BtmWqLocChlugL)
+    If BtmWqLocChlRFU > 0 Then BtmWqChlRFU = BtmWqData(BtmWqLocChlRFU)
+    If BtmWqLocBGApcRFU > 0 Then BtmWqBGArfu = BtmWqData(BtmWqLocBGApcRFU)
+    If BtmWqLocBGApcugL > 0 Then BtmWqBGAugl = BtmWqData(BtmWqLocBGApcugL)
+    If BtmWqLocFDomRFU > 0 Then BtmWqFDOMrfu = BtmWqData(BtmWqLocFDomRFU)
+    If BtmWqLocFDomQSU > 0 Then BtmWqFDOMqsu = BtmWqData(BtmWqLocFDomQSU)
+    If BtmWqLocNH4 > 0 Then BtmWqNH4mgl = BtmWqData(BtmWqLocNH4)
+    If BtmWqLocNO3 > 0 Then BtmWqNO3mgl = BtmWqData(BtmWqLocNO3)
+    If BtmWqLocCL > 0 Then BtmWqCLmgl = BtmWqData(BtmWqLocCL)
+    If BtmWqLocWiperPos > 0 Then BtmWqWiperPos = BtmWqData(BtmWqLocWiperPos)
+    #EndIf
   EndSub
 #EndIf
 '-------------------DefineParamsOrder----Automatically determines the order of the incoming serial connected EXO data ------
@@ -3239,7 +3792,31 @@ EndSub
     t(21) = FindSpa (NO3Code,NO3Code,1,WqParamOrder())
     t(22) = FindSpa (CLCode,CLCode,1,WqParamOrder())
     t(23) = FindSpa (WiperPos,WiperPos,1,WqParamOrder())
-
+#If TopBottom Then
+    BTM_t(1) = FindSpa (DateCode,DateCode,1,BtmWqParamOrder())
+    BTM_t(2) = FindSpa (TimeCode,TimeCode,1,BtmWqParamOrder())
+    BTM_t(3) = FindSpa (TempCCode,TempCCode,1,BtmWqParamOrder())
+    BTM_t(4) = FindSpa (TempFCode,TempFCode,1,BtmWqParamOrder())
+    BTM_t(5) = FindSpa (CondCode,CondCode,1,BtmWqParamOrder())
+    BTM_t(6) = FindSpa (TurbFNUCode,TurbFNUCode,1,BtmWqParamOrder())
+    BTM_t(7) = FindSpa (DoSatCode,DoSatCode,1,BtmWqParamOrder())
+    BTM_t(8) = FindSpa (DOmgLCode,DOmgLCode,1,BtmWqParamOrder())
+    BTM_t(9) = FindSpa (DepthCode,DepthCode,1,BtmWqParamOrder())
+    BTM_t(10) = FindSpa (BattCode,BattCode,1,BtmWqParamOrder())
+    BTM_t(11) = FindSpa (pHCode,pHCode,1,BtmWqParamOrder())
+    BTM_t(12) = FindSpa (pHmVCode,pHmVCode,1,BtmWqParamOrder())
+    BTM_t(13) = FindSpa (ORPCode,ORPCode,1,BtmWqParamOrder())
+    BTM_t(14) = FindSpa (ChlugLCode,ChlugLCode,1,BtmWqParamOrder())
+    BTM_t(15) = FindSpa (ChlRFUCode,ChlRFUCode,1,BtmWqParamOrder())
+    BTM_t(16) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,BtmWqParamOrder())
+    BTM_t(17) = FindSpa (BGApcugLCode,BGApcugLCode,1,BtmWqParamOrder())
+    BTM_t(18) = FindSpa (FDomRFU,FDomRFU,1,BtmWqParamOrder())
+    BTM_t(19) = FindSpa (FDomQSU,FDomQSU,1,BtmWqParamOrder())
+    BTM_t(20) = FindSpa (NH4Code,NH4Code,1,BtmWqParamOrder())
+    BTM_t(21) = FindSpa (NO3Code,NO3Code,1,BtmWqParamOrder())
+    BTM_t(22) = FindSpa (CLCode,CLCode,1,BtmWqParamOrder())
+    BTM_t(23) = FindSpa (WiperPos,WiperPos,1,BtmWqParamOrder())
+#EndIf
   EndSub
 #EndIf
 ' -------------------SetBurst-------if collecting burst then Setup EXO for burst-----
