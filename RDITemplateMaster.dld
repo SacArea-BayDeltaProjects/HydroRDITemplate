@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190409
+Const ProgramVersionDate = 20190509
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -245,6 +245,7 @@ Const ProgramVersionDate = 20190409
 '20190401 - TAV Added logic to record Turbidity NTUs (in addition to FNU) if it's a DWR sonde. Also added logic to set the time in PST if instead of UTC if it's a DWR sonde. They are using KOR 2, which makes the time output in local time (PST)
 '20190408 - TAV Removed NTU logic per discussions and findings about how the YSI EXO reports the values. Reading is actually FNU. The only thing that changes is the 3 letter acronym, so it is inaccurate to report "NTU".
 '20190409 - TAV Made the "Wq_Mark_Bad" function only occur if its a USGS sonde, not a DWR sonde in Sample and Hold mode.
+'20190509 - TAV Added CR6-RF451 radio link checking logic and reset if link is broken with up 4 total nodes in the system.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -333,6 +334,12 @@ Const VMDeadCntMax = 20
 'Min = 5
 'Max = 120
 'Inc = 5
+Const RadioNetwork = True 'Is the datalogger part of a radio network
+'value = True
+'value = False
+Const IsMaster = False  'Is the datalogger the Master in a radio network?
+'value = True
+'value = False
 Const StoreAllToCard = True
 'value = True
 'value = False
@@ -383,6 +390,25 @@ Const SeeRawWQ = True
   #If HasSlave = Yes Then
     Const SlaveCom = ComU7
   #EndIf
+    #If RadioNetwork Then
+Const DefRadOn = 0
+Const DefOpMode = 2
+Const DefFreqKey = 0
+Const DefMaxPacket = 8
+Const DefMinPacket = 9
+Const DefDataRate = 3 'Normal
+Const DefTxPwr = 10 'Max
+Const DefRetryTO = 255 'Max
+Const DefLowPwr = 2
+Const DefRepeaters = 0 'No repeaters
+Const DefPacketRepeat = 2
+Const DefSlaveRetry = 9
+Const DefFreqRepeat = 0
+Const DefSlaveRepeat = 0
+Const DefTxSubID = 15
+Const DefRxSubID = 15
+Const DefNetID = 1234
+#EndIf
   Const ExtPwrCom = U11
   Const ExtSolarCom = U9
 #EndIf
@@ -1283,6 +1309,135 @@ Public VMNoMemCount As Float 'how many times has the ADCP had no internal memory
 Public RecErased As Boolean 'flag indicating the internal memory was erased
 Public RecEraseString As String * 200 'echo of response from ADCP when internal memory is erased (also acts as indicator to trigger "RecErased" flag)
 
+#If RadioNetwork = True Then
+#If IsMaster = True Then
+ConstTable
+Const NetworkSlaves = 2 'How many nodes are in the system?
+EndConstTable
+#If NetworkSlaves = 1 Then 'Declare how many nodes are in the system with conditional compile
+Public NeighborApb = 3 'PakBus address of Node "A"
+Public NeighborASecCode = "0000" 'Security code of neighbor A (use "0000" if no security code is set)
+#ElseIf NetworkSlaves = 2 Then
+Public NeighborApb = 3
+Public NeighborASecCode = "0000"
+Public NeighborBpb = 4 'PakBus address of Node "B"
+Public NeighborBSecCode = "0000" 'Security code of neighbor B (use "0000" if no security code is set)
+#ElseIf NetworkSlaves = 3 Then
+Public NeighborApb = 3
+Public NeighborASecCode = "0000"
+Public NeighborBpb = 4
+Public NeighborBSecCode = "0000"
+Public NeighborCpb = 5 'PakBus address of Node "C"
+Public NeighborCSecCode = "0000" 'Security code of neighbor C (use "0000" if no security code is set)
+#ElseIf NetworkSlaves = 4 Then
+Public NeighborApb = 3
+Public NeighborASecCode = "0000"
+Public NeighborBpb = 4
+Public NeighborBSecCode = "0000"
+Public NeighborCpb = 5
+Public NeighborCSecCode = "0000"
+Public NeighborDpb = 6 'PakBus address of Node "D"
+Public NeighborDSecCode = "0000" 'Security code of neighbor D (use "0000" if no security code is set)
+#EndIf 'If Master
+#ElseIf IsMaster = False Then 'if it's part of a radio network but not the master datalogger
+Public MasterPB = 2 'PakBus address of master datalogger
+Public MasterSecCode = "0000" 'security code of master datalogger
+#EndIf 'If Slave
+#EndIf
+' Declare placeholders for all RF451 Settings
+#If RadioNetwork = True Then
+Public ReadRadSettings As Boolean 'Trigger to read in radio settings
+Public SetRadSettings As Boolean 'Trigger to reset radio settings
+Public SetRadToDefault As Boolean 'Trigger to Reset radio to factory defaults
+Public RadOn As Long 'Radio Enabled (0= False, 1 = True)
+Public RadOpMode As Long 'Operation mode (Point to Multipoint Master = 2, Point to Multipoint Slave = 3, Point to Multipoint Repeater = 7)
+Public RadFreqKey As Long  'Frequency Key (Min = 0, Max = 14)
+Public RadMaxPacket As Long '(Min = 0, Max = 9)
+Public RadMinPacket As Long '(Min = 0, Max = 9)
+Public RadDataRate As Long '(3 = Normal 115Kbps, 2 = High 153Kbps)
+Public RadTxPwr As Long 'Transmit power, 0=min, 10=max)
+Public RadRetryTO As Long 'Retry timeout, sets delay the radio will wait before dropping the connection to a master or repeater (factory=255 (if 1 in 255 packets is successful, link is maintained, Min = 8, Max = 255)
+Public RadLowPwr As Long 'Sets how many "slots" the transceiver sleeps (min = 2, max = 31)
+Public RadRepeaters As Long 'Are repeaters used in system (0 = no repeaters, 1 = repeaters used)
+Public RadPacketRepeat As Long 'hOw many times is the packet transmitted? (min= 0 (1 transmission), max = 9 (10 transmissions))
+Public RadSlaveRetry As Long 'How many times should the slave retrasmit a packet to master? (min = 0, max =9)
+Public RadFreqRepeat As Long '0 = Use Master Freq Key, 1= Use Repeater Freq Key
+Public RadSlaveRepeat As Long '0 = Normal, 1 = Enable Slave/Repeater
+Public RadRxSubID As Long 'Min = 0, Max = 15
+Public RadTxSubID As Long 'Min = 0, Max = 15
+Public RadNetID As Long 'Network ID, Min= 0, Max = 4095
+
+#If IsMaster = False Then 'If Not master then define Reset Slave
+Public ResetSlave As Boolean 'Set to true (automatically or manually) to reset the slave radio
+#EndIf
+
+Public ResetTried As Boolean 'indicates whether a reset of the radio was attempted
+Public NextTryCnt As Float 'counter to see how long it's been since last reset
+Public MaxNextTryCnt = 10 'user threshold for how long to wait between reset attempts
+Public ResetTryOK As Boolean 'flag to tell logger enough time passed to try a reset again. Set to True on Compile, then to false once a reset has been tried
+Public RadResetAttempts As Float 'how many times has the radio attempted a reset?
+
+Const MaxLinksDeadCnt = 10 'max number of times all links can be dead before a reset is attempted.
+#EndIf
+'Declare variables based on if the logger is in a radio network and whether it's the master in the network or not.
+#If IsMaster = True AND RadioNetwork = True Then
+  #If NetworkSlaves > 0 Then
+    Public AllLinksDead As Float 'counter to record how many times all links have been dead
+Public SendToNetwork As Float 'Placeholder variable to send to the network, used to get response from loggers whether communication is successful or not
+Public ResetMaster As Boolean
+#If NetworkSlaves = 1 Then 'if there is only one node in the network (Simple Master/Slave communication, 2 dataloggers in network, 1 master, 1 slave)
+Public SendToAresult As Float 'Result of whether the SendVariable worked or not (cue for if comms were successful)
+Public SendToAFailCnt As Float 'count for how many times the comms have failed
+Public MaxAFails = 5 'max number of times comms can fail before resetting itself
+Public LinkToAdead As Boolean 'is the link to SlaveX considered dead (counter exceeds threshold)
+#ElseIf NetworkSlaves = 2 Then 'if there are two nodes in the network (both communicating directly through master, 3 dataloggers in network, 1 master, 2 slaves)
+Public SendToAresult As Float 
+Public SendToAFailCnt As Float
+Public MaxAFails = 5 
+  Public LinkToAdead As Boolean
+  Public SendToBresult As Float
+  Public SendToBFailCnt As Float
+  Public MaxBFails = 5
+  Public LinkToBdead As Boolean
+#ElseIf NetworkSlaves = 3 Then 'if there are three nodes in the network (all three communicating directly through master, 4 dataloggers in network, 1 master, 3 slaves)
+Public SendToAresult As Float 
+Public SendToAFailCnt As Float 
+Public MaxAFails = 5 
+  Public LinkToAdead As Boolean 
+  Public SendToBresult As Float
+  Public SendToBFailCnt As Float
+  Public MaxBFails = 5
+  Public LinkToBdead As Boolean
+  Public SendToCresult As Float
+  Public SendToCFailCnt As Float
+  Public MaxCFails = 5
+  Public LinkToCdead As Boolean
+#ElseIf NetworkSlaves = 4 Then 'if there are four nodes in the network (all four communicating directly through master 5 dataloggers in network, 1 master, 4 slaves)
+Public SendToAresult As Float 
+Public SendToAFailCnt As Float 
+Public MaxAFails = 5
+  Public LinkToAdead As Boolean 
+  Public SendToBresult As Float
+  Public SendToBFailCnt As Float
+  Public MaxBFails = 5
+  Public LinkToBdead As Boolean
+  Public SendToCresult As Float
+  Public SendToCFailCnt As Float
+  Public MaxCFails = 5
+  Public LinkToCdead As Boolean
+  Public SendToDresult As Float
+  Public SendToDFailCnt As Float
+  Public MaxDFails = 5
+  Public LinkToDdead As Boolean
+  #EndIf
+#EndIf
+#ElseIf IsMaster = False AND RadioNetwork = True Then 'if the datalogger is in the network, but not the master
+Public MasterReceive As Float 'Variable to store value from the master datalogger
+Public GetResult As Float 'was the communication successful (0 = successful)
+Public GetFailCnt As Float 'counter for how many times communications have failed
+Public MaxGetFails = 5 'threshold for how many times comms can fail before resetting the radio
+Public LinkDead As Boolean 'flag to indicate the link is considered dead (counter exceeded threshold)
+#EndIf
 '------------------------String used to send specific data through serial communications to another logger-------------------
 'Public OutString As String * 1000 'string of variables/values to be sent out to another datalogger
 Public SendFlowData As Boolean 'user selectable flag to send only flow data
@@ -2048,6 +2203,55 @@ EndTable
 DataTable (DebugTimer,True,2880)
   Sample (9,DebugTime(),IEEE4)
 EndTable
+
+#If RadioNetwork = True Then
+DataTable (RadioStatus,1,1) 'testing table, holds nothing of importance for now.	
+#If IsMaster = True Then
+  #If NetworkSlaves = 1 Then
+Sample (1,SendToAFailCnt,FP2)
+Sample (1,LinkToAdead,Boolean)
+Sample (1,ResetTried,Boolean)
+Sample (1,RadResetAttempts,FP2)
+#ElseIf NetworkSlaves = 2 Then
+Sample (1,SendToAFailCnt,FP2)
+Sample (1,LinkToAdead,Boolean)
+Sample (1,SendToBFailCnt,FP2)
+Sample (1,LinkToBdead,Boolean)
+Sample (1,AllLinksDead,Boolean)
+Sample (1,ResetTried,Boolean)
+Sample (1,RadResetAttempts,FP2)
+#ElseIf NetworkSlaves = 3 Then
+Sample (1,SendToAFailCnt,FP2)
+Sample (1,LinkToAdead,Boolean)
+Sample (1,SendToBFailCnt,FP2)
+Sample (1,LinkToBdead,Boolean)
+Sample (1,SendToCFailCnt,FP2)
+Sample (1,LinkToCdead,Boolean)
+Sample (1,AllLinksDead,Boolean)
+Sample (1,ResetTried,Boolean)
+Sample (1,RadResetAttempts,FP2)
+#ElseIf NetworkSlaves = 4 Then
+Sample (1,SendToAFailCnt,FP2)
+Sample (1,LinkToAdead,Boolean)
+Sample (1,SendToBFailCnt,FP2)
+Sample (1,LinkToBdead,Boolean)
+Sample (1,SendToCFailCnt,FP2)
+Sample (1,LinkToCdead,Boolean)
+Sample (1,SendToDFailCnt,FP2)
+Sample (1,LinkToDdead,Boolean)
+Sample (1,AllLinksDead,Boolean)
+Sample (1,ResetTried,Boolean)
+Sample (1,RadResetAttempts,FP2)
+#EndIf 'Network Slaves
+#Else 'Not master
+Sample (1,GetFailCnt,FP2)
+Sample (1,LinkDead,Boolean)
+Sample (1,ResetTried,Boolean)
+Sample (1,RadResetAttempts,FP2)
+#EndIf 'Not master
+EndTable
+#EndIf
+
 '____________________________________SUBROUTINES__________________________________________
 
 '________________________________Get Startup Information__________________________________
@@ -4965,24 +5169,339 @@ Sub ZeroErrCounters
   NewPS2 = False
 EndSub
 
-'Function CheckVarStorage As Boolean
-''this is a first try at storing variables in case of power outage
-'  '----------------------
-'  'SetStatus ("USRDriveSize",16384)
-'  Public PreserveHandle As Long
-'  Public PreserveFileLen As Long
-'  Public Closeerror
-'  PreserveHandle = FileOpen("USR:VariableStore.txt","r",-1) 'open the preserve variable file here
-'  Delay (1,30,mSec)
-'  PreserveFileLen = FileRead(PreserveHandle,PreserveFile,500)
-'  Closeerror = FileClose(PreserveHandle)
-'  If PreserveFileLen <> 0 Then
-'    Return True
-'  Else
-'    Return False
-'   EndIf
+#If RadioNetwork = True Then
+'__________________________READ IN CURRENT SETTINGS OF RADIO_______________________
+Sub ReadRF
+    RadOn = Settings.RadioEnable
+    RadOpMode = Settings.RadioOpMode
+    RadFreqKey = Settings.RadioFreqKey
+    RadMaxPacket = Settings.RadioMaxPacket
+    RadMinPacket = Settings.RadioMinPacket
+    RadDataRate = Settings.RadioDataRate
+    RadTxPwr = Settings.RadioTxPwr
+    RadRetryTO = Settings.RadioRetryTimeout
+    RadLowPwr = Settings.RadioLowPwr
+    RadRepeaters = Settings.RadioRepeaters
+    RadPacketRepeat = Settings.RadioPacketRepeat
+    RadSlaveRetry = Settings.RadioSlaveRetry
+    RadFreqRepeat = Settings.RadioFreqRepeat
+    RadSlaveRepeat = Settings.RadioSlaveRepeat
+    RadRxSubID = Settings.RadioRxSubID
+    RadTxSubID = Settings.RadioTxSubID
+    RadNetID = Settings.RadioNetID
+    ReadRadSettings = False
+EndSub
+
+'_________________________STORE THE SETTINGS TO USR DRIVE BASED ON THE ABOVE SUBROUTINE VARIABLES___________________
+Sub StoreRadSettings
+  Public RadVar(17) As String 'establish a placeholder array
+  Public SendRadSetString As String * 256 'create a string that will be used to send to the USR drive
+  Public RadStringLen As Long 'length of string being stored
+  Public RadVarHandle As Long 'short name to be used in opening/reading/writing the User Radio Settings
+  Public RadVarBytes As Long 'number of bytes successfully written to file
+  Public StoreRadCloseErr 'variable to store whether file closure was a success or not. 0 = success, -1 = FileHandle referenced is not valid or if file was not previously opened/is already closed.
+  Public RadVarCnt As Long 'counter to establish number of times For To loop needs to continue
+  RadVar(1) = RadOn 'assign each value in RadVar() to a variable previously read in in the ReadRF subroutine
+  RadVar(2) = RadOpMode
+  RadVar(3) = RadFreqKey
+  RadVar(4) = RadMaxPacket
+  RadVar(5) = RadMinPacket
+  RadVar(6) = RadDataRate
+  RadVar(7) = RadTxPwr
+  RadVar(8) = RadRetryTO
+  RadVar(9) = RadLowPwr
+  RadVar(10) = RadRepeaters
+  RadVar(11) = RadPacketRepeat
+  RadVar(12) = RadSlaveRetry
+  RadVar(13) = RadFreqRepeat
+  RadVar(14) = RadSlaveRepeat
+  RadVar(15) = RadRxSubID
+  RadVar(16) = RadTxSubID
+  RadVar(17) = RadNetID    
+  SendRadSetString = RadVar(1) 'start writing the string out starting with the first value in the array
+  For RadVarCnt = 2 To 17 'from RadVar(2) through RadVar(n) build the string using For To Next Loop
+    SendRadSetString = SendRadSetString + "," + RadVar(RadVarCnt) 'SendRadSetString gets built using a comma for a delimiter for the entire length of the array
+  Next RadVarCnt 'move to next variable in array until string is complete
+  RadStringLen = Len(SendRadSetString) 'Len returns the length of the string in bytes
+  RadVarHandle = FileOpen("USR:UserRadSettings.txt","w",-1) 'Establish the "FileHandle" by opening (or creating if first open call) the file "UserRadSettings.txt" in the USR drive.
+  Delay (1,100,msec) 'delay processing to make sure file was opened
+  RadVarBytes = FileWrite (RadVarHandle,SendRadSetString,RadStringLen + 15) 'record how many bytes were written to file. Added 15 bytes to the expected length to make sure nothing gets missed
+  StoreRadCloseErr = FileClose(RadVarHandle) 'close the file, return whether closure was successful
+EndSub
+'EndSub
+
+'_______________________RESET RADIO TO FACTORY DEFAULT SETTINGS_______________________
+'__________Factory setting for RadioEnabled is True (On). I turn it off, as the purpose of this is to essentially reboot the radio system
+Sub ResetRadDefault
+  SetSetting("RadioEnable",DefRadOn) 'SetSetting for the settings in quotes based on the Const values establish in variable declarations, Ex: DefRadOn = 0, DefOpMode = 2, etc.)
+  SetSetting("RadioOpMode",DefOpMode)
+  SetSetting("RadioFreqKey",DefFreqKey)
+  SetSetting("RadioMaxPacket",DefMaxPacket)
+  SetSetting("RadioMinPacket",DefMinPacket)
+  SetSetting("RadioDataRate",DefDataRate)
+  SetSetting("RadioTxPwr",DefTxPwr)
+  SetSetting("RadioRetryTimeout",DefRetryTO)
+  SetSetting("RadioLowPwr",DefLowPwr)
+  SetSetting("RadioRepeaters",DefRepeaters)
+  SetSetting("RadioPacketRepeat",DefPacketRepeat)
+  SetSetting("RadioSlaveRetry",DefSlaveRetry)
+  SetSetting("RadioFreqRepeat",DefFreqRepeat)
+  SetSetting("RadioSlaveRepeat",DefSlaveRepeat)
+  SetSetting("RadioRxSubID",DefRxSubID)
+  SetSetting("RadioTxSubID",DefTxSubID)
+  SetSetting("RadioNetID",DefNetID)
+EndSub
+
+'_________________________RESET RADIO BACK TO USER SETTINGS PREVIOUSLY STORED IN USR______________________
 '
-'EndFunction
+Sub SetRadSetting
+  'Set Radio Settings to User settings from USR Drive
+  Public UserRadSettings As String * 60 'Variable to store settings string from USR 
+  Public SetRadHandle As Long 'FileHandle of the "UserRadSettings.txt"
+  Public SetRadFileLen As Long 'Length of the user settings file in bytes
+  Public SetCloseErr 'If the file was closed successfully or not. 0 = successful, -1 = FileHandle not valid or handle was not opened
+  Public RadFileClosure As String * 26 'Text to let User know whether reading settings was successful or not (based on number of bytes)
+  SetRadHandle = FileOpen("USR:UserRadSettings.txt","r",-1) 'open saved user settings for radio
+  Delay (1,30,mSec) 'delay processing
+  SetRadFileLen = FileRead(SetRadHandle,UserRadSettings,500) 'read in the file, store it to the variable "UserRadSettings"
+  SetCloseErr = FileClose(SetRadHandle) 'indicate whether the closure was successful
+  If SetRadFileLen = 0 Then 'if FileLength = 0
+    RadFileClosure = "Error: Settings not found!" 'Show text to user
+    SetRadSettings = False 'Don't set radio settings
+    ExitSub 'exit the subroutine
+  EndIf
+  Public InRadVar(17) As String 'create array to store the values from string once it's split
+  SplitStr(InRadVar,UserRadSettings,",",17,0) 'split the "UserRadSettings" string into InRadVar(), comma delimited, n array size
+  RadOn = InRadVar(1) 'fill each variable with appropriate value from array
+  RadOpMode = InRadVar(2)
+  RadFreqKey = InRadVar(3)
+  RadMaxPacket = InRadVar(4)
+  RadMinPacket = InRadVar(5)
+  RadDataRate = InRadVar(6)
+  RadTxPwr = InRadVar(7)
+  RadRetryTO = InRadVar(8)
+  RadLowPwr = InRadVar(9)
+  RadRepeaters = InRadVar(10)
+  RadPacketRepeat = InRadVar(11)
+  RadSlaveRetry = InRadVar(12)
+  RadFreqRepeat = InRadVar(13)
+  RadSlaveRepeat = InRadVar(14)
+  RadRxSubID = InRadVar(15)
+  RadTxSubID = InRadVar(16)
+  RadNetID = InRadVar(17)
+  SetSetting("RadioEnable",RadOn) 'now, SetSetting to set the radio to the settings read in from USR
+  SetSetting("RadioOpMode",RadOpMode)
+  SetSetting("RadioFreqKey",RadFreqKey)
+  SetSetting("RadioMaxPacket",RadMaxPacket)
+  SetSetting("RadioMinPacket",RadMinPacket)
+  SetSetting("RadioDataRate",RadDataRate)
+  SetSetting("RadioTxPwr",RadTxPwr)
+  SetSetting("RadioRetryTimeout",RadRetryTO)
+  SetSetting("RadioLowPwr",RadLowPwr)
+  SetSetting("RadioRepeaters",RadRepeaters)
+  SetSetting("RadioPacketRepeat",RadPacketRepeat)
+  SetSetting("RadioSlaveRetry",RadSlaveRetry)
+  SetSetting("RadioFreqRepeat",RadFreqRepeat)
+  SetSetting("RadioSlaveRepeat",RadSlaveRepeat)
+  SetSetting("RadioRxSubID",RadRxSubID)
+  SetSetting("RadioTxSubID",RadTxSubID)
+  SetSetting("RadioNetID",RadNetID)
+  SetRadSettings = False 'turn off flag
+EndSub
+
+'_____________________________Establish means of verifying successful communication
+
+  #If IsMaster = True Then 'if it's the master in the network
+Sub CheckLinks 'follow this subroutine
+  SendToNetwork = SendToNetwork + 1 'placeholder variable used to send to slave loggers
+  If SendToNetwork >= 150 Then 'count to 150
+    SendToNetwork = 0 'then reset (arbitrary numbers)
+  EndIf
+  #If NetworkSlaves = 1 Then 'if there's one slave in the network
+    SendVariables (SendToAresult,COMRF,-1,NeighborApb,NeighborASecCode,0,"Public","MasterReceive",SendToNetwork,1) 'send "SendToNetwork Variable to Node "A".
+    If SendToAresult <> 0 Then 'Result from above, 0 = successful comms, non-0 = failure of some sort.
+      SendToAFailCnt = SendToAFailCnt + 1 'if comms failed, count up
+      Else 'if comms successful
+        SendToAFailCnt = 0 'reset counter
+        LinkToAdead = False 'set "Dead" flag to false
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0 'Set reset attempt counter back to 0
+    EndIf
+    If SendToAFailCnt >= MaxAFails 'if fail counter exceeds threshold
+    LinkToAdead = True 'all links are dead
+    ResetMaster = True 'set reset flag
+    SendToAFailCnt = 0 'reset counter to 0, use counter to make sure radio doesn't continually attempt to reset once the link is considered dead
+    EndIf
+  #EndIf
+  #If NetworkSlaves = 2 Then 'if 2 slaves in the network, see comments above
+    SendVariables (SendToAresult,COMRF,-1,NeighborApb,NeighborASecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave A
+    If SendToAresult <> 0 Then
+      SendToAFailCnt = SendToAFailCnt + 1
+      RadResetAttempts = 0
+      Else
+        SendToAFailCnt = 0
+        LinkToAdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+    EndIf
+    If SendToAFailCnt >= MaxAFails
+    LinkToAdead = True
+    SendToAFailCnt = 0
+    EndIf
+    SendVariables (SendToBresult,COMRF,-1,NeighborBpb,NeighborBSecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave B
+    If SendToBresult <> 0 Then
+      SendToBFailCnt = SendToBFailCnt + 1
+      Else
+        SendToBFailCnt = 0
+        LinkToBdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToBFailCnt >= MaxBFails
+    LinkToBdead = True
+    EndIf
+    If LinkToAdead AND LinkToBdead Then 'only count towards fails if BOTH links are dead, something may be wrong with master.
+      AllLinksDead = AllLinksDead + 1 'counter for how many times both links are dead
+      If AllLinksDead >= MaxLinksDeadCnt Then 'if counter exceeds threshold
+      ResetMaster = True 'set flag to reset master
+      SendToAFailCnt = 0 'reset the counter for each slave
+      SendToBFailCnt = 0
+      AllLinksDead = 0 'reset the "AllLinksDead" counter
+    EndIf
+    #EndIf
+    #If NetworkSlaves = 3 Then 'if 3 slaves in network
+        SendVariables (SendToAresult,COMRF,-1,NeighborApb,NeighborASecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave A
+    If SendToAresult <> 0 Then
+      SendToAFailCnt = SendToAFailCnt + 1
+      Else
+        SendToAFailCnt = 0
+        LinkToAdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToAFailCnt >= MaxAFails
+    LinkToAdead = True
+    EndIf
+    SendVariables (SendToBresult,COMRF,-1,NeighborBpb,NeighborBSecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave B
+    If SendToBresult <> 0 Then
+      SendToBFailCnt = SendToBFailCnt + 1
+      Else
+        SendToBFailCnt = 0
+        LinkToBdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToBFailCnt >= MaxBFails
+    LinkToBdead = True
+    EndIf
+    SendVariables (SendToCresult,COMRF,-1,NeighborCpb,NeighborCSecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave C
+    If SendToCresult <> 0 Then
+      SendToCFailCnt = SendToCFailCnt + 1
+      Else
+        SendToCFailCnt = 0
+        LinkToCdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToCFailCnt >= MaxCFails
+    LinkToCdead = True
+    EndIf
+    If LinkToAdead AND LinkToBdead AND LinkToCdead Then 'only count towards fails if ALL links are dead, something may be wrong with master.
+            AllLinksDead = AllLinksDead + 1
+      If AllLinksDead >= MaxLinksDeadCnt Then
+      ResetMaster = True
+      SendToAFailCnt = 0
+      SendToBFailCnt = 0
+      SendToCFailCnt = 0
+      AllLinksDead = 0
+    EndIf
+  #EndIf
+  #If NetworkSlaves = 4 Then '4 slaves in network
+    SendVariables (SendToAresult,COMRF,-1,NeighborApb,NeighborASecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave A
+    If SendToAresult <> 0 Then
+      SendToAFailCnt = SendToAFailCnt + 1
+      Else
+        SendToAFailCnt = 0
+        LinkToAdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToAFailCnt >= MaxAFails
+    LinkToAdead = True
+    EndIf
+    SendVariables (SendToBresult,COMRF,-1,NeighborBpb,NeighborBSecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave B
+    If SendToBresult <> 0 Then
+      SendToBFailCnt = SendToBFailCnt + 1
+      Else
+        SendToBFailCnt = 0
+        LinkToBdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToBFailCnt >= MaxBFails
+    LinkToBdead = True
+    EndIf
+    SendVariables (SendToCresult,COMRF,-1,NeighborCpb,NeighborCSecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave C
+    If SendToCresult <> 0 Then
+      SendToCFailCnt = SendToCFailCnt + 1
+      Else
+        SendToCFailCnt = 0
+        LinkToCdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToCFailCnt >= MaxCFails
+    LinkToCdead = True
+    EndIf
+    SendVariables (SendToDresult,COMRF,-1,NeighborDpb,NeighborDSecCode,0,"Public","MasterReceive",SendToNetwork,1) 'Slave D
+    If SendToDresult <> 0 Then
+      SendToDFailCnt = SendToDFailCnt + 1
+      Else
+        SendToDFailCnt = 0
+        LinkToDdead = False
+        ResetMaster = False 'don't set flag to reset the radio
+        RadResetAttempts = 0
+    EndIf
+    If SendToDFailCnt >= MaxDFails
+    LinkToDdead = True
+    EndIf
+    If LinkToAdead AND LinkToBdead AND LinkToCdead AND LinkToDdead Then 'only count towards fails if ALL links are dead, something may be wrong with master.
+      AllLinksDead = AllLinksDead + 1
+      If AllLinksDead >= MaxLinksDeadCnt Then
+      ResetMaster = True
+      SendToAFailCnt = 0
+      SendToBFailCnt = 0
+      SendToCFailCnt = 0
+      SendToDFailCnt = 0
+      AllLinksDead = 0
+      EndIf
+    EndIf
+    #EndIf
+    EndIf
+ EndSub
+ #EndIf
+ 
+ #If IsMaster = False Then 'if it's in a radio network, but not the master
+   Sub CheckSlaveLink 'subroutine to run if it's a slave
+     GetVariables (GetResult,COMRF,-1,MasterPB,MasterSecCode,0,"Public","SendToNetwork",MasterReceive,1) 'GetVariable "SendToNetwork" from master, store in MasterReceive
+     If GetResult <> 0 Then 'if GetVariables was NOT successful (success = 0, fail <> 0)
+       GetFailCnt = GetFailCnt + 1 'start counter
+       Else 'if it was successful
+       GetFailCnt = 0 'reset counter
+       LinkDead = False 'link is not dead
+       ResetSlave = False 'don't set flag to reset the radio
+       RadResetAttempts = 0 'Set reset attempt counter to 0
+     EndIf
+     If GetFailCnt >= MaxGetFails Then 'if failure counter exceeds threshold
+       LinkDead = True 'link is considered dead
+     EndIf
+     If LinkDead = True Then 'if the link is dead
+       ResetSlave = True 'set flag to reset radio
+       GetFailCnt = 0 'reset counter to 0
+       EndIf
+    EndSub
+ #EndIf
+ #EndIf
+
 '__________________________________Keypad Menus________________________________________
 Sub KeypadMenu
   DisplayMenu ("Main Menu",-4)
@@ -5341,7 +5860,10 @@ BeginProg
   RecDataFlag = No
   CMD = ""
   SendCMD = FALSE
-
+  #If RadioNetwork = True Then
+ResetTryOK = True 'It's ok to try a reset once initial dead thresholds have been met, no need to wait.
+NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio without waiting the first time.
+#EndIf
   '---------------------------------------------------------------------
   ' This must be done inside scan
   '  If GetVariablesFlg = True Then
@@ -5942,7 +6464,64 @@ BeginProg
   '        Call ClearBurstVars
        #EndIf
   RecAQFlag = False
-  If StoreVariablesFlg = true Then Call StoreVariables
+
+  	#If RadioNetwork = True Then 'only compile if it's in a radio network
+  If ReadRadSettings = True Then 'if user wants to store radio settings
+    Call ReadRF 'read in settings
+    Call StoreRadSettings 'store in USR drive
+  EndIf
+#If IsMaster = True Then 'if it's the master
+    Call CheckLinks 'call the subroutine that checks multiple links
+  If SetRadSettings = True OR ResetMaster = True AND ResetTryOK = True Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
+    Call ResetRadDefault 'first, let's set radio back to factory defaults
+    Call ReadRF 'read in the settings after setting to default to make sure it did what it's supposed to
+    Delay (1,2,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
+    Call SetRadSetting 'set radio settings to the what's stored on USR
+    Call ReadRF 'read in the new settings
+    Call StoreRadSettings 'store the new settings
+    ResetTried = True 'flag to indicate a reset was tried
+    NextTryCnt = 0 'reset the counter to zero so we can wait X amount of time before retrying
+    RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)    
+  EndIf
+  If ResetMaster = True AND ResetTried = False Then 'if the reset master flag is still set and we didn't try to reset on this scan
+    NextTryCnt = NextTryCnt + 1 'increase NextTryCnt
+    EndIf
+    If NextTryCnt >= MaxNextTryCnt Then 'If NextTryCnt is greater that threshold
+      ResetTryOK = True 'it's ok to try the reset
+      Else
+      ResetTryOK = False 'otherwise, not enough time has passed since previous attempt
+    EndIf
+  #Else 'if it's a slave
+    Call CheckSlaveLink 'only check the single link to the master
+    If SetRadSettings = True OR ResetSlave = True AND ResetTryOK = True Then 'if link failed and enough time has passed to try again or user wants manual reset
+    Call ResetRadDefault 'reset radio to defaults
+    Call ReadRF 'read in settings to verify it did it correctly
+    Delay (1,2,Sec) 'delay, so user has opportunity to see that it worked
+    Call SetRadSetting 'set radio to settings stored in USR
+    Call ReadRF 'read in the new settings
+    Call StoreRadSettings 'store the new radio settings
+    ResetTried = True 'a reset was attempted
+    NextTryCnt = 0 'reset counter to 0
+    RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)    
+  EndIf
+  If ResetSlave = True AND ResetTried = False Then 'if the ResetSlave flag is still set and we didn't try a reset on this scan
+    NextTryCnt = NextTryCnt + 1 'increase counter
+    EndIf
+    If NextTryCnt >= MaxNextTryCnt Then 'if counter is greater than threshold
+      ResetTryOK = True 'then enough time has passed since previous attempt, it is ok to try the reset again
+      Else
+      ResetTryOK = False 'not enough time has passed, let's wait to try again.
+    EndIf
+   #EndIf
+  If SetRadToDefault = True Then 'if user wants to set radio to defaults/turn off radio
+    Call ResetRadDefault 'reset to default
+    Call ReadRF 'read in new settings, but don't store settings to USR because these settings are established as Constants and don't need to be stored.
+    SetRadToDefault = False 'reset flag to false
+  EndIf
+ResetTried = False 'set flag to false to start counter (if necessary)
+		CallTable RadioStatus
+ #EndIf
+   If StoreVariablesFlg = true Then Call StoreVariables
   ScanEnd = Timer(2,mSec,4)
   ScanEnd = ScanEnd/1000
   ProcessTime = ScanEnd - ScanStart
