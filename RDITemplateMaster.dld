@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190509
+Const ProgramVersionDate = 20190510
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -246,6 +246,7 @@ Const ProgramVersionDate = 20190509
 '20190408 - TAV Removed NTU logic per discussions and findings about how the YSI EXO reports the values. Reading is actually FNU. The only thing that changes is the 3 letter acronym, so it is inaccurate to report "NTU".
 '20190409 - TAV Made the "Wq_Mark_Bad" function only occur if its a USGS sonde, not a DWR sonde in Sample and Hold mode.
 '20190509 - TAV Added CR6-RF451 radio link checking logic and reset if link is broken with up 4 total nodes in the system.
+'20190510 - TAV Added code to accept a daisy-chained EXO system (2 Sondes total).
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -343,7 +344,7 @@ Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF T
 Const IsMaster = False  'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
-Const StoreAllToCard = True
+Const StoreAllToCard = False
 'value = True
 'value = False
 Const Debugging = False
@@ -862,7 +863,13 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   #EndIf
   Public Redeploy As Boolean
   Public NoSondeTrig
+  #If TopBottom Then
+    Public BtmNoSondeTrig
+  #EndIf
   Public GetBurst As Boolean
+  #If TopBottom Then
+    Public GetBtmBurst As Boolean
+  #EndIf
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
   Public BurstComs As String * 10000
@@ -1211,7 +1218,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public BtmWqWiperPos As Float
   Public BtmWqErrCount As Long
   Public BtmWqPwrCycleCnt As Long
-  Public BtmWqManualCycle As Boolean
+'  Public BtmWqManualCycle As Boolean
 #EndIf
 #EndIf
 Public IsWQNClosed As Boolean 'Keep this outside conditional compile until we take time to actually fix it. Works like this though.
@@ -3736,7 +3743,7 @@ EndSub
       BtmWqError = True
       BtmOldEXOTime = BtmWqData(BtmWqLocTime)
       #If DWRSonde = False Then 
-      Call WQ_Mark_Bad_Btm
+      Call Btm_WQ_Mark_Bad
       Exit Sub
       #EndIf
     EndIf
@@ -3825,6 +3832,7 @@ EndSub
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,20,mSec)
+    SerialOut (WqSerialPort,"setsonde 0" +CHR(13)+CHR(10),"OK",3,50)
         #If LoggerType = CR6 Then 'if we are using a CR6 we can use a faster period. 1000 worked with no issues but changed to 1150 so we have continuity in sampling rate between loggers. Can be altered in the future if needed.
       SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
     #Else 'a CR1000's slower processing speed require a slower period to not miss data coming from the sonde during a burst. Do not go below 1150. 1138 was the quickest tested speed that resulted in no errors. Added a little extra time as a buffer.
@@ -3868,6 +3876,56 @@ EndSub
     SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50)
     SerialClose(WqSerialPort)
   End Sub
+  #If TopBottom Then
+  Sub SetBtmBurst 'sets to run and receives string
+    Call OpenWQPort
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,20,mSec)
+    SerialOut (WqSerialPort,"setsonde 1" +CHR(13)+CHR(10),"OK",3,50)
+        #If LoggerType = CR6 Then 'if we are using a CR6 we can use a faster period. 1000 worked with no issues but changed to 1150 so we have continuity in sampling rate between loggers. Can be altered in the future if needed.
+      SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
+    #Else 'a CR1000's slower processing speed require a slower period to not miss data coming from the sonde during a burst. Do not go below 1150. 1138 was the quickest tested speed that resulted in no errors. Added a little extra time as a buffer.
+      SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
+    #EndIf
+    'We won't use baude rate 9600 any more
+'    #If WqBaud = 9600 Then 
+'      SerialOut (WqSerialPort,"setperiod 1170" + CHR(13) + CHR(10),"OK",3,50)
+'    #Else
+'      SerialOut (WqSerialPort,"setperiod 1000" + CHR(13) + CHR(10),"OK",3,50)
+'    #EndIf
+    Delay (1,200,msec)
+    SerialOut (WqSerialPort,"#" + CHR(13),"#" + CHR(13),3,100)
+    SerialOut (WqSerialPort,"run" + CHR(13),"run" + CHR(13),3,10) 'Starts the Wq sampling at 1Hz
+    Delay (1,1,Sec)
+  End Sub
+  Sub GetBtmBurstArray 'Gets 30 second burst from sonde and stores in burst array
+    BurstCount = 0
+    Dim Lcount As Long
+    For Lcount = 1 To 30
+      SerialIn (BtmBurstIn,WqSerialPort,100,"#",150)
+      Delay(1,50,mSec)
+      If BtmBurstIn = "" Then
+        BtmWqError = true
+        iCount = 1
+        Exit Sub
+      EndIf
+      BtmBurstIn = Replace (BtmBurstIn,"-nan","-9999")
+      SplitStr (BtmBurstArray(iCount,1),BtmBurstIn,CHR(32),17,0)'parse the raw string and store in burst array (process after loop)
+      Delay(1,20,mSec)
+      Erase(BtmBurstIn)
+      SerialFlush(WqSerialPort)
+      iCount = iCount+1
+      #If WqBaud = 9600 Then
+        Delay(1,1100,mSec)'needs a little extra time at 9600 baud
+      #Else
+        Delay (1,930,mSec)
+      #EndIf
+    Next Lcount
+    Delay (1,20,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50)
+    SerialClose(WqSerialPort)
+    EndSub
+    #EndIf
 #EndIf
 '------ParseBurst---------if collecting burst with Wq then parse the burst------------------------
 #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -3905,6 +3963,42 @@ EndSub
     If WqLocCL > 0 Then BurstCLmgl = BurstData(WqLocCL)
     If WqLocWiperPos > 0 Then BurstWiperPos = BurstData(WqLocWiperPos)
   EndSub
+  #If TopBottom Then
+    Sub ParseBtmBurst
+    If (BtmBurstData(BtmWqLocDate) <> NAN) AND (BtmBurstData(BtmWqLocDate) <> 0) Then
+      BtmWqError = False
+      BtmWqDead = False
+      BtmWqErrCount = 0
+      BtmWqPwrCycleCnt = 0
+      'WqDeadCnt = 0
+    Else
+      BtmWqError = True
+    EndIf
+    If BtmWqLocDate > 0 Then BtmBurstDate = BtmBurstData(BtmWqLocDate)
+    If BtmWqLocTime > 0 Then BtmBurstTime = BtmBurstData(BtmWqLocTime)
+    If BtmWqLocTempC > 0 Then BtmBurstTempC = BtmBurstData(BtmWqLocTempC)
+    If BtmWqLocTempF > 0 Then BtmBurstTempF = BtmBurstData(BtmWqLocTempF)
+    If BtmWqLocCond > 0 Then BtmBurstSpCond = BtmBurstData(BtmWqLocCond)
+    If BtmWqLocTurbFNU > 0 Then BtmBurstTurbFNU = BtmBurstData(BtmWqLocTurbFNU)
+    If BtmWqLocDoSat > 0 Then BtmBurstDOSat = BtmBurstData(BtmWqLocDoSat)
+    If BtmWqLocDOmgL > 0 Then BtmBurstDOmgL = BtmBurstData(BtmWqLocDOmgL)
+    If BtmWqLocDepth > 0 Then BtmBurstDepthFt = BtmBurstData(BtmWqLocDepth)
+    If BtmWqLocBatt > 0 Then BtmBurstBattV = BtmBurstData(BtmWqLocBatt)
+    If BtmWqLocpH > 0 Then BtmBurstpH = BtmBurstData(BtmWqLocpH)
+    If BtmWqLocpHmV > 0 Then BtmBurstpHmV = BtmBurstData(BtmWqLocpHmV)
+    If BtmWqLocORP > 0 Then BtmBurstORP = BtmBurstData(BtmWqLocORP)
+    If BtmWqLocChlugL > 0 Then BtmBurstChlugL = BtmBurstData(BtmWqLocChlugL)
+    If BtmWqLocChlRFU > 0 Then BtmBurstChlRFU = BtmBurstData(BtmWqLocChlRFU)
+    If BtmWqLocBGApcRFU > 0 Then BtmBurstBGApcRFU = BtmBurstData(BtmWqLocBGApcRFU)
+    If BtmWqLocBGApcugL > 0 Then BtmBurstBGApcugL = BtmBurstData(BtmWqLocBGApcugL)
+    If BtmWqLocFDomRFU > 0 Then BtmBurstFdomRFU = BtmBurstData(BtmWqLocFDomRFU)
+    If BtmWqLocFDomQSU > 0 Then BtmBurstFDomQSU = BtmBurstData(BtmWqLocFDomQSU)
+    If BtmWqLocNH4 > 0 Then BtmBurstNH4Amgl = BtmBurstData(BtmWqLocNH4)
+    If BtmWqLocNO3 > 0 Then BtmBurstNO3Nmgl = BtmBurstData(BtmWqLocNO3)
+    If BtmWqLocCL > 0 Then BtmBurstCLmgl = BtmBurstData(BtmWqLocCL)
+    If BtmWqLocWiperPos > 0 Then BtmBurstWiperPos = BtmBurstData(BtmWqLocWiperPos)
+  EndSub
+  #EndIf
 #EndIf
 
 '------------------Set Burst Variables to NAN-------------------------------
@@ -3935,7 +4029,33 @@ EndSub
     MedCLmgl= BadDataIndicator
     MedWiperPos= BadDataIndicator
   EndSub
-  
+  #If TopBottom Then
+   Sub ResetBtmBurstVals
+    BtmMedBurstDate = BadDataIndicator
+    BtmMedBurstTime = BadDataIndicator
+    BtmMedTempC = BadDataIndicator
+    BtmMedTempF = BadDataIndicator
+    BtmMedSpCond = BadDataIndicator
+    BtmMedTurbFNU = BadDataIndicator
+    BtmMedDOSat = BadDataIndicator
+    BtmMedDOmgL= BadDataIndicator
+    BtmMedORP= BadDataIndicator
+    BtmMedDepthFt = BadDataIndicator
+    BtmMedBattV= BadDataIndicator
+    BtmMedpH= BadDataIndicator
+    BtmMedpHmV= BadDataIndicator
+    BtmMedChlugL= BadDataIndicator
+    BtmMedChlRFU= BadDataIndicator
+    BtmMedBGApcRFU= BadDataIndicator
+    BtmMedBGApcugL= BadDataIndicator
+    BtmMedFdomRFU= BadDataIndicator
+    BtmMedFDomQSU= BadDataIndicator
+    BtmMedNH4Amgl= BadDataIndicator
+    BtmMedNO3Nmgl= BadDataIndicator
+    BtmMedCLmgl= BadDataIndicator
+    BtmMedWiperPos= BadDataIndicator
+  EndSub
+  #EndIf
 '_______________________Copy the calculated medians to a variable to be sampled into the Aquarius table___________________
 Sub CopyMedBurstVals
           MedBurstDate = Burst.BurstDate_Med
@@ -3962,7 +4082,36 @@ Sub CopyMedBurstVals
           MedNO3Nmgl= Burst.BurstNO3Nmgl_Med
           MedCLmgl= Burst.BurstCLmgl_Med
           MedWiperPos= Burst.BurstWiperPos_Med
+
           EndSub
+                    #If TopBottom Then
+            Sub CopyBtmMedBurstVals
+          BtmMedBurstDate = BtmBurst.BtmBurstDate_Med
+          BtmMedBurstTime = BtmBurst.BtmBurstTime_Med
+          BtmMedBurstTime = Round(BtmMedBurstTime,0) 'round the time because the median value of an even set of numbers is the average of the two median values
+          BtmMedTempC = BtmBurst.BtmBurstTempC_Med
+          BtmMedTempF = BtmBurst.BtmBurstTempF_Med
+          BtmMedSpCond = BtmBurst.BtmBurstSpCond_Med
+          BtmMedTurbFNU = BtmBurst.BtmBurstTurbFNU_Med
+          BtmMedDOSat = BtmBurst.BtmBurstDOSat_Med
+          BtmMedDOmgL= BtmBurst.BtmBurstDOmgL_Med
+          BtmMedORP= BtmBurst.BtmBurstORP_Med
+          BtmMedDepthFt = BtmBurst.BtmBurstDepthFt_Med
+          BtmMedBattV= BtmBurst.BtmBurstBattV_Med
+          BtmMedpH= BtmBurst.BtmBurstpH_Med
+          BtmMedpHmV= BtmBurst.BtmBurstpHmV_Med
+          BtmMedChlugL= BtmBurst.BtmBurstChlugL_Med
+          BtmMedChlRFU= BtmBurst.BtmBurstChlRFU_Med
+          BtmMedBGApcRFU= BtmBurst.BtmBurstBGApcRFU_Med
+          BtmMedBGApcugL= BtmBurst.BtmBurstBGApcugL_Med
+          BtmMedFdomRFU= BtmBurst.BtmBurstFdomRFU_Med
+          BtmMedFDomQSU= BtmBurst.BtmBurstFDomQSU_Med
+          BtmMedNH4Amgl= BtmBurst.BtmBurstNH4Amgl_Med
+          BtmMedNO3Nmgl= BtmBurst.BtmBurstNO3Nmgl_Med
+          BtmMedCLmgl= BtmBurst.BtmBurstCLmgl_Med
+          BtmMedWiperPos= BtmBurst.BtmBurstWiperPos_Med
+          EndSub
+          #EndIf
 #EndIf
 
 '-------WipWQ-----Wipe the serial connected EXO sensors----------------------------------------
@@ -3971,9 +4120,13 @@ Sub CopyMedBurstVals
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay(1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 0" + CHR(13)+CHR(10),"OK",3,50)
+    Delay(1,10,mSec)
     SerialOut (WqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     SplitStr (WqDelay,WqIn,"",1,0)
+    SerialFlush (WqSerialPort)
+
     '  If WqDelay > -1 AND WqDelay <> NAN Then
     '    Timer(1,Sec,2)
     '    Do
@@ -3981,6 +4134,19 @@ Sub CopyMedBurstVals
     '    Loop Until TempLong >= (WqDelay + 1)
     '  EndIf
   EndSub
+      #If TopBottom Then
+        Sub WipeBtmWQ
+      Delay(1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay(1,10,mSec)
+    SerialOut (WqSerialPort,"setsonde 1" + CHR(13)+CHR(10),"OK",3,50)
+    Delay(1,10,mSec)
+    SerialOut (WqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
+    SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
+    SplitStr (BtmWqDelay,BtmWqIn,"",1,0)
+    SerialFlush (WqSerialPort)
+    EndSub
+    #EndIf
   'if operator sets the manual power cycle flag then cycle WQ power
 #EndIf
 
@@ -4141,7 +4307,35 @@ Sub CopyMedBurstVals
     WqNO3mgl = BadDataIndicator
     WqCLmgl = BadDataIndicator
     WqWiperPos = BadDataIndicator
-  EndSub
+    EndSub
+    #If TopBottom Then
+  Sub Btm_WQ_Mark_Bad
+    BtmWqDate = ""
+    BtmWqTime =""
+    'Public WqNparams As Long
+    BtmWqTempC = BadDataIndicator
+    BtmWqTempF = BadDataIndicator
+    BtmWqSpCond = BadDataIndicator
+    BtmWqTurbFNU = BadDataIndicator
+    BtmWqChlugL = BadDataIndicator
+    BtmWqChlRFU = BadDataIndicator
+    BtmWqDOMgl = BadDataIndicator
+    BtmWqDOSat = BadDataIndicator
+    BtmWqPH = BadDataIndicator
+    BtmWqPHmv = BadDataIndicator
+    BtmWqORP = BadDataIndicator
+    BtmWqDepthFt = BadDataIndicator
+    BtmWqBattV = BadDataIndicator
+    BtmWqBGAugl = BadDataIndicator
+    BtmWqBGArfu = BadDataIndicator
+    BtmWqFDOMrfu = BadDataIndicator
+    BtmWqFDOMqsu = BadDataIndicator
+    BtmWqNH4mgl = BadDataIndicator
+    BtmWqNO3mgl = BadDataIndicator
+    BtmWqCLmgl = BadDataIndicator
+    BtmWqWiperPos = BadDataIndicator
+    EndSub
+    #EndIf
 #EndIf
 '___________________New Stage Subroutine______________________________
 Sub GetStage
@@ -6521,6 +6715,12 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
         Erase BurstIn
         Erase BurstArray()
         Erase BurstData()
+        #If TopBottom Then
+        iCount=1
+        Erase BtmBurstIn
+        Erase BtmBurstArray()
+        Erase BtmBurstData()
+        #EndIf
       #EndIf
       'Redeploy = False
       'Call SetBaud
@@ -6612,6 +6812,13 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       ElseIf BurstPeriod < 250 Then 'if user enters values less than 250, but not 0, bring it up to 250. This is the max rate that the sonde can collect.
         BurstPeriod = 250
       EndIf
+      #If TopBottom Then
+        If Mod15Minutes > 770 AND Mod15Minutes < 800 Then 'if time is within 20sec of 13th minute of the scan
+          GetBtmBurst = True
+        Else
+          GetBtmBurst = False
+        EndIf
+      #EndIf
       If Mod15Minutes > 830 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
         GetBurst = True 'set the burst flag to true
       Else
@@ -6643,6 +6850,9 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       Rec15minFlag = Yes 'always set record data flag to yes every fifteen minutes
       #If WqSonde <> "NONE" Then
         If WqDead = True Then RecAQFlag = Yes
+        #If TopBottom Then
+          If BtmWqDead = True Then RecAQFlag = True
+        #EndIf
       #EndIf
       If RecordAll = Yes Then RecAllVelFlag = Yes
       RecDataFlag = No 'Set it back to false for next time
@@ -6756,6 +6966,13 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       EndIf
     #EndIf
     #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
+      #If TopBottom Then
+        If Mod15Minutes > 710 AND Mod15Minutes < 730 Then
+          BtmWipeflag = True
+          Else
+            BtmWipeflag = False
+         EndIf
+       #EndIf
       If (Mod15Minutes > 770) AND (Mod15Minutes < 790) Then 'wipe 13mins +- 10s into a 15 min period when not collecting burst, set a disable variable
         Wipeflag = True
       Else
@@ -6853,6 +7070,78 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
           EndIf
           SerialFlush (WqSerialPort) 'flush the port to ensure nothing gets inadvertantly populated
         BurstCount = 0 'reset our burst count back to 0
+      #EndIf 'burst
+    EndIf 'getburst and not redeploy
+    '      EndIf 'Redeploy = true
+      If GetBtmBurst AND NOT Redeploy Then 'ok we need a burst
+        #If WqSonde = "WQ_SERIAL_BURST" Then
+          'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
+          ' if it didn't respond to the previous "data" attempt
+            Call SetBtmBurst 'set the period to output the data from the sonde
+            Call GetBtmBurstArray 'set up the array to store the burst values
+            BtmBurstDebugCount = BtmBurstDebugCount+1 'we made it this far, count up
+            '              BurstMedDate = ""
+            '              BurstMedTime = ""
+            BtmBurstCount = 0 'reset our burst counter
+            TotalBurstVals = 0 'reset variable that will store how many values used to calculate burst table
+            BtmBurstErrCnt = 0 'reset error counter
+            GotToBurst = GotToBurst + 1 'we got to the burst (duplicate variable as the BurstDebugCount)
+            BtmjCount = 0 'reset j Loop counter
+            BtmkCount = 0 'reset k Loop counter
+            For BtmjCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
+              For BtmkCount = 1 To 23 'this is the loop to pull the parameters
+                BtmBurstData(BtmkCount) = BtmBurstArray(BtmjCount,BtmkCount)' get one burst string
+              Next BtmkCount 'pull all 23 parameters within the n-th part of the j-loop and store in the array
+              Call ParseBtmBurst 'parse array into proper fields
+              If BtmWqError Then 'if we didn't get data
+                BtmWqBadData = true 'set a flag
+              Else
+                BtmWqBadData = false 'otherwise, we are good
+              EndIf
+              '                StdDevSpa(StdTurbFNU,MaxBurstCnt,BurstArray(1,WqLocTurb))
+              '                Delay(1,30,msec)
+              BtmBurstCount = BtmBurstCount+1 'burst count increase
+              If BtmWqError Then 'an error occured while trying to read a burst value (in "ParseBurst" sub)
+                BtmBurstErrCnt = BtmBurstErrCnt + 1 'count up if the error occurs
+              EndIf
+              If BtmBurstErrCnt > BtmBurstMaxErrCnt Then 'if we have more errors than the threshold
+                TotalBurstVals = BtmjCount - BtmBurstErrCnt 'the total number of values used for the burst should be jCount - number of errors
+                SerialOut (WqSerialPort,"0" + CHR(13) + CHR(10),"#",3,50) 'send a "0" out to stop the SOA from attempting to burst
+                ExitFor 'if error occurs more than a threshold, exit the loop
+              EndIf
+
+             If BtmBurstCount >= MaxBurstCnt Then 'if our burst count has reached our threshold
+               TotalBurstVals = BtmjCount - BtmBurstErrCnt 'if there's an interuption during the burst but it comes back online, we need to subtract how many times error happened to calculate a total number of values
+               BtmBurstMissed = False 'we had good values coming in, so Make sure disable variable is set to false so the values get processed
+               RecBurstFlag = True 'set our output flag to true
+               CallTable BtmSecBurst 'call the table that stores individual 1sec values
+               CallTable BtmBurst 'call the burst table
+             ElseIf BtmBurstCount < MaxBurstCnt AND BtmWqError = True Then
+               BtmBurstMissed = False 'we have good values
+               RecBurstFlag = False 'don't set the output flag because we haven't reached our threshold
+               CallTable BtmSecBurst 'store the next 1sec value
+             ElseIf BtmBurstCount < MaxBurstCnt AND BtmWqError = False Then
+               BtmBurstMissed = False
+               RecBurstFlag = False
+               CallTable BtmSecBurst
+               CallTable BtmBurst 'Need to call table to store the values in the table memory until the output flag (RecBurstFlag) is true
+             EndIf
+              Delay(1,1,msec)
+            Next jCount 'restart the loop until we reach max burst count
+          If BtmBurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's Call and output SecBurst and Burst Tables
+            BtmBurstMissed = True 'Disable processing of Median values in burst table
+            RecBurstFlag = True 'set the output flag to true
+            CallTable BtmSecBurst 'store the final value in the SecBurst table
+            CallTable BtmBurst 'Call the burst table to output median values no with however many 1sec values were collected
+            EndIf
+
+          If TotalBurstVals >= MinBurstVals Then 'if we reached our minimum threshold for 1sec values
+          Call CopyBtmMedBurstVals 'copy the values from the burst table to the "Med..." values to be sampled into the AQ table
+          Else
+          Call ResetBtmBurstVals 'we didn't reach our minimum threshold, NAN all values to be sampled into AQ table
+          EndIf
+          SerialFlush (WqSerialPort) 'flush the port to ensure nothing gets inadvertantly populated
+        BtmBurstCount = 0 'reset our burst count back to 0
       #EndIf 'burst
     EndIf 'getburst and not redeploy
     '      EndIf 'Redeploy = true
@@ -6984,6 +7273,13 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       Delay (1,1,Sec)
       WipeTime = Status.TimeStamp(0,1)
     EndIf
+    #If TopBottom Then
+      If BtmWipeflag = true Then
+      Call WipeBtmWQ
+      Delay (1,1,Sec)
+      BtmWipeTime = Status.TimeStamp(0,1)
+      EndIf
+    #EndIf
     If SetEXOTimeFlg = True Then
       Call SetEXOTime
     EndIf
