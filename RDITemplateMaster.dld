@@ -301,7 +301,7 @@ Const VmBaud = 38400
 'value = 38400
 'value = 57600
 'value = 115200
-Const IsWqMax232 = True
+Const IsWqMax232 = True 'we could conditional this to turn to false if cr6. It keeps causing issues. We should be able to switch it back manually if needed.
 'value = True
 'value = False
 Const MaxBurstCnt = 30
@@ -3595,11 +3595,13 @@ EndSub
 #EndIf
 '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-  Sub ParamCheck 'gets the parameter codes from the EXO in whichever order they are being output
+   Sub ParamCheck 'gets the parameter codes from the EXO in whichever order they are being output
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
     Delay (1,300,mSec)
@@ -3609,10 +3611,11 @@ EndSub
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,200,mSec)
     SerialFlush(WqSerialPort)
-    #If TopBottom Then
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
     Delay (1,300,mSec)
@@ -3622,36 +3625,37 @@ EndSub
     BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
     Delay (1,200,mSec)
     SerialFlush(WqSerialPort)
-    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
 ' SetDilim -----------Sets the serial connected EXO to comma delimited output----
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-  Sub SetDelim 'sets the EXO to comma delimited output
+ Sub SetDelim 'sets the EXO to comma delimited output
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
-    Delay (1,10,mSec)    
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec) 
     SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
     Delay (1,300,mSec)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
-    #If TopBottom Then
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
-    Delay (1,10,mSec)    
+    Delay (1,10,mSec) 
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)  
     SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
     Delay (1,300,mSec)
     SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
     BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
-    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3663,6 +3667,8 @@ EndSub
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
     Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
     SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
     Delay (1,200,mSec)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
@@ -3672,10 +3678,11 @@ EndSub
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
-    #If TopBottom Then
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
     Delay (1,200,mSec)
@@ -3686,7 +3693,6 @@ EndSub
     BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
-    #EndIf      
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3833,11 +3839,10 @@ EndSub
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,20,mSec)
     SerialOut (WqSerialPort,"setsonde 0" +CHR(13)+CHR(10),"OK",3,50)
-        #If LoggerType = CR6 Then 'if we are using a CR6 we can use a faster period. 1000 worked with no issues but changed to 1150 so we have continuity in sampling rate between loggers. Can be altered in the future if needed.
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
       SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
-    #Else 'a CR1000's slower processing speed require a slower period to not miss data coming from the sonde during a burst. Do not go below 1150. 1138 was the quickest tested speed that resulted in no errors. Added a little extra time as a buffer.
-      SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
-    #EndIf
     'We won't use baude rate 9600 any more
 '    #If WqBaud = 9600 Then 
 '      SerialOut (WqSerialPort,"setperiod 1170" + CHR(13) + CHR(10),"OK",3,50)
@@ -3877,16 +3882,15 @@ EndSub
     SerialClose(WqSerialPort)
   End Sub
   #If TopBottom Then
-  Sub SetBtmBurst 'sets to run and receives string
+   Sub SetBtmBurst 'sets to run and receives string
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,20,mSec)
     SerialOut (WqSerialPort,"setsonde 1" +CHR(13)+CHR(10),"OK",3,50)
-        #If LoggerType = CR6 Then 'if we are using a CR6 we can use a faster period. 1000 worked with no issues but changed to 1150 so we have continuity in sampling rate between loggers. Can be altered in the future if needed.
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
       SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
-    #Else 'a CR1000's slower processing speed require a slower period to not miss data coming from the sonde during a burst. Do not go below 1150. 1138 was the quickest tested speed that resulted in no errors. Added a little extra time as a buffer.
-      SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
-    #EndIf
     'We won't use baude rate 9600 any more
 '    #If WqBaud = 9600 Then 
 '      SerialOut (WqSerialPort,"setperiod 1170" + CHR(13) + CHR(10),"OK",3,50)
@@ -4122,6 +4126,8 @@ Sub CopyMedBurstVals
     Delay(1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 0" + CHR(13)+CHR(10),"OK",3,50)
     Delay(1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
     SerialOut (WqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     SplitStr (WqDelay,WqIn,"",1,0)
@@ -4134,19 +4140,19 @@ Sub CopyMedBurstVals
     '    Loop Until TempLong >= (WqDelay + 1)
     '  EndIf
   EndSub
-      #If TopBottom Then
-        Sub WipeBtmWQ
-      Delay(1,10,mSec)
+  Sub WipeBtmWQ
+    Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay(1,10,mSec)
     SerialOut (WqSerialPort,"setsonde 1" + CHR(13)+CHR(10),"OK",3,50)
     Delay(1,10,mSec)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
     SerialOut (WqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
     SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
     SplitStr (BtmWqDelay,BtmWqIn,"",1,0)
     SerialFlush (WqSerialPort)
     EndSub
-    #EndIf
   'if operator sets the manual power cycle flag then cycle WQ power
 #EndIf
 
@@ -7001,6 +7007,19 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
         Call ParseData
       EndIf '
       Delay (1,50,mSec)
+       #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then ' Check WQ flags and do things!!
+    If Wipeflag = true Then
+      Call WipeWQ
+      Delay (1,1,Sec)
+      WipeTime = Status.TimeStamp(0,1)
+    EndIf
+    #If TopBottom Then
+      If BtmWipeflag = true Then
+      Call WipeBtmWQ
+      Delay (1,1,Sec)
+      BtmWipeTime = Status.TimeStamp(0,1)
+      EndIf
+    #EndIf
       If GetBurst AND NOT Redeploy Then 'ok we need a burst
         #If WqSonde = "WQ_SERIAL_BURST" Then
           'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
@@ -7267,19 +7286,6 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
   If SetVMTimeFlg Then
     Call SetVMTime
   EndIf
-  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then ' Check WQ flags and do things!!
-    If Wipeflag = true Then
-      Call WipeWQ
-      Delay (1,1,Sec)
-      WipeTime = Status.TimeStamp(0,1)
-    EndIf
-    #If TopBottom Then
-      If BtmWipeflag = true Then
-      Call WipeBtmWQ
-      Delay (1,1,Sec)
-      BtmWipeTime = Status.TimeStamp(0,1)
-      EndIf
-    #EndIf
     If SetEXOTimeFlg = True Then
       Call SetEXOTime
     EndIf
