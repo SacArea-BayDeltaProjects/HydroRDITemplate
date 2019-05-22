@@ -246,7 +246,8 @@ Const ProgramVersionDate = 20190510
 '20190408 - TAV Removed NTU logic per discussions and findings about how the YSI EXO reports the values. Reading is actually FNU. The only thing that changes is the 3 letter acronym, so it is inaccurate to report "NTU".
 '20190409 - TAV Made the "Wq_Mark_Bad" function only occur if its a USGS sonde, not a DWR sonde in Sample and Hold mode.
 '20190509 - TAV Added CR6-RF451 radio link checking logic and reset if link is broken with up 4 total nodes in the system.
-'20190510 - TAV Added code to accept a daisy-chained EXO system (2 Sondes total).
+'20190510 - TAV Added base code to accept a daisy-chained EXO system (2 Sondes total).
+'20190522 - MRI Altered communication with SOA to address sondes independently and accept commands for the targeted sonde only and send data to the correct field. Flags for redeploy and cycleWQpower work if either sonde is having problems
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -289,7 +290,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = True 'Is there a second EXO daisy-chained in the system
+Const TopBottom = False 'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
 Const WqBaud = 38400
@@ -301,7 +302,7 @@ Const VmBaud = 38400
 'value = 38400
 'value = 57600
 'value = 115200
-Const IsWqMax232 = True 'we could conditional this to turn to false if cr6. It keeps causing issues. We should be able to switch it back manually if needed.
+Const IsWqMax232 = False 'If using a CR1000 and collecting serial burst water quality data this should be true
 'value = True
 'value = False
 Const MaxBurstCnt = 30
@@ -1864,7 +1865,8 @@ SetStatus ("USRDriveSize",16384)
   EndTable
 
 '__________________________Bottom Sonde Burst Data Tables_________________________________
-  DataTable(BtmBurst,RecBurstFlag,-1)
+#If TopBottom Then  'remove these tables if there is no bottom sonde
+DataTable(BtmBurst,RecBurstFlag,-1)
     'DataInterval(0,1,Min,-1)
     CardOut (0,17280)
     OpenInterval
@@ -1962,10 +1964,10 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BtmBurstMissed,Boolean)
     Sample (1,BtmBurstErrCnt,FP2)
   EndTable
-  
+ 
 '__________________________________________Metadata for each burst sample_____________________________________
 '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
-  DataTable(BtmSecBurst,True,-1)
+DataTable(BtmSecBurst,True,-1)
     'DataInterval(0,1,Min,-1)
     CardOut (0,350000)
     OpenInterval
@@ -1999,7 +2001,9 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,BtmBurstMissed,Boolean)
     Sample (1,BtmBurstErrCnt,FP2)
   EndTable
-  #EndIf
+  #EndIf 'endif for top bottom
+  #EndIf 'endif for burst
+  
   DataTable (Aquarius,Rec15minFlag,-1) 'guaruntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
     OpenInterval
@@ -3596,28 +3600,29 @@ EndSub
 '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
    Sub ParamCheck 'gets the parameter codes from the EXO in whichever order they are being output
-    Call OpenWQPort
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Call OpenWQPort 'open the port
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10) 'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'configure logger/SOA to talk to the top sonde
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10) 'after chosing what sonde to talk to, another zero must be sent to wake it up again.
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
+    SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)'gives the parameter order
     Delay (1,300,mSec)
-    SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
+    SerialIn (WqIn,WqSerialPort,100,&H0D0A,200) 
     WqIn = Trim(WqIn)
-    SplitStr (WqParamOrder,WqIn,CHR(32),WqNparams,0)
+    SplitStr (WqParamOrder,WqIn,CHR(32),WqNparams,0) 
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,200,mSec)
-    SerialFlush(WqSerialPort)
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialFlush(WqSerialPort) 
+    #If TopBottom Then
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50) 'configure logger/SOA to talk to the bottom sonde
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10) 'after chosing what sonde to talk to, another zero must be sent to wake it up again.
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0)
+    SerialOut (WqSerialPort,"para" + CHR(13) + CHR(10),"",1,0) 'gives the parameter order
     Delay (1,300,mSec)
     SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
     BtmWqIn = Trim(BtmWqIn)
@@ -3625,6 +3630,7 @@ EndSub
     BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
     Delay (1,200,mSec)
     SerialFlush(WqSerialPort)
+    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3634,28 +3640,30 @@ EndSub
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'set to communicate to top sonde
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec) 
-    SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50) 'set to comma delimited
     Delay (1,300,mSec)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
+    #If TopBottom Then
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)'set to communicate to bottom sonde
     Delay (1,10,mSec) 
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)  
-    SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50)'set to comma delimited
     Delay (1,300,mSec)
     SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
     BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
+    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3665,11 +3673,11 @@ EndSub
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'communicate to top sonde
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
+    SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)'retrieve instant YSI filtered data point
     Delay (1,200,mSec)
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     Erase WqData()
@@ -3678,13 +3686,14 @@ EndSub
     NoSondeTrig = InStr(1,WqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
+    #If TopBottom Then
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 1"+CHR(13)+CHR(10),"OK",3,50)'communicate to bottom sonde
     Delay (1,10,mSec)
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0)
+    SerialOut (WqSerialPort,"data" + CHR(13) + CHR(10),"",1,0) 'retrieve instant YSI filtered data point
     Delay (1,200,mSec)
     SerialIn (BtmWqIn,WqSerialPort,100,&H0D0A,200)
     Erase BtmWqData()
@@ -3693,6 +3702,7 @@ EndSub
     BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
     Delay (1,20,mSec)
     SerialFlush(WqSerialPort)
+    #EndIf
     SerialClose(WqSerialPort)
   EndSub
 #EndIf
@@ -3836,11 +3846,11 @@ EndSub
 #If WqSonde = "WQ_SERIAL_BURST" Then
   Sub SetBurst 'sets to run and receives string
     Call OpenWQPort
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)'wake up SOA
     Delay (1,20,mSec)
-    SerialOut (WqSerialPort,"setsonde 0" +CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 0" +CHR(13)+CHR(10),"OK",3,50)'communicate to top sonde
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)'wake up SOA now that it is set to the top sonde
     Delay (1,10,mSec)
       SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
     'We won't use baude rate 9600 any more
@@ -3884,11 +3894,11 @@ EndSub
   #If TopBottom Then
    Sub SetBtmBurst 'sets to run and receives string
     Call OpenWQPort
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)'wake up SOA
     Delay (1,20,mSec)
-    SerialOut (WqSerialPort,"setsonde 1" +CHR(13)+CHR(10),"OK",3,50)
+    SerialOut (WqSerialPort,"setsonde 1" +CHR(13)+CHR(10),"OK",3,50)'communicate to bottom sonde
     Delay (1,10,mSec)
-    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)'wake up SOA now that is is set to bottom sonde
     Delay (1,10,mSec)
       SerialOut (WqSerialPort,"setperiod " + BurstPeriod + CHR(13) + CHR(10),"OK",3,50)
     'We won't use baude rate 9600 any more
@@ -4140,6 +4150,7 @@ Sub CopyMedBurstVals
     '    Loop Until TempLong >= (WqDelay + 1)
     '  EndIf
   EndSub
+  #If TopBottom Then
   Sub WipeBtmWQ
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)
@@ -4153,6 +4164,7 @@ Sub CopyMedBurstVals
     SplitStr (BtmWqDelay,BtmWqIn,"",1,0)
     SerialFlush (WqSerialPort)
     EndSub
+    #EndIf
   'if operator sets the manual power cycle flag then cycle WQ power
 #EndIf
 
@@ -6814,7 +6826,7 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       BurstReachedMod = Mod15Minutes
       'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
       If BurstPeriod = 0 Then
-      BurstPeriod = 1150
+      BurstPeriod = 1150'this is adjustable here and in the public table. Minimum value is 250 for the sonde. A cr6 seems to work at that rate or slower. A CR1000 needs a rate of no faster than 1150.
       ElseIf BurstPeriod < 250 Then 'if user enters values less than 250, but not 0, bring it up to 250. This is the max rate that the sonde can collect.
         BurstPeriod = 250
       EndIf
@@ -6990,8 +7002,11 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
     #If WqSonde = "WQ_SDI12" Then
       Call GetWq_SDI12 'get YSI data
     #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-      If WqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True
-      If Redeploy = True Then 'EXO not setup yet
+      If WqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True 'checks for top sonde. If no new data redeploy
+      #If TopBottom Then
+        If BtmWqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True 'checks for bottom sonde. If no new data redeploy
+        #EndIf
+      If Redeploy = True Then 'EXO not setup yet. If TopBottom the subroutines will redeploy both sondes
         Call ParamCheck
         Delay (1,1,Sec)
         Call DefineParamsOrder
@@ -7092,6 +7107,7 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       #EndIf 'burst
     EndIf 'getburst and not redeploy
     '      EndIf 'Redeploy = true
+    #If TopBottom Then
       If GetBtmBurst AND NOT Redeploy Then 'ok we need a burst
         #If WqSonde = "WQ_SERIAL_BURST" Then
           'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
@@ -7164,20 +7180,34 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       #EndIf 'burst
     EndIf 'getburst and not redeploy
     '      EndIf 'Redeploy = true
+    #EndIf
 
     If (WqParamOrder(1) = BadDataIndicator) OR (WqError = True) Then'unable to initialize or bad data
       #If DWRSonde = False Then
       Call WQ_Mark_Bad
       Erase WqData()
       #EndIf
-      If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the Sonde
+      If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the both Sondes if one sonde has a WQdead flag
         Call CycleWQPower
       EndIf
-      WqErrCount = WqErrCount + 1
-      WqPwrCycleCnt = WqPwrCycleCnt + 1
+      WqErrCount = WqErrCount + 1'this will continue until there is no error
+      WqPwrCycleCnt = WqPwrCycleCnt + 1 'this gets reset to zero when there is a power cycle to avoid having non-stop power cycles
       If WqErrCount >= WQDeadCntMax Then
         WqDead = True
         'WqDeadCnt = WqDeadCnt + 1
+      EndIf
+    EndIf 'error
+  #EndIf
+  
+#If TopBottom Then 'need to conditional compile here to determine if the correct chunks are removed if not topbottom
+  If (BtmWqParamOrder(1) = BadDataIndicator) OR (BtmWqError = True) Then'unable to initialize or bad data
+      If BtmWqDead AND BtmWqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the both Sondes if one sonde has a WQdead flag
+        Call CycleWQPower
+      EndIf
+      BtmWqErrCount = BtmWqErrCount + 1'this will continue until there is no error
+      BtmWqPwrCycleCnt = BtmWqPwrCycleCnt + 1 'this gets reset to zero when there is a power cycle to avoid having non-stop power cycles
+      If BtmWqErrCount >= WQDeadCntMax Then 'if the error is above the threshold switch the dead flag to true
+        BtmWqDead = True
       EndIf
     EndIf 'error
   #EndIf
