@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190510
+Const ProgramVersionDate = 20190529
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -248,6 +248,7 @@ Const ProgramVersionDate = 20190510
 '20190509 - TAV Added CR6-RF451 radio link checking logic and reset if link is broken with up 4 total nodes in the system.
 '20190510 - TAV Added base code to accept a daisy-chained EXO system (2 Sondes total).
 '20190522 - MRI Altered communication with SOA to address sondes independently and accept commands for the targeted sonde only and send data to the correct field. Flags for redeploy and cycleWQpower work if either sonde is having problems
+'20190529 - TAV Added Suna Code to program
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -293,6 +294,13 @@ Const DWRSonde = False
 Const TopBottom = False 'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
+Const HasSuna = True
+'value = True
+'value = False
+Const MaxSunaBurst = 30
+'Min = 10
+'Max = 30
+'Inc = 1
 Const WqBaud = 38400
 'value = 9600
 'value = 38400
@@ -354,9 +362,10 @@ Const Debugging = False
 Const SeeAllVel = False
 'Value = True
 'Value = False
-Const SeeRawWQ = True
+Const SeeRawWQ = False
 'Value = True
 'Value = False
+Const ReadExtPwr = False
 'End of Constants Customization Section
 
 '------------------------------------------------------------------------------------------
@@ -378,8 +387,10 @@ Const SeeRawWQ = True
   #If HasSlave = Yes Then
     Const SlaveCom = Com4
   #EndIf
+  #If ReadExtPwr = True Then
   Const ExtPwrCom = 1
   Const ExtSolarCom = 2
+  #EndIf
 #ElseIf LoggerType = CR6 Then
   Const AdcpPort = ComU1
   Const WqSerialPort = ComC1
@@ -392,6 +403,10 @@ Const SeeRawWQ = True
   Const PS2Com5 = U5
   Const WqCom3 = U3
   Const wqCom5 = U5
+  #If HasSuna = True Then
+    Const SunaPort = ComC3
+    Const SunaSwitch = U9
+  #EndIf
   #If HasSlave = Yes Then
     Const SlaveCom = ComU7
   #EndIf
@@ -414,8 +429,10 @@ Const DefTxSubID = 15
 Const DefRxSubID = 15
 Const DefNetID = 1234
 #EndIf
+#If ReadExtPwr = True Then
   Const ExtPwrCom = U11
   Const ExtSolarCom = U9
+#EndIf
 #EndIf
 
 
@@ -1592,6 +1609,72 @@ Public LinkDead As Boolean 'flag to indicate the link is considered dead (counte
 'Public OutString As String * 1000 'string of variables/values to be sent out to another datalogger
 Public SendFlowData As Boolean 'user selectable flag to send only flow data
 
+#If HasSuna Then
+Public SampleSuna As Boolean
+Public SunaReady As Boolean
+Public SunaMissedCnt
+Public SunaMissed As Boolean
+Public SunaOnTime
+Public SunaStringLen
+Public LocLF 'Variable to store where the L occurs in the string
+Public LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
+Public Lcount As Long
+Public SunaSN
+Public SunaSampleTime
+Public SunaNitrateuM
+Public SunaNitratemgL
+Public SunaFittingResult
+Public A254
+Public TLamp
+Public TSpec
+Public SunaLampTime
+Public SunaHumid
+Public SunaSpecAve
+Public SunaDarkAve
+Public SunaVoltMain
+Public SunaVoltLamp
+Public SunaTimer
+Public PowerSuna As Boolean
+Public RecSunaData As Boolean
+Public AvgSunaNitrateuM
+Public  MedSunaNitrateuM
+Public  StdSunaNitrateuM
+Public AvgSunaNitratemgL
+Public  MedSunaNitratemgL
+Public  AvgSunaFittingResult
+Public  StdSunaFittingResult
+Public  AvgA254
+Public  AvgSunaDarkAve
+Public  AvgSunaSpecAve
+Public  AvgTSpec
+Public  AvgTLamp
+Public  AvgSunaHumid
+Public  AvgSunaLampTime
+Public  AvgSunaVoltMain
+Public  AvgSunaVoltLamp
+Dim SSN 'Serial Number
+Dim SST 'Sample Time
+Dim SNuM 'NO3 uM
+Dim SNmgL 'NO3 mg/L
+Dim SFR
+Dim STL
+Dim STS
+Dim SLT
+Dim SH
+Dim SSA
+Dim SDA
+Dim SVL
+Dim SVM
+Dim SA254
+Dim SunaBurstIn As String * 2000
+Dim SunaBurstArray(MaxSunaBurst,282)
+Dim SunaBurstData(282)
+Dim SpectrumData(256)
+Dim mCount
+Dim nCount
+Dim oCount
+#EndIf
+
 PreserveVariables 'preserve values in case of power outages
 SetStatus ("USRDriveSize",16384)
 '__________________________Define Output Tables___________________________________________
@@ -2041,6 +2124,24 @@ DataTable(BtmSecBurst,True,-1)
     Sample (1,BTMMedFdomRFU,IEEE4)
     Sample (1,BTMMedFDomQSU,IEEE4)
     #EndIf
+    #If HasSuna Then
+    Sample (1,AvgSunaNitrateuM,IEEE4)
+    Sample (1,MedSunaNitrateuM,IEEE4)
+    Sample (1,StdSunaNitrateuM,IEEE4)
+    Sample (1,AvgSunaNitratemgL,IEEE4)
+    Sample (1,MedSunaNitratemgL,IEEE4)
+    Sample (1,AvgSunaFittingResult,IEEE4)
+    Sample (1,StdSunaFittingResult,IEEE4)
+    Sample (1,AvgA254,IEEE4)
+    Sample (1,AvgSunaDarkAve,IEEE4)
+    Sample (1,AvgSunaSpecAve,IEEE4)
+    Sample (1,AvgTSpec,FP2)
+    Sample (1,AvgTLamp,FP2)
+    Sample (1,AvgSunaHumid,FP2)
+    Sample (1,AvgSunaLampTime,IEEE4)
+    Sample (1,AvgSunaVoltMain,IEEE4)
+    Sample (1,AvgSunaVoltLamp,IEEE4)
+    #EndIf
     '    Median (1,BurstTempC,MaxBurstCnt,IEEE4,WqBadData)
     '    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,WqBadData)
     '    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,WqBadData)
@@ -2134,6 +2235,39 @@ DataTable(BtmSecBurst,True,-1)
     Sample (1,AvgVMRoll,IEEE4)
     '    Sample (1,AvgLoggerQcfs,IEEE4)
   EndTable
+#EndIf
+
+#If HasSuna = True Then
+  DataTable (SunaStats,RecSunaData,-1)
+  CardOut(0,17280)
+  Average (1,SunaNitrateuM,IEEE4,False)
+  Median (1,SunaNitrateuM,30,IEEE4,False)
+  StdDev (1,SunaNitrateuM,IEEE4,False)
+  Average (1,SunaNitratemgL,IEEE4,False)
+  Median (1,SunaNitratemgL,30,IEEE4,False)
+  Average (1,SunaFittingResult,IEEE4,False)
+  Median (1,SunaFittingResult,30,IEEE4,False)
+  StdDev (1,SunaFittingResult,IEEE4,False)
+  Average (1,A254,IEEE4,False)
+  Average (1,SunaDarkAve,IEEE4,False)
+  Average (1,SunaSpecAve,IEEE4,False)
+  Average (1,TSpec,FP2,False)
+  Average (1,TLamp,FP2,False)
+  Average (1,SunaHumid,FP2,False)
+  Average (1,SunaLampTime,IEEE4,False)
+  Average (1,SunaVoltMain,IEEE4,False)
+  Average (1,SunaVoltLamp,IEEE4,False)
+EndTable
+
+DataTable (SecSunaData,1,-1)
+  CardOut(0,35000)
+  Sample(282,SunaBurstData(),IEEE4)
+EndTable
+
+DataTable (RawSpectrum,1,-1)
+  CardOut(0,35000)
+  Sample (256,SpectrumData(),IEEE4)
+EndTable
 #EndIf
 
 'Store Velocity  data for all bins (used for beam coordinate studies)
@@ -2605,7 +2739,7 @@ DataTable (Debugger,True,-1)
   #EndIf
 EndTable
 
-DataTable (DebugTimer,True,2880)
+DataTable (DebugTimer,True,1)
   Sample (9,DebugTime(),IEEE4)
 EndTable
 
@@ -2834,7 +2968,7 @@ Sub GetStartup
 EndSub
 
 
-
+#If ReadExtPwr = True Then
 '___________________External Battery Voltage_______________________________
 Sub ExtPwrSource
   'Datalogger can only read in 5 volts or less
@@ -2844,7 +2978,7 @@ Sub ExtPwrSource
   VoltDiff (ExtWHConvertVolt,1,mV5000,ExtPwrCom,True,0,250,0.01,0)
   VoltDiff (ExtSolarVolt,1,mv5000,ExtSolarCom,true,0,250,0.01,0)
 End Sub
-
+#EndIf
 '____________________________________LastScan Subroutine__________________________________
 'now lets create the LastScan variable for keypad menu
 'Stores current hour and minute in the LastScan Variable
@@ -6019,6 +6153,9 @@ Sub StoreRadSettings
 EndSub
 'EndSub
 
+
+    
+
 '_______________________RESET RADIO TO FACTORY DEFAULT SETTINGS_______________________
 '__________Factory setting for RadioEnabled is True (On). I turn it off, as the purpose of this is to essentially reboot the radio system
 Sub ResetRadDefault
@@ -6289,6 +6426,46 @@ Sub CheckLinks 'follow this subroutine
        EndIf
     EndSub
  #EndIf
+ #EndIf
+ 
+#If HasSuna = True Then
+ Sub CopySunaStats
+  AvgSunaNitrateuM = SunaStats.SunaNitrateuM_Avg
+  MedSunaNitrateuM = SunaStats.SunaNitrateuM_Med
+  StdSunaNitrateuM = SunaStats.SunaNitrateuM_Std
+  AvgSunaNitratemgL = SunaStats.SunaNitratemgL_Avg
+  MedSunaNitratemgL = SunaStats.SunaNitratemgL_Med
+  AvgSunaFittingResult = SunaStats.SunaFittingResult_Avg
+  StdSunaFittingResult = SunaStats.SunaFittingResult_Std
+  AvgA254 = SunaStats.A254_Avg
+  AvgSunaDarkAve = SunaStats.SunaDarkAve_Avg
+  AvgSunaSpecAve = SunaStats.SunaSpecAve_Avg
+  AvgTSpec = SunaStats.TSpec_Avg
+  AvgTLamp = SunaStats.TLamp_Avg
+  AvgSunaHumid = SunaStats.SunaHumid_Avg
+  AvgSunaLampTime = SunaStats.SunaLampTime_Avg
+  AvgSunaVoltMain = SunaStats.SunaVoltMain_Avg
+  AvgSunaVoltLamp = SunaStats.SunaVoltLamp_Avg
+EndSub
+
+Sub ResetSunaStats
+  AvgSunaNitrateuM = BadDataIndicator
+  MedSunaNitrateuM = BadDataIndicator
+  StdSunaNitrateuM = BadDataIndicator
+  AvgSunaNitratemgL = BadDataIndicator
+  MedSunaNitratemgL = BadDataIndicator
+  AvgSunaFittingResult = BadDataIndicator
+  StdSunaFittingResult = BadDataIndicator
+  AvgA254 = BadDataIndicator
+  AvgSunaDarkAve = BadDataIndicator
+  AvgSunaSpecAve = BadDataIndicator
+  AvgTSpec = BadDataIndicator
+  AvgTLamp = BadDataIndicator
+  AvgSunaHumid = BadDataIndicator
+  AvgSunaLampTime = BadDataIndicator
+  AvgSunaVoltMain = BadDataIndicator
+  AvgSunaVoltLamp = BadDataIndicator
+EndSub  
  #EndIf
 
 '__________________________________Keypad Menus________________________________________
@@ -6663,6 +6840,25 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
   'The Scan starts here and we initialize variables that are changed during every scan
   '-----------------------------------------------------------------------------------
   Scan (ScanRate,ScanUnit,5,0)'set to scan every 60 seconds
+    RealTime (rTime)' get current time from datalogger real time clock
+    RealSeconds = (Hour * 3600) + (Minute * 60) + Second
+    'see if time is close to 15 minute or Day Interval
+    Mod5Minutes = RealSeconds MOD 300
+    Mod15Minutes = RealSeconds MOD 900
+    Mod60Minutes = RealSeconds MOD 3600
+    ModDay = RealSeconds MOD 86400
+    #If HasSuna Then
+    SunaMissed = False
+    SunaReady = False
+    If Mod15Minutes = 780 Then 'If 1
+      PortSet (SunaSwitch,1)
+      Timer (6,mSec,2)
+      SampleSuna = True
+    Else
+      PortSet (SunaSwitch,0)
+      SampleSuna = False
+    EndIf
+    #EndIf
     Timer(5,mSec,2)
     RealTime DebugTime()
     CallTable DebugTimer
@@ -6744,13 +6940,7 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
       'Call SetBaud
     #EndIf
     Call GetStage
-    RealTime (rTime)' get current time from datalogger real time clock
-    RealSeconds = (Hour * 3600) + (Minute * 60) + Second
-    'see if time is close to 15 minute or Day Interval
-    Mod5Minutes = RealSeconds MOD 300
-    Mod15Minutes = RealSeconds MOD 900
-    Mod60Minutes = RealSeconds MOD 3600
-    ModDay = RealSeconds MOD 86400
+
     '    If Mod15Minutes < 85 Then 'If within 85 seconds of 15 minute time-period
     '      'Reset all 15 minute flags or zero variables here
     '      'RunEnsSpikes = 0
@@ -6786,7 +6976,9 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
     Call GetLastScan
     Call GetSysInfo
     Call KeypadMenu
+    #If ReadExtPwr Then
     Call ExtPwrSource
+    #EndIf
     'If Event ocures, then
     '                If Tech <> "" OR VisitReason <> "" OR TrueStg1 <> NAN OR TrueStg2 <> NAN OR TrueStg3 <> NAN OR VisRefOK = True OR DiveVisit = True OR WQVisit = True OR FullVisit = True Then
     If Tech <> "" OR VisitReason <> "" OR TrueUpBeamStg <> NAN OR TrueVMPressStg <> NAN OR TruePS1Stg <> NAN OR TruePS2Stg <> NAN OR TrueSondeStg <> NAN Then
@@ -7351,12 +7543,7 @@ NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio 
   '      AvgStagePrime = Dataout.StagePrime_Avg
   '      AvgStageSec = Dataout.StageSecnd_Avg
   Delay (1,3,mSec)
-  CallTable Aquarius
-  #If WqSonde = "WQ_SERIAL_BURST" Then
-  If Rec15minFlag = True Then
-    Call ResetBurstVars
-  EndIf
-  #EndIf
+
   AQcount = AQcount + 1
   AQTabEnd = Timer (2,msec,4)
   AQTabEnd = AQTabEnd/1000
@@ -7431,6 +7618,142 @@ ResetTried = False 'set flag to false to start counter (if necessary)
 		CallTable RadioStatus
  #EndIf
    If StoreVariablesFlg = true Then Call StoreVariables
+   #If HasSuna Then
+     If SampleSuna = True Then
+        Do
+        Delay (1,500,mSec)
+        SunaTimer = Timer(6,mSec,4)
+        SunaTimer = SunaTimer/1000
+        If SunaTimer >= 15 Then
+          SunaReady = True
+        Else
+          SunaReady = False
+        EndIf
+      Loop Until SunaReady = True
+      If SunaReady = True Then
+        oCount = 1
+      SerialOpen (SunaPort,115200,0,0,3000)
+      For Lcount = 1 To 30
+        SunaMissedCnt = 0
+        Do
+          SerialIn(SunaBurstIn,SunaPort,50,CHR(13)+CHR(10),3000)
+          SunaStringLen = Len(SunaBurstIn)
+          If SunaStringLen <> 0 Then
+            LocLF = InStr (1,SunaBurstIn,"L",2)
+            Delay (1,50,mSec)
+            If LocLF = 5 Then
+              LFrame = True
+            Else
+              LFrame = False
+            EndIf
+          Else
+            SunaMissedCnt = SunaMissedCnt + 1
+            If SunaMissedCnt >= 3 Then
+              SunaMissed = True
+            Else
+              SunaMissed = False
+            EndIf
+          EndIf
+          Loop Until LFrame = True OR SunaMissed = True
+          If SunaMissed = True Then
+            ExitFor
+          EndIf
+          Delay (1,200,mSec)
+          SplitStr(SunaBurstArray(oCount,1),SunaBurstIn,&H0D0A,282,0)
+          Delay(1,500,mSec)
+          Erase(SunaBurstIn)
+          SerialFlush(SunaPort)
+          oCount=oCount+1
+          Delay (1,200,mSec)
+        Next Lcount
+        Delay (1,100,mSec)
+        SerialClose(SunaPort)
+        PortSet (SunaSwitch,0)
+        SunaTimer = Timer(2,mSec,2)
+        SunaOnTime = SunaTimer/1000
+        PowerSuna = False
+        If SunaMissed = False Then
+          For mCount = 1 To MaxSunaBurst
+            For nCount = 1 To 282
+              SunaBurstData(nCount) = SunaBurstArray(mCount,nCount)
+            Next nCount
+            If SunaBurstData(1) <> "NAN" Then
+              If SunaBurstData(1) < 255 Then 'SUNA SN 255 works for our inventory.  V1s and V2s were produced in parallel for a time, per Satlantic
+                SSN = 1 'Serial Number
+                SST = 2 'Sample Time
+                SNuM = 3 'NO3 uM
+                SNmgL = 4 'NO3 mg/L
+                SFR = 5
+                STL = 6
+                STS = 7
+                SLT = 8
+                SH = 9
+                SSA = 13
+                SDA = 14
+                SVL = 10
+                SVM = 12
+                SA254 = 90
+              Else  'SUNAV2
+                SSN = 1
+                SST = 3
+                SNuM = 4
+                SNmgL = 5
+                SFR = 281
+                STL = 270
+                STS = 269
+                SLT = 271
+                SH = 272 'Check this- value is 0.137 and doesnt look right!
+                SSA = 9
+                SDA = 10
+                SVL = 274
+                SVM = 273
+                SA254 = 6
+              EndIf
+            EndIf
+            SunaSN = SunaBurstData(SSN)
+            SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
+            SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
+            SunaNitratemgL = SunaBurstData(SNmgL)'AF 6..11
+            SunaFittingResult = SunaBurstData(SFR)
+            TLamp = SunaBurstData(STL)
+            TSpec = SunaBurstData(STS)
+            SunaLampTime = SunaBurstData(SLT)
+            SunaHumid = SunaBurstData(SH)'AF 3..5 Case Is
+            SunaSpecAve = SunaBurstData(SSA) 'AI 1..5
+            SunaDarkAve = SunaBurstData(SDA)'ASCII INTEGER 1.3
+            SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
+            SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
+            A254 = SunaBurstData(SA254)
+            If mCount >= MaxSunaBurst Then
+              RecSunaData = True
+            Else
+              RecSunaData = False
+            EndIf
+            Move (SpectrumData(),256,SunaBurstData(12),256)
+            CallTable SecSunaData
+            CallTable RawSpectrum
+            CallTable SunaStats
+          Next mCount
+        EndIf
+      EndIf
+      SunaBurstData() = BadDataIndicator
+      SunaBurstArray() = BadDataIndicator
+      SpectrumData() = BadDataIndicator
+        Call CopySunaStats
+      EndIf
+    #EndIf
+  Delay(1,100,mSec)
+  CallTable Aquarius
+  #If WqSonde = "WQ_SERIAL_BURST" Then
+  If Rec15minFlag = True Then
+    Call ResetBurstVars
+  EndIf
+  #EndIf
+  #If HasSuna Then
+    If Rec15minFlag = True Then
+    Call ResetSunaStats
+    EndIf
+  #EndIf
   ScanEnd = Timer(2,mSec,4)
   ScanEnd = ScanEnd/1000
   ProcessTime = ScanEnd - ScanStart
