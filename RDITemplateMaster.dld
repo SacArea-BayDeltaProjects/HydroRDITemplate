@@ -7754,6 +7754,7 @@ EndSub
           Call ResetSunaStats
         EndIf
       #EndIf
+      Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
       ScanEnd = Timer(2,mSec,4)
       ScanEnd = ScanEnd/1000
       ProcessTime = ScanEnd - ScanStart
