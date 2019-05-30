@@ -7554,7 +7554,6 @@ EndSub
       CallBmChkEnd = Timer(2,msec,4)
       CallBmChkEnd = CallBmChkEnd/1000
       CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
-      Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
       #If WqSonde = "WQ_SERIAL_BURST" Then
         RecBurstFlag = False
         '        Call ClearBurstVars
