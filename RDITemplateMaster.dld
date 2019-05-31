@@ -291,7 +291,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = False 'Is there a second EXO daisy-chained in the system
+Const TopBottom = True 'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
 Const HasSuna = True
@@ -324,7 +324,7 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = False
+Const IsSpecStudy = True
 'value = True
 'value = False
 Const GetNoiseFloor = True
@@ -353,7 +353,7 @@ Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF T
 Const IsMaster = False  'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
-Const StoreAllToCard = False
+Const StoreAllToCard = True
 'value = True
 'value = False
 Const Debugging = False
@@ -406,6 +406,7 @@ Const ReadExtPwr = False
   #If HasSuna = True Then
     Const SunaPort = ComC3
     Const SunaSwitch = U9
+    Const SunaWipeSwitch = U10
   #EndIf
   #If HasSlave = Yes Then
     Const SlaveCom = ComU7
@@ -1289,12 +1290,6 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public ADCPLoop As Long
     Public ADCPDone As Boolean
     Public ScanDiff As Long
-    Public DebugTime(9) 'DEBUGGING START TIME OF SCANS
-    Alias DebugTime(3) = DayOfMnth
-    Alias DebugTime(4) = Hours
-    Alias DebugTime(5) = Minites
-    Alias DebugTime(6) = Secints
-    Alias DebugTime(7) = MicSec
     Public ScanStart
     Public ScanEnd
     Public ADCPEnd
@@ -1357,6 +1352,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public Data1mCount
     Public CardBadCount
     Public CardOkCount
+    Dim DebugTimer
   #Else
     Dim DepthMSB As Long 'debugging variables
     Dim DepthMSB1 As Long'debugging variables
@@ -1373,12 +1369,6 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Dim ADCPLoop As Long
     Dim ADCPDone As Boolean
     Dim ScanDiff As Long
-    Dim DebugTime(9) 'DEBUGGING START TIME OF SCANS
-    Alias DebugTime(3) = DayOfMnth
-    Alias DebugTime(4) = Hours
-    Alias DebugTime(5) = Minites
-    Alias DebugTime(6) = Secints
-    Alias DebugTime(7) = MicSec
     Dim ScanStart
     Dim ScanEnd
     Dim ADCPEnd
@@ -1441,6 +1431,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Dim Data1mCount
     Dim CardBadCount
     Dim CardOkCount
+    Dim DebugTimer
   #EndIf
   '---------------------------------------------------------DEBUGGING!---------------------------------------------------------
 
@@ -1635,6 +1626,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public SunaVoltLamp
     Public SunaTimer
     Public PowerSuna As Boolean
+    Public WipeSuna As Boolean
     Public RecSunaData As Boolean
     Public AvgSunaNitrateuM
     Public  MedSunaNitrateuM
@@ -1673,6 +1665,15 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Dim mCount
     Dim nCount
     Dim oCount
+    Dim SunaSampleTimer
+    Dim SunaWipeTimer
+    Dim WipeStart
+    Dim StartWipe As Boolean
+    Dim WipeEnd
+    Dim SunaWipeTotTime
+    Dim SunaProcessStart
+    Dim SunaProcessEnd
+    Dim SunaProcessTotTime
   #EndIf
 
   PreserveVariables 'preserve values in case of power outages
@@ -2737,10 +2738,14 @@ DataTable (Debugger,True,-1)
   #If WqSonde <> "WQ_SDI12" AND WqSonde <> "NONE" Then
     Sample (1,BurstComs,String)
   #EndIf
-EndTable
-
-DataTable (DebugTimer,True,1)
-  Sample (9,DebugTime(),IEEE4)
+  #If HasSuna Then
+    Sample (1,WipeStart,FP2)
+    Sample (1,WipeEnd,FP2)
+    Sample (1,SunaWipeTotTime,FP2)
+    Sample (1,SunaProcessStart,FP2)
+    Sample (1,SunaProcessEnd,FP2)
+    Sample (1,SunaProcessTotTime,FP2)
+  #EndIf
 EndTable
 
 #If RadioNetwork = True Then
@@ -3441,7 +3446,7 @@ EndSub
 'So this Sub is called to Sychronize the logger and VM times
 '--------------------------------------------------------------------
 Sub SetVMTime
-  VMTimeStart = Timer(2,msec,4)
+  VMTimeStart = Timer(DebugTimer,msec,4)
   VMTimeStart = VMTimeStart/1000
   Call CycleVmPower
   'The set time command to the VM Requires leading zeros, so the logger timestamp is split out and leading zeros added if needed
@@ -3518,7 +3523,7 @@ Sub SetVMTime
     SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
   EndIf
   SetVMTimeFlg = false 'set the flag back to false until next time sychro
-  VMTimeEnd = Timer(2,msec,4)
+  VMTimeEnd = Timer(DebugTimer,msec,4)
   VMTimeEnd = VMTimeEnd/1000
   VMTotTime = VMTimeEnd - VMTimeStart
 EndSub
@@ -4276,14 +4281,8 @@ EndSub
     SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
     SplitStr (WqDelay,WqIn,"",1,0)
     SerialFlush (WqSerialPort)
-
-    '  If WqDelay > -1 AND WqDelay <> NAN Then
-    '    Timer(1,Sec,2)
-    '    Do
-    '      TempLong = Timer (1,Sec,4)
-    '    Loop Until TempLong >= (WqDelay + 1)
-    '  EndIf
   EndSub
+  
   #If TopBottom Then
     Sub WipeBtmWQ
       Call OpenWQPort
@@ -6791,7 +6790,6 @@ EndSub
   'Main Program
   BeginProg
     'INITIALIZE variables here that will hold their value from scan to scan
-    'Timer(1,mSec,2)
     MissedEns = 0
     ScanDiff = 0
     #If HasVM Then
@@ -6840,6 +6838,8 @@ EndSub
     'The Scan starts here and we initialize variables that are changed during every scan
     '-----------------------------------------------------------------------------------
     Scan (ScanRate,ScanUnit,5,0)'set to scan every 60 seconds
+      ScanStart = Timer(DebugTimer,mSec,2)
+      ScanStart = ScanStart/1000      
       RealTime (rTime)' get current time from datalogger real time clock
       RealSeconds = (Hour * 3600) + (Minute * 60) + Second
       'see if time is close to 15 minute or Day Interval
@@ -6850,21 +6850,41 @@ EndSub
       #If HasSuna Then
         SunaMissed = False
         SunaReady = False
-        If Mod15Minutes = 780 Then 'If 1
+        WipeSuna = False
+        PortSet (SunaWipeSwitch,0)
+        #If TopBottom Then
+        If Mod15Minutes = 660 Then
+          WipeSuna = True
+          Timer (SunaWipeTimer,mSec,2)
+        Else
+          WipeSuna = False
+        EndIf
+        If Mod15Minutes = 720 Then 'If 1
           PortSet (SunaSwitch,1)
-          Timer (6,mSec,2)
+          Timer (SunaSampleTimer,mSec,2)
           SampleSuna = True
         Else
           PortSet (SunaSwitch,0)
           SampleSuna = False
         EndIf
+        #Else
+        If Mod15Minutes = 720 Then
+          WipeSuna = True
+          Timer (SunaWipeTimer,mSec,2)
+        Else
+          WipeSuna = False
+        EndIf
+        If Mod15Minutes = 780 Then 'If 1
+          PortSet (SunaSwitch,1)
+          Timer (SunaSampleTimer,mSec,2)
+          SampleSuna = True
+        Else
+          PortSet (SunaSwitch,0)
+          SampleSuna = False
+        EndIf
+        #EndIf
       #EndIf
-      Timer(5,mSec,2)
-      RealTime DebugTime()
-      CallTable DebugTimer
       Dim InCount As Long
-      ScanStart = Timer(2,mSec,2)
-      ScanStart = ScanStart/1000
       EnsBytes = 0
       Subscans = 0
       ScanNo = ScanNo + 1
@@ -7014,7 +7034,7 @@ EndSub
         'SetVMTimeFlg = No
       EndIf
       #If WqSonde = "WQ_SERIAL_BURST" Then
-        BurstTimeReached = Timer(5,mSec,4)
+        BurstTimeReached = Timer(DebugTimer,mSec,4)
         BurstReachedMod = Mod15Minutes
         'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
         If BurstPeriod = 0 Then
@@ -7130,18 +7150,18 @@ EndSub
           Delay (1,5,Sec) 'Wait a bit for incoming ensemble, but not more than 10 seconds
         Next
       #EndIf
-      ADCPEnd = Timer(2,mSec,4)
+      ADCPEnd = Timer(DebugTimer,mSec,4)
       ADCPEnd = ADCPEnd/1000
 
       If Numbytes = ((EnsBytes *2) +4) Then MissedEns = MissedEns + 1
-      CDMACheckStart = Timer(2,msec,4)
+      CDMACheckStart = Timer(DebugTimer,msec,4)
       CDMACheckStart = CDMACheckStart/1000
       Call CDMAcheck
-      CDMACheckEnd = Timer(2,msec,4)
+      CDMACheckEnd = Timer(DebugTimer,msec,4)
       CDMACheckEnd = CDMACheckEnd/1000
       CDMACheckTotTime = CDMACheckEnd-CDMACheckStart
       #If HasVM = True Then
-        ZeroVMTimeStart = Timer(2,msec,4)
+        ZeroVMTimeStart = Timer(DebugTimer,msec,4)
         ZeroVMTimeStart = ZeroVMTimeStart/1000
         If NumbytesZero > 7 Then
           BadEnsemble = BadEnsemble + 1
@@ -7157,19 +7177,19 @@ EndSub
         EndIf
         ReceivedBytes = Numbytes
         InCount = 0
-        ZeroVMTimeEnd = Timer(2,msec,4)
+        ZeroVMTimeEnd = Timer(DebugTimer,msec,4)
         ZeroVMTimeEnd = ZeroVMTimeEnd/1000
         ZeroVMTotTime = ZeroVMTimeEnd - ZeroVMTimeStart
-        ChkSumChkStart = Timer(2,msec,4)
+        ChkSumChkStart = Timer(DebugTimer,msec,4)
         ChkSumChkStart = ChkSumChkStart/1000
         Call ChecksumCheck
-        ChkSumChkEnd = Timer(2,msec,4)
-        ChkSumChkEnd = ChkSumChkEnd/1000
         ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
         If (CalcCheckSum <> EnsChecksum) OR (CalcCheckSum = 0) Then
           BadEnsemble = BadEnsemble + 1
           BadChecksum = BadChecksum + 1
           VMdataIn = No
+        ChkSumChkEnd = Timer(DebugTimer,msec,4)
+        ChkSumChkEnd = ChkSumChkEnd/1000
           'SerialFlush(AdcpPort)
         Else
           VMdataIn = Yes
@@ -7189,7 +7209,7 @@ EndSub
           Wipeflag = false
         EndIf
       #EndIf
-      BeforeBurst = Timer(2,msec,4)
+      BeforeBurst = Timer(DebugTimer,msec,4)
       BeforeBurst = BeforeBurst/1000
       #If WqSonde = "WQ_SDI12" Then
         Call GetWq_SDI12 'get YSI data
@@ -7403,15 +7423,15 @@ EndSub
             EndIf
           EndIf 'error
         #EndIf
-        AfterBurst = Timer(2,msec,4)
+        AfterBurst = Timer(DebugTimer,msec,4)
         AfterBurst = AfterBurst/1000
 
         If VMdataIn = Yes Then 'only process data if we have it
           VmDeadCount = 0
-          MainDecodeStart = Timer(2,msec,4)
+          MainDecodeStart = Timer(DebugTimer,msec,4)
           MainDecodeStart = MainDecodeStart/1000
           Call MainDecode
-          MainDecodeEnd = Timer(2,msec,4)
+          MainDecodeEnd = Timer(DebugTimer,msec,4)
           MainDecodeEnd = MainDecodeEnd/1000
           MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
           #If WqSonde <>"NONE" Then
@@ -7432,31 +7452,31 @@ EndSub
           #EndIf
 
           #If UseAutoRange = true
-            CalcRangeStart = Timer(2,msec,4)
+            CalcRangeStart = Timer(DebugTimer,msec,4)
             CalcRangeStart = CalcRangeStart/1000
             Call CalcRangebin
             EndBin = RangedBin
-            CalcRangeEnd = Timer(2,msec,4)
+            CalcRangeEnd = Timer(DebugTimer,msec,4)
             CalcRangeEnd = CalcRangeEnd/1000
             CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
           #EndIf
           '      Call LastGoodBinCheck
-          OneMinCalcStart = Timer(2,msec,4)
+          OneMinCalcStart = Timer(DebugTimer,msec,4)
           OneMinCalcStart = OneMinCalcStart/1000
           Call OneMinuteCalcs
-          OneMinCalcEnd = Timer(2,msec,4)
+          OneMinCalcEnd = Timer(DebugTimer,msec,4)
           OneMinCalcEnd = OneMinCalcEnd/1000
           OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
-          CalcQStart = Timer(2,msec,4)
+          CalcQStart = Timer(DebugTimer,msec,4)
           CalcQStart = CalcQStart/1000
           Call SubCalcQ
-          CalcQEnd = Timer(2,msec,4)
+          CalcQEnd = Timer(DebugTimer,msec,4)
           CalcQEnd = CalcQEnd/1000
           CalcQTotTime = CalcQEnd-CalcQStart
-          GetVMMemStart = Timer(2,msec,4)
+          GetVMMemStart = Timer(DebugTimer,msec,4)
           GetVMMemStart = GetVMMemStart/1000
           Call GetVMFreeMem
-          GetVMMemEnd = Timer(2,msec,4)
+          GetVMMemEnd = Timer(DebugTimer,msec,4)
           GetVMMemEnd = GetVMMemEnd/1000
           GetVMMemTotTime = GetVMMemEnd-GetVMMemStart
 
@@ -7471,25 +7491,25 @@ EndSub
             'Rec15minFlag = false 'turn data table flag back off
             'make sure spike stuff is not called if hasvm is false
             If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
-              ChkSpikeStart = Timer(2,msec,4)
+              ChkSpikeStart = Timer(DebugTimer,msec,4)
               ChkSpikeStart = ChkSpikeStart/1000
               Call CheckSpikes
-              ChkSpikeEnd = Timer(2,msec,4)
+              ChkSpikeEnd = Timer(DebugTimer,msec,4)
               ChkSpikeEnd = ChkSpikeEnd/1000
               ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
               #If StoreAllToCard Then
-                StoreToCrdStart = Timer(2,msec,4)
+                StoreToCrdStart = Timer(DebugTimer,msec,4)
                 StoreToCrdStart = StoreToCrdStart/1000
                 Call StoreAllData
-                StoreToCrdEnd = Timer(2,msec,4)
+                StoreToCrdEnd = Timer(DebugTimer,msec,4)
                 StoreToCrdEnd = StoreToCrdEnd/1000
                 StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
               #EndIf
             EndIf
-            AddSpikeStart = Timer(2,msec,4)
+            AddSpikeStart = Timer(DebugTimer,msec,4)
             AddSpikeStart = AddSpikeStart/1000
             Call AddSpikes 'make sure buffer is full before checking
-            AddSpikeEnd = Timer(2,msec,4)
+            AddSpikeEnd = Timer(DebugTimer,msec,4)
             AddSpikeEnd = AddSpikeEnd/1000
             AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
           #EndIf
@@ -7499,9 +7519,6 @@ EndSub
         If VmDeadCount >= VMDeadCntMax Then
           WakeUpVM = True
         EndIf
-        DataTabsEnd = Timer(2,msec,4)
-        DataTabsEnd = DataTabsEnd/1000
-        DataTabsTotTime = DataTabsEnd - DataTabsStart
         Call StageDiff
         Call ResetMeasFlags
         Call GetSN
@@ -7516,42 +7533,27 @@ EndSub
         EndIf
       #EndIf
       'Call All Data Tables (time them to make sure nothing is being hung up.
-      DataTabsStart = Timer(2,msec,4)
+      DataTabsStart = Timer(DebugTimer,msec,4)
       DataTabsStart = DataTabsStart/1000
       CallTable DataOut
       DataOutCount = DataOutCount + 1
-      DataOutEnd = Timer (2,msec,4)
+      DataOutEnd = Timer (DebugTimer,msec,4)
       DataOutEnd = DataOutEnd/1000
       DataOutTotTime = DataOutEnd - DataOutStart
-      Data1mStart = Timer (2,msec,4)
+      Data1mStart = Timer (DebugTimer,msec,4)
       Data1mStart = Data1mStart/1000
       CallTable Data1m
       Data1mCount = Data1mCount + 1
-      Data1mEnd = Timer(2,msec,4)
+      Data1mEnd = Timer(DebugTimer,msec,4)
       Data1mEnd = Data1mEnd/1000
       Data1mTotTime = Data1mEnd - Data1mStart
-      AQTabStart = Timer(2,msec,4)
-      AQTabStart = AQTabStart/1000
-      AvgIndexVel = DataOut.IndexVel_Avg
-      AvgVMTemp = DataOut.VMtempC_Avg
-      AvgVMPitch = DataOut.VMpitch_Avg
-      AvgVMRoll = DataOut.VMroll_Avg
-      AvgPS1Stg = DataOut.PS1Stg_Avg
-      AvgPS2Stg = DataOut.PS2Stg_Avg
-      AvgUpBeamStg = DataOut.UpBeamStg_Avg
-      '      AvgLoggerQcfs = DataOut.Qcfs_Avg
-      '      AvgStagePrime = Dataout.StagePrime_Avg
-      '      AvgStageSec = Dataout.StageSecnd_Avg
-      Delay (1,3,mSec)
-
-      AQcount = AQcount + 1
-      AQTabEnd = Timer (2,msec,4)
-      AQTabEnd = AQTabEnd/1000
-      AQTabTotTime = AQTabEnd - AQTabStart   'store the instantaneous variables to the aquarius table
-      CallBmChkStart = Timer(2,msec,4)
+      DataTabsEnd = Timer(DebugTimer,msec,4)
+      DataTabsEnd = DataTabsEnd/1000
+      DataTabsTotTime = DataTabsEnd - DataTabsStart
+      CallBmChkStart = Timer(DebugTimer,msec,4)
       CallBmChkStart = CallBmChkStart/1000
       CallTable BeamCheck
-      CallBmChkEnd = Timer(2,msec,4)
+      CallBmChkEnd = Timer(DebugTimer,msec,4)
       CallBmChkEnd = CallBmChkEnd/1000
       CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
       #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -7618,10 +7620,31 @@ EndSub
       #EndIf
       If StoreVariablesFlg = true Then Call StoreVariables
       #If HasSuna Then
+        If WipeSuna = True Then
+          Do
+            Delay(1,500,mSec)
+            WipeStart = Timer(SunaWipeTimer,mSec,4)
+            WipeStart = WipeStart/1000
+            If WipeStart >= 55 Then
+              StartWipe = True
+            Else
+              StartWipe = False
+            EndIf
+          Loop Until StartWipe = True
+          If StartWipe = True Then
+            PortSet(SunaWipeSwitch,1)
+            Delay(1,15,mSec)
+            PortSet(SunaWipeSwitch,0)
+            StartWipe = False
+            WipeEnd = Timer(SunaWipeTimer,mSec,4)
+            WipeEnd = WipeEnd/1000
+            SunaWipeTotTime = WipeEnd - WipeStart
+          EndIf
+        EndIf
         If SampleSuna = True Then
           Do
             Delay (1,500,mSec)
-            SunaTimer = Timer(6,mSec,4)
+            SunaTimer = Timer(SunaSampleTimer,mSec,4)
             SunaTimer = SunaTimer/1000
             If SunaTimer >= 15 Then
               SunaReady = True
@@ -7630,9 +7653,10 @@ EndSub
             EndIf
           Loop Until SunaReady = True
           If SunaReady = True Then
+            SerialOpen(SunaPort,115200,0,0,3000)
             oCount = 1
-            SerialOpen (SunaPort,115200,0,0,3000)
-            For Lcount = 1 To 30
+            Delay(1,2,Sec)
+            For Lcount = 1 To MaxSunaBurst
               SunaMissedCnt = 0
               Do
                 SerialIn(SunaBurstIn,SunaPort,50,CHR(13)+CHR(10),3000)
@@ -7668,9 +7692,11 @@ EndSub
             Delay (1,100,mSec)
             SerialClose(SunaPort)
             PortSet (SunaSwitch,0)
-            SunaTimer = Timer(2,mSec,2)
+            SunaTimer = Timer(SunaSampleTimer,mSec,4)
             SunaOnTime = SunaTimer/1000
             PowerSuna = False
+            SunaProcessStart = Timer(DebugTimer,mSec,4)
+            SunaProcessStart = SunaProcessStart/1000
             If SunaMissed = False Then
               For mCount = 1 To MaxSunaBurst
                 For nCount = 1 To 282
@@ -7739,10 +7765,29 @@ EndSub
           SunaBurstArray() = BadDataIndicator
           SpectrumData() = BadDataIndicator
           Call CopySunaStats
+          SunaProcessEnd = Timer(DebugTimer,mSec,4)
+          SunaProcessEnd = SunaProcessEnd/1000
+          SunaProcessTotTime = SunaProcessEnd-SunaProcessStart
         EndIf
       #EndIf
-      Delay(1,100,mSec)
+      AQTabStart = Timer(DebugTimer,msec,4)
+      AQTabStart = AQTabStart/1000
+      AvgIndexVel = DataOut.IndexVel_Avg
+      AvgVMTemp = DataOut.VMtempC_Avg
+      AvgVMPitch = DataOut.VMpitch_Avg
+      AvgVMRoll = DataOut.VMroll_Avg
+      AvgPS1Stg = DataOut.PS1Stg_Avg
+      AvgPS2Stg = DataOut.PS2Stg_Avg
+      AvgUpBeamStg = DataOut.UpBeamStg_Avg
+      '      AvgLoggerQcfs = DataOut.Qcfs_Avg
+      '      AvgStagePrime = Dataout.StagePrime_Avg
+      '      AvgStageSec = Dataout.StageSecnd_Avg
+      Delay(1,50,mSec)
       CallTable Aquarius
+      AQcount = AQcount + 1
+      AQTabEnd = Timer (DebugTimer,msec,4)
+      AQTabEnd = AQTabEnd/1000
+      AQTabTotTime = AQTabEnd - AQTabStart   'store the instantaneous variables to the aquarius table
       #If WqSonde = "WQ_SERIAL_BURST" Then
         If Rec15minFlag = True Then
           Call ResetBurstVars
@@ -7754,7 +7799,7 @@ EndSub
         EndIf
       #EndIf
       Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
-      ScanEnd = Timer(2,mSec,4)
+      ScanEnd = Timer(DebugTimer,mSec,4)
       ScanEnd = ScanEnd/1000
       ProcessTime = ScanEnd - ScanStart
       CallTable Debugger
