@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190529
+Const ProgramVersionDate = 20190603
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -291,10 +291,10 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = True 'Is there a second EXO daisy-chained in the system
+Const TopBottom = False 'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const HasSuna = True
+Const HasSuna = False
 'value = True
 'value = False
 Const MaxSunaBurst = 30
@@ -324,10 +324,10 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = True
+Const IsSpecStudy = False
 'value = True
 'value = False
-Const GetNoiseFloor = True
+Const GetNoiseFloor = False
 'value = True
 'value = False
 Const HasSlave = False
