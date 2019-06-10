@@ -245,6 +245,7 @@ Const ProgramVersionDate = 20190409
 '20190401 - TAV Added logic to record Turbidity NTUs (in addition to FNU) if it's a DWR sonde. Also added logic to set the time in PST if instead of UTC if it's a DWR sonde. They are using KOR 2, which makes the time output in local time (PST)
 '20190408 - TAV Removed NTU logic per discussions and findings about how the YSI EXO reports the values. Reading is actually FNU. The only thing that changes is the 3 letter acronym, so it is inaccurate to report "NTU".
 '20190409 - TAV Made the "Wq_Mark_Bad" function only occur if its a USGS sonde, not a DWR sonde in Sample and Hold mode.
+'20190610 - MRI Added "1MinConsistent" variable to allow 1min data table to be recorded for long period of time. 
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -426,6 +427,7 @@ Public PTempC As Float 'CR1000 panel temperature in DegC
 Public PTempF As Float 'CR1000 panel temperature in Degf
 Public BurstPeriod As Long 'give user ability to alter burst period in the public table
 Public RecCalibData As Boolean 'flag to recored data at 1 minute interval when measurements are being done.
+Public OneMinConsistent As Boolean 'flag to recored data at 1 minute interval for prolonged periods of time.
 Public StoreVariablesFlg As Boolean
 Public GetVariablesFlg As Boolean
 Dim Rec15minFlag As Boolean 'set when Dataout table is stored
@@ -1824,9 +1826,9 @@ DataTable(SiteVisit,True,-1)
 EndTable
 
 '1 MINUTE DATA OUTPUT TABLE
-DataTable (Data1m,Rec1MinFlag,-1)
+DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the one min data table will be written
   OpenInterval
-  CardOut (0,43200)
+  CardOut (0,169600)'tripled allocation from 43,200 to allow for continous 1min data collection
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,StagePrime,IEEE4)
@@ -4816,8 +4818,8 @@ Sub ReadVariables
     '    'set error txt
     ExitSub
   EndIf
-  Dim InVar(39) As String
-  SplitStr(InVar,PreserveFile,",",39,0)
+  Dim InVar(40) As String
+  SplitStr(InVar,PreserveFile,",",40,0)
   StartBin = InVar(1)
   EndBin = InVar(2)
   StartEbbBin = InVar(3)
@@ -4857,13 +4859,14 @@ Sub ReadVariables
   IsWQNClosed = InVar(37)
   isVMNClosed = InVar(38)
   BurstPeriod = InVar(39)
+  OneMinConsistent = InVar(40)'if you want constant 1min data this will keep in one in case of a power cycle
 EndSub
 
 'Store Variables to USR File (preserve variables)
 '--------------------------------------------------
 Sub StoreVariables
   'store variables out
-  Dim Var(39) As String
+  Dim Var(40) As String
   Public SendVarString As String * 500
   Public VarStringLen As Long
   Public VarHandle = Long
@@ -4909,9 +4912,10 @@ Sub StoreVariables
   Var(37) = IsWQNClosed
   Var(38) = isVMNClosed
   Var(39) = BurstPeriod
+  Var(40) = OneMinConsistent
   'build send string
   SendVarString = Var(1)
-  For VarCnt = 2 To 39
+  For VarCnt = 2 To 40
     SendVarString = SendVarString + "," + Var(VarCnt)
   Next VarCnt
   VarStringLen = Len(SendVarString)
@@ -5339,6 +5343,7 @@ BeginProg
   Call Initialize 'initialize important variables
   SetVMTimeFlg = false
   RecDataFlag = No
+  OneMinConsistent = False 'during intialization make sure the continous 1min data is not enabled. Only user selections should activate it.
   CMD = ""
   SendCMD = FALSE
 
@@ -5378,7 +5383,7 @@ BeginProg
     If (SendCMD) Then Call SendSetup
     #If GetNoiseFloor = True Then
       'If SendPT3 = True AND TimeIntoInterval(PT3Time,5,Min) Then 'used for debugging
-      If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) Then '3 minutes before midnight
+      If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min)AND OneMinConsistent=False Then '3 minutes before midnight skip this if OneMinConsistent is true.
         CMD = "PT3"
         SendCMD = True
         Call SendSetup
