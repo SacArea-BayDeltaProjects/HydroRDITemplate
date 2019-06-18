@@ -393,7 +393,7 @@ Const ReadExtPwr = False
   #EndIf
 #ElseIf LoggerType = CR6 Then
   Const AdcpPort = ComU1
-  Const WqSerialPort = ComC1
+  Const WqSerialPort = ComC3
   Const WqSwitchPort = U6
   Const UseSW12_2_forWQ = False
   Const VMSwitchPort = U4
@@ -404,9 +404,9 @@ Const ReadExtPwr = False
   Const WqCom3 = U3
   Const wqCom5 = U5
   #If HasSuna = True Then
-    Const SunaPort = ComC3
-    Const SunaSwitch = U9
-    Const SunaWipeSwitch = U10
+    Const SunaPort = ComC1
+    Const SunaWipeSwitch = U9
+    Const SunaSwitch = U10
   #EndIf
   #If HasSlave = Yes Then
     Const SlaveCom = ComU7
