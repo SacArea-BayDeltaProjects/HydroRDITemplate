@@ -291,7 +291,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = False 'Is there a second EXO daisy-chained in the system
+Const TopBottom = True  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
 Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
@@ -886,8 +886,16 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BtmNoSondeTrig
   #EndIf
   Public GetBurst As Boolean
+  Public StartTopBurstTimer
+  #If TopBottom = False Then
+  Public StartTopBurst As Boolean
+  Public TopBurstDelay
+  #EndIf
   #If TopBottom Then
     Public GetBtmBurst As Boolean
+    Public StartBtmBurstTimer
+    Public StartBtmBurst As Boolean
+    Public BtmBurstDelay
   #EndIf
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
@@ -6848,19 +6856,20 @@ EndSub
       Mod15Minutes = RealSeconds MOD 900
       Mod60Minutes = RealSeconds MOD 3600
       ModDay = RealSeconds MOD 86400
+      '------------------------------------------------------SUNA TIMING-------------------------------------
+      '----------------Leave here to ensure it gets powered ASAP at beginning of scan------------------------
       #If HasSuna Then 'set all suna variables to false
         SunaMissed = False
         SunaReady = False
         WipeSuna = False
         PortSet (SunaWipeSwitch,0)' keep wiper off
-        #If TopBottom Then 'if there's a Suna AND we have Top/Bottom sondes, set the timing
-        If Mod15Minutes = 660 Then 'if minute 11
+        If Mod15Minutes = 840 Then 'if minute 14
           WipeSuna = True 'set the wiper flag to true
           Timer (SunaWipeTimer,mSec,2) 'start a timer so we can wipe late in the scan
         Else
           WipeSuna = False 'otherwise, don't wipe
         EndIf
-        If Mod15Minutes = 720 Then 'If 12th minute
+        If Mod15Minutes = 0 Then 'If 15th minute
           PortSet (SunaSwitch,1) 'turn the Suna power ON
           Timer (SunaSampleTimer,mSec,2) 'start a timer to sample in 15sec
           SampleSuna = True 'set flag to trigger sampling routine
@@ -6868,23 +6877,81 @@ EndSub
           PortSet (SunaSwitch,0) 'otherwise, keep suna off
           SampleSuna = False 'don't trigger sampling
         EndIf
-        #Else 'if there's no top/bottom
-        If Mod15Minutes = 720 Then 'if 12th minute
-          WipeSuna = True 'set wiper flag to true
-          Timer (SunaWipeTimer,mSec,2) 'start timer so we wipe late in the scan
-        Else
-          WipeSuna = False 'otherwise, not time to wipe
-        EndIf
-        If Mod15Minutes = 780 Then 'if 13th minute
-          PortSet (SunaSwitch,1) 'power up the suna
-          Timer (SunaSampleTimer,mSec,2) 'start timer to sample in 15sec
-          SampleSuna = True 'set flag to trigger sampling routine
-        Else
-          PortSet (SunaSwitch,0) 'otherwise, keep Suna off
-          SampleSuna = False 'keep trigger false
-        EndIf
-        #EndIf
       #EndIf
+      '-------------------------------------------------------------------------------------------------------
+      If ModDay = 0 Then 'At midnight
+        SetVMTimeFlg = True
+        Rec24HrFlag = True 'Trigger for QAQC table
+        CallTable QAQCInfo
+        #If WqSonde = "WQ_SERIAL" OR WqSonde = "WQ_SERIAL_BURST" Then
+          SetEXOTimeFlg = True
+        #EndIf
+        StoreVariablesFlg = True 'set flag to store the necessary variables to the USR drive
+        Else
+        Rec24HrFlag = False
+      EndIf
+      If ModDay = 300 Then 'Reset bad data counter at 5 minutes after Midnight
+        'Reset all Daily flags or zero variables here
+        Call ZeroErrCounters 'Reset Counters at midnight
+        #If HasVM Then
+          SpikeCounter = 0
+        #EndIf
+      EndIf
+      If Mod15Minutes = 0 Then 'at the 15 minute mark
+        Rec15minFlag = True ' set flag to record AQ and DataOut tables
+        RecBeamCheckFlag = True 'set flag to record BeamCheck Table
+        If RecordAll = True Then RecAllVelFlag = True 'set flag to record VelData table for special studies
+        Else
+        Rec15minFlag = False
+        RecAllVelFlag = False
+        RecBeamCheckFlag = False
+      EndIf
+      If RecCalibData = True Then 'if we want 1 min data
+        Rec1MinFlag = True
+        Else 'if the user set it back to false
+        Rec1MinFlag = False 'stop recording 1min data
+        OneMinCount = 0 'reset the counter
+      EndIf
+      If Rec1MinFlag = True Then
+        OneMinCount = OneMinCount + 1
+        If OneMinCount > 1439 Then 'If 24hours has been recorded
+          RecCalibData = False
+          Rec1MinFlag = False
+          OneMinCount = 0
+        EndIf
+      EndIf
+      #If WqSonde = "WQ_SERIAL_BURST" Then
+      'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
+        If BurstPeriod = 0 Then
+          BurstPeriod = 1150 'this is adjustable here and in the public table. Minimum value is 250 for the sonde. A cr6 seems to work at that rate or slower. A CR1000 needs a rate of no faster than 1150.
+        ElseIf BurstPeriod < 250 Then 'if user enters values less than 250, but not 0, bring it up to 250. This is the max rate that the sonde can collect.
+          BurstPeriod = 250
+        EndIf
+      #If TopBottom Then 'if we have a Top/Bottom sonde setup
+        If Mod15Minutes = 720 Then 'if the 12th minute
+          BtmWipeflag = True 'set flag to wipe the bottom sonde
+          Else
+          BtmWipeflag = False
+        EndIf
+        If Mod15Minutes = 780 Then 'If the 13th minute
+        Timer(StartBtmBurstTimer,mSec,2) 'Start Timer to use to delay the burst to later in the minute
+          GetBtmBurst = True 'set flag to initiate sample
+        Else
+          GetBtmBurst = False
+        EndIf
+      #EndIf
+      If Mod15Minutes = 780 Then 'if the 13th minute
+        Wipeflag = True 'wipe the top sonde (or only sonde not Top/Bottom
+        Else
+        Wipeflag = False
+      EndIf
+      If Mod15Minutes = 840 Then 'if the 14th minute
+        Timer (StartTopBurstTimer,mSec,2) 'start timer for delaying the burst to later in the minute
+        GetBurst = True
+        Else
+        GetBurst = False
+      EndIf
+    #EndIf
       Dim InCount As Long
       EnsBytes = 0
       Subscans = 0
@@ -6962,31 +7029,7 @@ EndSub
       #EndIf
       Call GetStage
 
-      '    If Mod15Minutes < 85 Then 'If within 85 seconds of 15 minute time-period
-      '      'Reset all 15 minute flags or zero variables here
-      '      'RunEnsSpikes = 0
-      '      'SpikeCounter = 0
-      '    EndIf
-      If (ModDay > 300) AND (ModDay < 420) Then 'Reset bad data counter at between 5 and 7 minutes after Midnight
-        'Reset all Daily flags or zero variables here
-        Call ZeroErrCounters 'Reset Counters at midnight
-        #If HasVM Then
-          SpikeCounter = 0
-        #EndIf
-        '      PowerSwitch = True 'turn VM power relay back on after previous day site visit
-      EndIf
-      'If Mod60Minutes = 60 Then Call WakeVM 'temporary fix for counters\sensors wacking out.
-      Numbytes = 0
-      InCount=0
-      'First check to see if user changed the UseDefaults value
-      'compare with the record retrieved from startup data table
-      '    If UseDefaults <> StartPrams Then 'UseDefaults is from keypad, StartPrams is from startup table
-      '      ResetTable (Startup) 'first, clear out previous data so table doesn't grow and grow
-      '      LowerCase (UseDefaults)'standardize string
-      '      StartPrams = UseDefaults 'this is like a toggle switch
-      '      CallTable Startup 'write current value to startup table
-      '    EndIf
-      'Call CdmaCheck
+
       'If user elects to wake up Channel Master because it has gone to sleep for some reason
       #If HasVM Then
         If WakeUpVM Then
@@ -7004,8 +7047,6 @@ EndSub
       '                If Tech <> "" OR VisitReason <> "" OR TrueStg1 <> NAN OR TrueStg2 <> NAN OR TrueStg3 <> NAN OR VisRefOK = True OR DiveVisit = True OR WQVisit = True OR FullVisit = True Then
       If Tech <> "" OR VisitReason <> "" OR TrueUpBeamStg <> NAN OR TrueVMPressStg <> NAN OR TruePS1Stg <> NAN OR TruePS2Stg <> NAN OR TrueSondeStg <> NAN Then
         ErrorEvent = "Tech Visit"
-        '      PowerSwitch = false 'turn off relay that cycles VM power
-        'CallTable Event 'The table is stored using the tablefile instruction in Event and Outstat must be
         CallTable SiteVisit
         ' checked to see if data are to be sent.
         Delay (0,200,mSec)
@@ -7019,104 +7060,13 @@ EndSub
         TrueSondeStg = BadDataIndicator
         'Now set Visit Variables back to False
       EndIf
-
-      'toggle telemetery once a day and record system information to a file, zero error counters
-      If ModDay < 15 Then 'at midnight ~ Within 14 seconds
-        SetVMTimeFlg = Yes
-        'ZERO THE SPIKE FILTERS HERE
-        Rec24HrFlag = Yes 'Trigger the QAQCinfo table
-        CallTable QAQCInfo 'only call table at midnight
-        #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-          SetEXOTimeFlg = True
-        #EndIf
-        StoreVariablesFlg = True
-      Else
-        Rec24HrFlag = No  'otherwise keep it turned off
-        'SetVMTimeFlg = No
-      EndIf
-      #If WqSonde = "WQ_SERIAL_BURST" Then
-        BurstTimeReached = Timer(DebugTimer,mSec,4)
-        BurstReachedMod = Mod15Minutes
-        'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
-        If BurstPeriod = 0 Then
-          BurstPeriod = 1150'this is adjustable here and in the public table. Minimum value is 250 for the sonde. A cr6 seems to work at that rate or slower. A CR1000 needs a rate of no faster than 1150.
-        ElseIf BurstPeriod < 250 Then 'if user enters values less than 250, but not 0, bring it up to 250. This is the max rate that the sonde can collect.
-          BurstPeriod = 250
-        EndIf
-        #If TopBottom Then
-          If Mod15Minutes > 770 AND Mod15Minutes < 800 Then 'if time is within 20sec of 13th minute of the scan
-            GetBtmBurst = True
-          Else
-            GetBtmBurst = False
-          EndIf
-        #EndIf
-        If Mod15Minutes > 830 AND Mod15Minutes < 860 Then 'if time is within 20sec of the 14th minute of the scan
-          GetBurst = True 'set the burst flag to true
-        Else
-          GetBurst = False 'outside the 15sec of the 14th minute, don't burst
-        EndIf
-      #EndIf
-      If Mod15Minutes < 15 Then 'when time to output data...within 14 seconds of 15 minute period
-        If RecordAll = Yes Then RecAllVelFlag = Yes
-        #If WqSonde <> "NONE" Then
-          If WqDead = True Then RecAQFlag = True
-        #EndIf
-        Rec15minFlag = Yes 'always set record data flag to yes every fifteen minutes
-        RecDataFlag = Yes 'let next statement know that it was done
-        RecBeamCheckFlag = Yes
-        '        #If WqSonde = "WQ_SERIAL_BURST" Then
-        '          GetBurst = Yes 'set the burst flag
-        '        #EndIf
-      Else
-        '        #If WqSonde = "WQ_SERIAL_BURST" Then
-        '          GetBurst = No 'set the burst flag
-        '        #EndIf
-        Rec15minFlag = No 'turn off when not on 15min interval
-        RecAllVelFlag = No
-        RecBeamCheckFlag = No
-        RecAQFlag = False
-      EndIf
-      'Now check the next scan to see if we missed it
-      If (Mod15Minutes < 35) AND (RecDataFlag = No) Then 'Check next scan (15 min within 34 Seconds)
-        Rec15minFlag = Yes 'always set record data flag to yes every fifteen minutes
-        #If WqSonde <> "NONE" Then
-          If WqDead = True Then RecAQFlag = Yes
-          #If TopBottom Then
-            If BtmWqDead = True Then RecAQFlag = True
-          #EndIf
-        #EndIf
-        If RecordAll = Yes Then RecAllVelFlag = Yes
-        RecDataFlag = No 'Set it back to false for next time
-      EndIf
-      If Mod15Minutes > 35 Then RecDataFlag = No
-      If RecCalibData = True Then 'if user has changed value to yes,then
-        Rec1MinFlag = True
-        'RecBeamCheckFlag = True
-      Else 'if user changed value to false
-        Rec1MinFlag = False 'Stop Recording 1min data
-        OneMinCount = 0 'reset 1min data counter
-      EndIf
-      If Rec1MinFlag = True Then
-        OneMinCount = OneMinCount + 1
-        If OneMinCount > 1439 Then 'if 24 hours have been collected
-          RecCalibData = False
-          Rec1MinFlag = False
-          OneMinCount = 0
-        EndIf
-      EndIf
-
-      '    CallTable BeamCheck
-      '    'now call the DataOut tables (need to be seen on every scan)
-      '    CallTable DataOut
-      '    CallTable Data1m
-      '    CallTable VelData
-      '    RecAllVelFlag = false
-      '    Rec15minFlag = false 'turn data table flag back off
       'The following code looks for the incoming data stream,stores the data in an array of longs, and passes the data through
       'a series of checks.  If those checks fail then the scan is truncated, the ruesulting
       'data is flagged, and the serial port is flushed.  On the next scan the next valid ensemble
       'is read, if there is good data in the buffer then that should be reflected in the output.
       ADCPDone = False
+      Numbytes = 0 'Zero counters for ADCP Decoder
+      InCount=0
       #If HasVM = true Then
         For ADCPLoop = 1 To 2
           Do While SerialInChk(AdcpPort)
@@ -7196,20 +7146,6 @@ EndSub
           VMdataIn = Yes
         EndIf
       #EndIf
-      #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-        #If TopBottom Then
-          If Mod15Minutes > 710 AND Mod15Minutes < 730 Then
-            BtmWipeflag = True
-          Else
-            BtmWipeflag = False
-          EndIf
-        #EndIf
-        If (Mod15Minutes > 770) AND (Mod15Minutes < 790) Then 'wipe 13mins +- 10s into a 15 min period when not collecting burst, set a disable variable
-          Wipeflag = True
-        Else
-          Wipeflag = false
-        EndIf
-      #EndIf
       BeforeBurst = Timer(DebugTimer,msec,4)
       BeforeBurst = BeforeBurst/1000
       #If WqSonde = "WQ_SDI12" Then
@@ -7252,7 +7188,22 @@ EndSub
             #If WqSonde = "WQ_SERIAL_BURST" Then
               'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
               ' if it didn't respond to the previous "data" attempt
+              BurstReachedMod = Mod15Minutes
               Call setburst 'set the period to output the data from the sonde
+              #If TopBottom = False Then 'if we don't have a top/bottom sonde, get the burst sample as close to the 15min mark as we can by delaying
+              Do
+                Delay(1,500,mSec)
+                TopBurstDelay = Timer(StartTopBurstTimer,mSec,4)
+                TopBurstDelay = TopBurstDelay/1000
+                If TopBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
+                  StartTopBurst = True
+                Else
+                  StartTopBurst = False
+                EndIf
+              Loop Until StartTopBurst = True
+              #EndIf
+              BurstTimeReached = Timer(DebugTimer,mSec,4)
+              BurstTimeReached = BurstTimeReached/1000
               Call GetBurstArray 'set up the array to store the burst values
               BurstDebugCount = BurstDebugCount+1 'we made it this far, count up
               '              BurstMedDate = ""
@@ -7266,7 +7217,7 @@ EndSub
               For jCount = 1 To MaxBurstCnt 'de-construct BurstArray and send to table.  too slow to do in get loop
                 For kCount = 1 To 23 'this is the loop to pull the parameters
                   BurstData(kCount) = BurstArray(jCount,kCount)' get one burst string
-                Next kCount 'pull all 23 parameters within the n-th part of the j-loop and store in the array
+                Next kCount 'pull all 23 parameters within the k-th part of the j-loop and store in the array
                 Call parseburst 'parse array into proper fields
                 If WqError Then 'if we didn't get data
                   WqBadData = true 'set a flag
@@ -7325,7 +7276,20 @@ EndSub
               #If WqSonde = "WQ_SERIAL_BURST" Then
                 'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
                 ' if it didn't respond to the previous "data" attempt
+                BurstReachedMod = Mod15Minutes
                 Call SetBtmBurst 'set the period to output the data from the sonde
+                Do
+                Delay(1,500,mSec)
+                BtmBurstDelay = Timer(StartBtmBurstTimer,mSec,4)
+                BtmBurstDelay = BtmBurstDelay/1000
+                If BtmBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
+                  StartBtmBurst = True
+                Else
+                  StartBtmBurst = False
+                EndIf
+                Loop Until StartBtmBurst = True
+                BurstTimeReached = Timer(DebugTimer,mSec,4)
+                BurstTimeReached = BurstTimeReached/1000
                 Call GetBtmBurstArray 'set up the array to store the burst values
                 BtmBurstDebugCount = BtmBurstDebugCount+1 'we made it this far, count up
                 '              BurstMedDate = ""
@@ -7573,7 +7537,7 @@ EndSub
           If SetRadSettings = True OR ResetMaster = True AND ResetTryOK = True Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
             Call ResetRadDefault 'first, let's set radio back to factory defaults
             Call ReadRF 'read in the settings after setting to default to make sure it did what it's supposed to
-            Delay (1,2,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
+            Delay (1,1,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
             Call SetRadSetting 'set radio settings to the what's stored on USR
             Call ReadRF 'read in the new settings
             Call StoreRadSettings 'store the new settings
@@ -7594,7 +7558,7 @@ EndSub
           If SetRadSettings = True OR ResetSlave = True AND ResetTryOK = True Then 'if link failed and enough time has passed to try again or user wants manual reset
             Call ResetRadDefault 'reset radio to defaults
             Call ReadRF 'read in settings to verify it did it correctly
-            Delay (1,2,Sec) 'delay, so user has opportunity to see that it worked
+            Delay (1,1,Sec) 'delay, so user has opportunity to see that it worked
             Call SetRadSetting 'set radio to settings stored in USR
             Call ReadRF 'read in the new settings
             Call StoreRadSettings 'store the new radio settings
@@ -7634,7 +7598,7 @@ EndSub
           Loop Until StartWipe = True 'continue loop until we reach 55sec
           If StartWipe = True Then 'if we've completed the loop
             PortSet(SunaWipeSwitch,1) 'send signal to wiper
-            Delay(1,15,mSec) 'delay 0.15sec
+            Delay(1,250,mSec) 'delay 0.25sec
             PortSet(SunaWipeSwitch,0) 'turn signal off
             StartWipe = False 'set flag back to false
             WipeEnd = Timer(SunaWipeTimer,mSec,4) 'store time of wiper end
