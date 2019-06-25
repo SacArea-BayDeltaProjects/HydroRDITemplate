@@ -7303,7 +7303,6 @@ Sub ResetSunaTimers
                 'If WqError = False  Then 'If sonde is having probs then don't burst <--- Commented this because I think we still want to try to set the Run function even
                 ' if it didn't respond to the previous "data" attempt
                 BurstReachedMod = Mod15Minutes
-                Call SetBtmBurst 'set the period to output the data from the sonde
                 Do
                 BtmBurstDelay = Timer(StartBtmBurstTimer,mSec,4)
                 BtmBurstDelay = BtmBurstDelay/1000
@@ -7317,6 +7316,7 @@ Sub ResetSunaTimers
                 Loop
                 BurstTimeReached = Timer(DebugTimer,mSec,4)
                 BurstTimeReached = BurstTimeReached/1000
+                Call SetBtmBurst 'set the period to output the data from the sonde
                 Call GetBtmBurstArray 'set up the array to store the burst values
                 BtmBurstDebugCount = BtmBurstDebugCount+1 'we made it this far, count up
                 '              BurstMedDate = ""
