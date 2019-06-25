@@ -4338,7 +4338,6 @@ EndSub
     #EndIf
     WqPwrCycleCnt = 0
     WqManualCycle = False
-    Delay(1,15,sec)'let exo warm up
     ErrorEvent = "Cycle Sonde Power"
     #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
       Redeploy = true
