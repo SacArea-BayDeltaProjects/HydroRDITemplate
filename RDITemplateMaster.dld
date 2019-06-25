@@ -4,7 +4,7 @@
 'HydroInterface
 'Trevor Violette and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190603
+Const ProgramVersionDate = 20190625
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -249,6 +249,7 @@ Const ProgramVersionDate = 20190603
 '20190510 - TAV Added base code to accept a daisy-chained EXO system (2 Sondes total).
 '20190522 - MRI Altered communication with SOA to address sondes independently and accept commands for the targeted sonde only and send data to the correct field. Flags for redeploy and cycleWQpower work if either sonde is having problems
 '20190529 - TAV Added Suna Code to program
+'20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -291,7 +292,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = True  'Is there a second EXO daisy-chained in the system
+Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
 Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
@@ -1614,10 +1615,12 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public SunaMissedCnt 'Counter for when the SUNA missed (Either DarkFrame, or no data)
     Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
     Public SunaOnTime 'How long was the SUNA powered
+    Public SunaSampleStart 'How long into the scan did the Suna Sampling Start
     Public SunaStringLen 'Length of the String read in
     Public LocLF 'Variable to store where the L occurs in the string
     Public LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
     Public Lcount As Long 'Counter for the ForNext loop to read in the SUNA data
+    Public SunaHeader As String * 7
     Public SunaSN 'Suna Parameters
     Public SunaSampleTime
     Public SunaNitrateuM
@@ -2248,6 +2251,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 #If HasSuna = True Then
   DataTable (SunaStats,RecSunaData,-1)
     CardOut(0,17280)
+    Sample (1,SunaSN,FP2)
     Average (1,SunaNitrateuM,IEEE4,False)
     Median (1,SunaNitrateuM,30,IEEE4,False)
     StdDev (1,SunaNitrateuM,IEEE4,False)
@@ -2269,11 +2273,13 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 
   DataTable (SecSunaData,1,-1)
     CardOut(0,35000)
+    Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (RawSpectrum,1,-1)
     CardOut(0,35000)
+    Sample (1,SunaSN,FP2)
     Sample (256,SpectrumData(),IEEE4)
   EndTable
 #EndIf
@@ -2749,6 +2755,8 @@ DataTable (Debugger,True,-1)
     Sample (1,WipeStart,FP2)
     Sample (1,WipeEnd,FP2)
     Sample (1,SunaWipeTotTime,FP2)
+    Sample (1,SunaSampleStart,FP2)
+    Sample (1,SunaOnTime,FP2)
     Sample (1,SunaProcessStart,FP2)
     Sample (1,SunaProcessEnd,FP2)
     Sample (1,SunaProcessTotTime,FP2)
@@ -6474,6 +6482,18 @@ EndSub
       AvgSunaVoltMain = BadDataIndicator
       AvgSunaVoltLamp = BadDataIndicator
     EndSub
+    
+'___________________________________________Reset Timers for Suna____________________
+Sub ResetSunaTimers
+    WipeStart = 0
+    WipeEnd = 0
+    SunaWipeTotTime = 0
+    SunaSampleStart = 0
+    SunaOnTime = 0
+    SunaProcessStart = 0
+    SunaProcessEnd = 0
+    SunaProcessTotTime = 0
+ EndSub
   #EndIf
 
   '__________________________________Keypad Menus________________________________________
@@ -6859,6 +6879,7 @@ EndSub
       '------------------------------------------------------SUNA TIMING-------------------------------------
       '----------------Leave here to ensure it gets powered ASAP at beginning of scan------------------------
       #If HasSuna Then 'set all suna variables to false
+        Call ResetSunaTimers
         SunaMissed = False
         SunaReady = False
         WipeSuna = False
@@ -7157,13 +7178,13 @@ EndSub
         #EndIf
         If Redeploy = True Then 'EXO not setup yet. If TopBottom the subroutines will redeploy both sondes
           Call ParamCheck
-          Delay (1,1,Sec)
+          Delay (1,10,mSec)
           Call DefineParamsOrder
-          Delay (1,1,Sec)
+          Delay (1,10,mSec)
           Call DefineLocs
-          Delay (1,1,Sec)
+          Delay (1,10,mSec)
           Call SetDelim
-          Delay (1,1,Sec)
+          Delay (1,10,mSec)
           Redeploy = False
         Else 'if not redeploy Get single data point
           Call GetWQ_Serial 'get a single data point
@@ -7174,13 +7195,13 @@ EndSub
         #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then ' Check WQ flags and do things!!
           If Wipeflag = true Then
             Call WipeWQ
-            Delay (1,1,Sec)
+            Delay (1,50,mSec)
             WipeTime = Status.TimeStamp(0,1)
           EndIf
           #If TopBottom Then
             If BtmWipeflag = true Then
               Call WipeBtmWQ
-              Delay (1,1,Sec)
+              Delay (1,50,mSec)
               BtmWipeTime = Status.TimeStamp(0,1)
             EndIf
           #EndIf
@@ -7192,15 +7213,16 @@ EndSub
               Call setburst 'set the period to output the data from the sonde
               #If TopBottom = False Then 'if we don't have a top/bottom sonde, get the burst sample as close to the 15min mark as we can by delaying
               Do
-                Delay(1,500,mSec)
                 TopBurstDelay = Timer(StartTopBurstTimer,mSec,4)
                 TopBurstDelay = TopBurstDelay/1000
                 If TopBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
                   StartTopBurst = True
-                Else
+                  ExitDo 'we reached out time threshold, start burst
+                  Else
                   StartTopBurst = False
                 EndIf
-              Loop Until StartTopBurst = True
+                Delay(1,250,mSec) 'delay 0.25sec before checking time again
+              Loop
               #EndIf
               BurstTimeReached = Timer(DebugTimer,mSec,4)
               BurstTimeReached = BurstTimeReached/1000
@@ -7279,15 +7301,16 @@ EndSub
                 BurstReachedMod = Mod15Minutes
                 Call SetBtmBurst 'set the period to output the data from the sonde
                 Do
-                Delay(1,500,mSec)
                 BtmBurstDelay = Timer(StartBtmBurstTimer,mSec,4)
                 BtmBurstDelay = BtmBurstDelay/1000
                 If BtmBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
                   StartBtmBurst = True
+                  ExitDo 'continue loop until we've reached the proper time
                 Else
                   StartBtmBurst = False
                 EndIf
-                Loop Until StartBtmBurst = True
+                Delay(1,250,mSec) 'delay 0.25sec before returning to top of loop
+                Loop
                 BurstTimeReached = Timer(DebugTimer,mSec,4)
                 BurstTimeReached = BurstTimeReached/1000
                 Call GetBtmBurstArray 'set up the array to store the burst values
@@ -7587,15 +7610,16 @@ EndSub
       #If HasSuna Then 'if there's a suna
         If WipeSuna = True Then 'if wipe flag was set to true based on the Mod15Min
           Do 'Start a Do/Loop
-            Delay(1,500,mSec) 'Delay a half second between loops
             WipeStart = Timer(SunaWipeTimer,mSec,4) 'read the timer in
             WipeStart = WipeStart/1000 'convert mSec to Seconds
             If WipeStart >= 55 Then 'If we are at least 55seconds into the scan
               StartWipe = True 'set trigger to true
+              ExitDo
             Else
               StartWipe = False 'otherwise, keep false
             EndIf
-          Loop Until StartWipe = True 'continue loop until we reach 55sec
+            Delay(1,250,mSec) 'Delay 0.25sec between loops
+          Loop
           If StartWipe = True Then 'if we've completed the loop
             PortSet(SunaWipeSwitch,1) 'send signal to wiper
             Delay(1,250,mSec) 'delay 0.25sec
@@ -7608,19 +7632,22 @@ EndSub
         EndIf
         If SampleSuna = True Then 'if it's time to sample the Suna based on the Mod15Min
           Do 'start Do/Loop
-            Delay (1,500,mSec) 'delay 0.5 sec
             SunaTimer = Timer(SunaSampleTimer,mSec,4) 'read sampling timer
             SunaTimer = SunaTimer/1000 'convert from mSec to Sec
-            If SunaTimer >= 15 Then 'if the Suna has been on for at least 15 seconds (warm up)
+            If SunaTimer >= 13 Then 'if the Suna has been on for at least 13 seconds (warm up)- get remaining two seconds in the delay after opening SerialPort
               SunaReady = True 'we are ready to actually read in data
+              ExitDo 'Exit the loop
             Else
               SunaReady = False 'otherwise, we aren't ready
             EndIf
-          Loop Until SunaReady = True 'continue loop until we are ready
+            Delay (1,250,mSec) 'delay 0.25 sec before checking time again
+          Loop 'continue loop until we are ready
           If SunaReady = True Then 'now that we're ready
             SerialOpen(SunaPort,115200,0,0,3000) 'open the serial port
             oCount = 1 'start a counter at 1
-            Delay(1,2,Sec) 'delay for 2 seconds to port time to open
+            Delay(1,2,Sec) 'delay for 2 seconds to give port time to open and finish warm up time
+            SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
+            SunaSampleStart = SunaSampleStart/1000
             For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
               SunaMissedCnt = 0 'set the missed count to 0
               Do 'start Do/Loop
@@ -7649,6 +7676,12 @@ EndSub
               Delay (1,200,mSec) 'delay 0.2 sec
               SplitStr(SunaBurstArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the multi-dimensioned array based on the counter
                                                                           'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
+              SplitStr(SunaHeader,SunaBurstIn,"",1,1)
+              If SunaBurstArray(oCount,1) < 1000 Then
+                SunaHeader = SunaHeader + "0"
+              Else
+                SunaHeader = SunaHeader
+              EndIf  
               Delay(1,500,mSec) 'delay to wait for next value
               Erase(SunaBurstIn) 'erase the string
               SerialFlush(SunaPort) 'flush the port
