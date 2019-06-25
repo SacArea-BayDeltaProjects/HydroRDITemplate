@@ -249,6 +249,7 @@ Const ProgramVersionDate = 20190625
 '20190510 - TAV Added base code to accept a daisy-chained EXO system (2 Sondes total).
 '20190522 - MRI Altered communication with SOA to address sondes independently and accept commands for the targeted sonde only and send data to the correct field. Flags for redeploy and cycleWQpower work if either sonde is having problems
 '20190529 - TAV Added Suna Code to program
+'20190610 - MRI Added "OneMinConsistent" variable to allow 1min data to be recorded for a long period of time
 '20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
@@ -295,7 +296,7 @@ Const DWRSonde = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 30
@@ -393,7 +394,7 @@ Const ReadExtPwr = False
     Const ExtSolarCom = 2
   #EndIf
 #ElseIf LoggerType = CR6 Then
-  Const AdcpPort = ComU1
+  Const AdcpPort = ComC1
   Const WqSerialPort = ComC3
   Const WqSwitchPort = U6
   Const UseSW12_2_forWQ = False
@@ -475,7 +476,8 @@ Public ExtSolarVolt As Float 'get volts from solar panel
 Public PTempC As Float 'CR1000 panel temperature in DegC
 Public PTempF As Float 'CR1000 panel temperature in Degf
 Public BurstPeriod As Long 'give user ability to alter burst period in the public table
-Public RecCalibData As Boolean 'flag to recored data at 1 minute interval when measurements are being done.
+Public RecCalibData As Boolean 'flag to record data at 1 minute interval when measurements are being done.
+Public OneMinConsistent As Boolean 'flag to record data at 1 minute interval for prolonged periods of time
 Public StoreVariablesFlg As Boolean
 Public GetVariablesFlg As Boolean
 Dim Rec15minFlag As Boolean 'set when Dataout table is stored
@@ -2492,9 +2494,9 @@ DataTable(SiteVisit,True,-1)
 EndTable
 
 '1 MINUTE DATA OUTPUT TABLE
-DataTable (Data1m,Rec1MinFlag,-1)
+DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the one min data table will be written
   OpenInterval
-  CardOut (0,43200)
+  CardOut (0,169600)'trippled allocation from 43,200 to allow for continous 1min data collection
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,StagePrime,IEEE4)
@@ -5956,8 +5958,8 @@ Sub ReadVariables
     '    'set error txt
     ExitSub
   EndIf
-  Dim InVar(39) As String
-  SplitStr(InVar,PreserveFile,",",39,0)
+  Dim InVar(40) As String
+  SplitStr(InVar,PreserveFile,",",40,0)
   StartBin = InVar(1)
   EndBin = InVar(2)
   StartEbbBin = InVar(3)
@@ -5997,13 +5999,14 @@ Sub ReadVariables
   IsWQNClosed = InVar(37)
   isVMNClosed = InVar(38)
   BurstPeriod = InVar(39)
+  OneMinConsistent= InVar(40) 'if you want constant 1min data this will keep it on in case of power cycle
 EndSub
 
 'Store Variables to USR File (preserve variables)
 '--------------------------------------------------
 Sub StoreVariables
   'store variables out
-  Dim Var(39) As String
+  Dim Var(40) As String
   Public SendVarString As String * 500
   Public VarStringLen As Long
   Public VarHandle = Long
@@ -6049,9 +6052,10 @@ Sub StoreVariables
   Var(37) = IsWQNClosed
   Var(38) = isVMNClosed
   Var(39) = BurstPeriod
+  Var(40) = OneMinConsistent
   'build send string
   SendVarString = Var(1)
-  For VarCnt = 2 To 39
+  For VarCnt = 2 To 40
     SendVarString = SendVarString + "," + Var(VarCnt)
   Next VarCnt
   VarStringLen = Len(SendVarString)
@@ -6850,6 +6854,7 @@ Sub ResetSunaTimers
     Call Initialize 'initialize important variables
     SetVMTimeFlg = false
     RecDataFlag = No
+    OneMinConsistent = False 'during initializationmake sure the continous 1min data is not enabled. Only user selections should activate it.
     CMD = ""
     SendCMD = FALSE
     #If RadioNetwork = True Then
@@ -6993,7 +6998,7 @@ Sub ResetSunaTimers
       If (SendCMD) Then Call SendSetup
       #If GetNoiseFloor = True Then
         'If SendPT3 = True AND TimeIntoInterval(PT3Time,5,Min) Then 'used for debugging
-        If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) Then '3 minutes before midnight
+        If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) and OneMinConsistent = False Then '3 minutes before midnight. Skip this if OneMinConsistent is true.
           CMD = "PT3"
           SendCMD = True
           Call SendSetup
