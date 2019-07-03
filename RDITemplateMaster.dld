@@ -5,7 +5,7 @@
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
 Const ProgramVersionDate = 20190703
-Const ProgramVersion = 4.0
+Const ProgramVersion = "4.0"
 'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
