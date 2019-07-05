@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190703
-Const ProgramVersion = "4.0"
-'Last Modified by: Mark Inc
+Const ProgramVersionDate = 20190705
+Const ProgramVersion = "4.1"
+'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -252,7 +252,8 @@ Const ProgramVersion = "4.0"
 '20190529 - TAV Added Suna Code to program
 '20190610 - MRI Added "OneMinConsistent" variable to allow 1min data to be recorded for a long period of time
 '20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
-'20190703 - MRI Implimented easier to track program versioning with variable "ProgramVersion". Starting at 4.0. Adjustment of the version number should reflect severity of the changes made.
+'20190703 - MRI Implemented easier to track program versioning with variable "ProgramVersion". Starting at 4.0. Adjustment of the version number should reflect severity of the changes made.
+'20190705 - TAV Added V1, V2, V3, V4 to DataOut table.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -298,7 +299,7 @@ Const DWRSonde = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 30
@@ -1744,13 +1745,17 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Sample (1,BadStgCount,FP2)
       Sample (1,BadVelCount,FP2)
       Sample (1,BadQCount,FP2)
-      Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
       Average(1,AvgSwathRSSI,FP2,False)
       Sample (1,LowRatVel,FP2)
       Sample (1,HighRatVel,FP2)
       Minimum (1,ExtWHConvertVolt,FP2,False,False)
       Minimum (1,ExtSolarVolt,FP2,False,False)
       Average (1,RangedBin,FP2,False)
+      Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
+      Average(MaxBins,V1(),FP2,V1Disable())
+      Average(MaxBins,V2(),FP2,V2Disable())
+      Average(MaxBins,V3(),FP2,V3Disable())
+      Average(MaxBins,V4(),FP2,V4disable())
       'WQ data
       Average (1,TempDiff,IEEE4,False)
       Sample (1,WqTempC,FP2)
@@ -1830,13 +1835,17 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Sample (1,BadStgCount,FP2)
       Sample (1,BadVelCount,FP2)
       Sample (1,BadQCount,FP2)
-      Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
-      Average(1,AvgSwathRSSI,FP2,False)
       'Maximum (1,LastGoodBin,FP2,False,False)
       Sample (1,LowRatVel,FP2)
       Sample (1,HighRatVel,FP2)
       Minimum (1,ExtWHConvertVolt,FP2,False,False)
       Minimum (1,ExtSolarVolt,FP2,False,False)
+      Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
+      Average(MaxBins,V1(),FP2,V1Disable())
+      Average(MaxBins,V2(),FP2,V2Disable())
+      Average(MaxBins,V3(),FP2,V3Disable())
+      Average(MaxBins,V4(),FP2,V4disable())
+      Average(1,AvgSwathRSSI,FP2,False)
     EndTable
   #EndIf
   'Data table that is only used for obtaining an EXO burst (1 minute burst of one second dat, once every 15 minutes
