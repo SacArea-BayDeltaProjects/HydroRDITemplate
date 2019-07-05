@@ -24,7 +24,9 @@ Before Compiling/Sending to Datalogger:
     **DWRSonde:** Is the sonde maintained by DWR? If so, this adds Turbidity NTUs to tables and forces the sonde time update to happen to PST rather
 	than to UTC.
 
-    ** TopBottom:** Are there two sondes daisy-chained together? If so this will duplicate all serial communications for water quality (parameter checks, set delimiters, get 	instant data points, wipe, and collect bursts) for the second sonde and assign the values with a BTM prefix.
+    **TopBottom:** Are there two sondes daisy-chained together? If so this will duplicate all serial communications for water quality (parameter checks, set delimiters, get 	instant data points, wipe, and collect bursts) for the second sonde and assign the values with a BTM prefix.
+    
+    **HasSuna:** Is there a SUNA in the system? If so, this will perform SUNA operations and create and parse datatables for the SUNA.
     
     **WqBaud:** If sonde is present, select baud rate for SERIAL communications. Most likely, 38400 is correct.
     
