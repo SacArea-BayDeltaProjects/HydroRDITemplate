@@ -2,10 +2,11 @@
 'Program Authors
 'Michael R. Simpson
 'HydroInterface
-'Trevor Violette and Jim DeRose, USGS
+'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190625
-'Last Modified by: Trevor Violette
+Const ProgramVersionDate = 20190703
+Const ProgramVersion = "4.0"
+'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -251,6 +252,7 @@ Const ProgramVersionDate = 20190625
 '20190529 - TAV Added Suna Code to program
 '20190610 - MRI Added "OneMinConsistent" variable to allow 1min data to be recorded for a long period of time
 '20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
+'20190703 - MRI Implimented easier to track program versioning with variable "ProgramVersion". Starting at 4.0. Adjustment of the version number should reflect severity of the changes made.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -600,6 +602,7 @@ Public SerNum As Long 'datalogger computer serial number
 Public OSVers As String * 18 'datalogger Operating System version
 Public Program As String * 25 'Program version
 Public ProgVersDate As String * 8 'date of the program version, based on the constant "ProgramVersionDate"
+Public ProgVersion As String * 5 'program version number, based on constant "ProgramVersion"
 Public ProgErrors As Long 'from "Status" table, The number of compile or runtime errors for the current program.
 Public Low12Volts As Long 'from "status" table, how many times has there been low voltage (based on CR1000 threshold of 9.6v when the CR1000 goes into a lower power
 'mode and discontinues it's measurement tasks until power is restored)
@@ -2350,6 +2353,7 @@ DataTable  (QAQCInfo,Rec24HrFlag,-1)
   Sample (1,VisitReason,String
   Sample (1,Program,String)
   Sample (1,ProgVersDate,String)
+  Sample (1,ProgVersion, String)
   Sample (1,SerNum,Long)
   Sample (1,OSVers,String)
   Sample (1,AdcpSN,Long)
@@ -2855,6 +2859,7 @@ Sub GetStartup
   '  If Startup.StartPrams(1,1) <> "false" Then 'insert default values
   '    UseDefaults = "false"
   ProgVersDate = ProgramVersionDate
+  ProgVersion =ProgramVersion
   LastScan = "00:00"
   '******************Below are the default stations Parameters (~ line 740) *********************
   Tech = "TEC"
