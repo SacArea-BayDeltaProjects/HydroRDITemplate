@@ -296,7 +296,7 @@ Const DWRSonde = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 30
@@ -394,7 +394,7 @@ Const ReadExtPwr = False
     Const ExtSolarCom = 2
   #EndIf
 #ElseIf LoggerType = CR6 Then
-  Const AdcpPort = ComC1
+  Const AdcpPort = ComU1
   Const WqSerialPort = ComC3
   Const WqSwitchPort = U6
   Const UseSW12_2_forWQ = False
@@ -478,6 +478,9 @@ Public PTempF As Float 'CR1000 panel temperature in Degf
 Public BurstPeriod As Long 'give user ability to alter burst period in the public table
 Public RecCalibData As Boolean 'flag to record data at 1 minute interval when measurements are being done.
 Public OneMinConsistent As Boolean 'flag to record data at 1 minute interval for prolonged periods of time
+#If HasSuna Then
+  Public ManualSunaOn As Boolean
+#EndIf
 Public StoreVariablesFlg As Boolean
 Public GetVariablesFlg As Boolean
 Dim Rec15minFlag As Boolean 'set when Dataout table is stored
@@ -879,9 +882,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 '                           Float was used, changed to a 3 character string in case someone accidentally types a number in, this will allow user to revert back to "NAN" -TAV 20141208
 'declare variables for EXO and SDI
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-  Public WqNparams = 23
+  Public WqNparams = 24
   #If TopBottom Then
-    Public BtmWqNparams = 23
+    Public BtmWqNparams = 24
   #EndIf
   Public Redeploy As Boolean
   Public NoSondeTrig
@@ -919,7 +922,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Dim TurbFNUCode = 223
   Dim DoSatCode = 211
   Dim DOmgLCode = 212
-  Dim DepthCode = 23
+  Dim DepthFtCode = 23
+  Dim DepthMetersCode = 22
   Dim BattCode = 28
   Dim pHCode = 18
   Dim pHmVCode = 17
@@ -936,8 +940,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Dim WiperPos = 229
 
   #If WqSonde = "WQ_SERIAL_BURST" Then
-    Public BurstData(23)
-    Dim BurstArray(30,23)
+    Public BurstData(24)
+    Dim BurstArray(30,24)
     Public BurstIn As String * 256 'Raw EXO burst data string
     Public jCount As Long 'Counter
     Public kCount As Long 'Counter
@@ -959,6 +963,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BurstDOmgL
     Public BurstORP
     Public BurstDepthFt
+    Public BurstDepthMeters
     Public BurstBattV
     Public BurstpH
     Public BurstpHmV
@@ -973,8 +978,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BurstCLmgl
     Public BurstWiperPos
     #If TopBottom Then
-      Public BtmBurstData(23)
-      Dim BtmBurstArray(30,23)
+      Public BtmBurstData(24)
+      Dim BtmBurstArray(30,24)
       Public BtmBurstIn As String * 256 'Raw EXO burst data string
       Public BtmjCount As Long 'Counter
       Public BtmkCount As Long 'Counter
@@ -995,6 +1000,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Public BtmBurstDOmgL
       Public BtmBurstORP
       Public BtmBurstDepthFt
+      Public BtmBurstDepthMeters
       Public BtmBurstBattV
       Public BtmBurstpH
       Public BtmBurstpHmV
@@ -1020,6 +1026,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MedDOmgL
     Public MedORP
     Public MedDepthFt
+    Public MedDepthMeters
     Public MedBattV
     Public MedpH
     Public MedpHmV
@@ -1044,6 +1051,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Public BtmMedDOmgL
       Public BtmMedORP
       Public BtmMedDepthFt
+      Public BtmMedDepthMeters
       Public BtmMedBattV
       Public BtmMedpH
       Public BtmMedpHmV
@@ -1060,26 +1068,26 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     #EndIf
   #EndIf 'EXO data that's been parsed
   #If SeeRawWQ = True OR Debugging = True Then
-    Public t(23)
-    Public WqData(23)
+    Public t(24)
+    Public WqData(24)
     Public WqIn As String * 256 'Raw EXO data string
     Public WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
     Public RecBurstFlag As Boolean
     #If TopBottom Then
-      Public BTM_t(23)
-      Public BtmWqData(23)
+      Public BTM_t(24)
+      Public BtmWqData(24)
       Public BtmWqIn As String * 256
       Public BtmWqDelay
     #EndIf
   #Else
-    Dim t(23)
-    Dim WqData(23)
+    Dim t(24)
+    Dim WqData(24)
     Dim WqIn As String * 256 'Raw EXO data string
     Dim WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
     Dim RecBurstFlag As Boolean
     #If TopBottom Then
-      Dim BTM_t(23)
-      Dim BtmWqData(23)
+      Dim BTM_t(24)
+      Dim BtmWqData(24)
       Dim BtmWqIn As String * 256
       Dim BtmWqDelay
     #EndIf
@@ -1088,7 +1096,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   #EndIf
   'Dim TempLong As Long 'Placerholder for timer
   Public WipeTime As String * 25 'Time/Date that the wiper finishes its wipe
-  Public WqParamOrder(23) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+  Public WqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
   Public WqLocDate
   Public WqLocTime
   Public WqLocTempC
@@ -1098,7 +1106,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public WqLocDoSat
   Public WqLocDOmgL
   Public WqLocORP
-  Public WqLocDepth
+  Public WqLocDepthFt
+  Public WqLocDepthMeters
   Public WqLocBatt
   Public WqLocpH
   Public WqLocpHmV
@@ -1119,7 +1128,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   '  Public ExoErrorCnt
   #If TopBottom Then
     Public BtmWipeTime As String * 25 'Time/Date that the wiper finishes its wipe
-    Public BtmWqParamOrder(23) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+    Public BtmWqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
     Public BtmWqLocDate
     Public BtmWqLocTime
     Public BtmWqLocTempC
@@ -1129,7 +1138,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BtmWqLocDoSat
     Public BtmWqLocDOmgL
     Public BtmWqLocORP
-    Public BtmWqLocDepth
+    Public BtmWqLocDepthFt
+    Public BtmWqLocDepthMeters
     Public BtmWqLocBatt
     Public BtmWqLocpH
     Public BtmWqLocpHmV
@@ -1205,6 +1215,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public WqPHmv As Float
     Public WqORP As Float
     Public WqDepthFt As Float
+    Public WqDepthMeters As Float
     Public WqBattV As Float
     Public WqBGAugl As Float
     Public WqBGArfu As Float
@@ -1237,6 +1248,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Public BtmWqPHmv As Float
       Public BtmWqORP As Float
       Public BtmWqDepthFt As Float
+      Public BtmWqDepthMeters As Float
       Public BtmWqBattV As Float
       Public BtmWqBGAugl As Float
       Public BtmWqBGArfu As Float
@@ -1749,6 +1761,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Sample (1,WqChlugL,FP2)
       Sample (1,WqChlRFU,FP2)
       Average (1,WqDepthFt,FP2,WqBadData)
+      Average (1,WqDepthMeters,FP2,WqBadData)
       Sample (1,WqDOSat,FP2)
       Sample (1,WqORP,FP2)
       Sample (1,WqFDOMrfu,FP2)
@@ -1770,6 +1783,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
         Sample (1,BtmWqChlugL,FP2)
         Sample (1,BtmWqChlRFU,FP2)
         Average (1,BtmWqDepthFt,FP2,BtmWqBadData)
+        Average (1,BtmWqDepthMeters,FP2,BtmWqBadData)
         Sample (1,BtmWqDOSat,FP2)
         Sample (1,BtmWqORP,FP2)
         Sample (1,BtmWqFDOMrfu,FP2)
@@ -1845,6 +1859,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
       Median (1,BurstORP,MaxBurstCnt,IEEE4,BurstMissed)
       Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BurstDepthMeters,MaxBurstCnt,IEEE4,BurstMissed)
       Median (1,BurstBattV,MaxBurstCnt,FP2,BurstMissed)
       Median (1,BurstpH,MaxBurstCnt,FP2,BurstMissed)
       Median (1,BurstpHmV,MaxBurstCnt,FP2,BurstMissed)
@@ -1879,6 +1894,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       StdDev (1,BurstDepthFt,IEEE4,False)
       Minimum (1,BurstDepthFt,IEEE4,False,0)
       Maximum (1,BurstDepthFt,IEEE4,False,0)
+      StdDev (1,BurstDepthMeters,IEEE4,False)
+      Minimum (1,BurstDepthMeters,IEEE4,False,0)
+      Maximum (1,BurstDepthMeters,IEEE4,False,0)
       StdDev (1,BurstBattV,FP2,False)
       Minimum (1,BurstBattV,FP2,False,0)
       Maximum (1,BurstBattV,FP2,False,0)
@@ -1941,6 +1959,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Sample (1,BurstDOmgL,IEEE4)
       Sample (1,BurstORP,IEEE4)
       Sample (1,BurstDepthFt,IEEE4)
+      Sample (1,BurstDepthMeters,IEEE4)
       Sample (1,BurstBattV,FP2)
       Sample (1,BurstpH,FP2)
       Sample (1,BurstpHmV,FP2)
@@ -1983,6 +2002,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
         Median (1,BtmBurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
         Median (1,BtmBurstORP,MaxBurstCnt,IEEE4,BurstMissed)
         Median (1,BtmBurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+        Median (1,BtmBurstDepthMeters,MaxBurstCnt,IEEE4,BurstMissed)
         Median (1,BtmBurstBattV,MaxBurstCnt,FP2,BurstMissed)
         Median (1,BtmBurstpH,MaxBurstCnt,FP2,BurstMissed)
         Median (1,BtmBurstpHmV,MaxBurstCnt,FP2,BurstMissed)
@@ -2017,6 +2037,9 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
         StdDev (1,BtmBurstDepthFt,IEEE4,False)
         Minimum (1,BtmBurstDepthFt,IEEE4,False,0)
         Maximum (1,BtmBurstDepthFt,IEEE4,False,0)
+        StdDev (1,BtmBurstDepthMeters,IEEE4,False)
+        Minimum (1,BtmBurstDepthMeters,IEEE4,False,0)
+        Maximum (1,BtmBurstDepthMeters,IEEE4,False,0)
         StdDev (1,BtmBurstBattV,FP2,False)
         Minimum (1,BtmBurstBattV,FP2,False,0)
         Maximum (1,BtmBurstBattV,FP2,False,0)
@@ -2079,6 +2102,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
         Sample (1,BtmBurstDOmgL,IEEE4)
         Sample (1,BtmBurstORP,IEEE4)
         Sample (1,BtmBurstDepthFt,IEEE4)
+        Sample (1,BtmBurstDepthMeters,IEEE4)
         Sample (1,BtmBurstBattV,FP2)
         Sample (1,BtmBurstpH,FP2)
         Sample (1,BtmBurstpHmV,FP2)
@@ -2114,6 +2138,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Sample (1,MedDOSat,IEEE4)
     Sample (1,MedDOmgL,IEEE4)
     Sample (1,MedDepthFt,IEEE4)
+    Sample (1,MedDepthMeters,IEEE4)
     Sample (1,MedBattV,FP2)
     Sample (1,MedpH,IEEE4)
     Sample (1,MedChlugL,IEEE4)
@@ -2130,6 +2155,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Sample (1,BtmMedDOSat,IEEE4)
       Sample (1,BtmMedDOmgL,IEEE4)
       Sample (1,BtmMedDepthFt,IEEE4)
+      Sample (1,BtmMedDepthMeters,IEEE4)
       Sample (1,BtmMedBattV,FP2)
       Sample (1,BtmMedpH,IEEE4)
       Sample (1,BtmMedChlugL,IEEE4)
@@ -2194,6 +2220,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Sample (1,WqDOSat,IEEE4)
     Sample (1,WqDOMgl,IEEE4)
     Sample (1,WqDepthFt,IEEE4)
+    Sample (1,WqDepthMeters,IEEE4)
     Sample (1,WqBattV,IEEE4)
     Sample (1,WqPH,IEEE4)
     Sample (1,WqChlugL,IEEE4)
@@ -2210,6 +2237,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Sample (1,BtmWqDOSat,IEEE4)
       Sample (1,BtmWqDOMgl,IEEE4)
       Sample (1,BtmWqDepthFt,IEEE4)
+      Sample (1,BtmWqDepthMeters,IEEE4)
       Sample (1,BtmWqBattV,IEEE4)
       Sample (1,BtmWqPH,IEEE4)
       Sample (1,BtmWqChlugL,IEEE4)
@@ -2456,6 +2484,7 @@ DataTable(SiteVisit,True,-1)
     Sample (1,WqChlugL,FP2)
     Sample (1,WqChlRFU,FP2)
     Sample (1,WqDepthFt,FP2)
+    Sample (1,WqDepthMeters,FP2)
     Sample (1,WqDOSat,FP2)
     Sample (1,WqFDOMrfu,FP2)
     Sample (1,WqFDOMqsu,FP2)
@@ -2475,6 +2504,7 @@ DataTable(SiteVisit,True,-1)
       Sample (1,BtmWqChlugL,FP2)
       Sample (1,BtmWqChlRFU,FP2)
       Sample (1,BtmWqDepthFt,FP2)
+      Sample (1,BtmWqDepthMeters,FP2)
       Sample (1,BtmWqDOSat,FP2)
       Sample (1,BtmWqFDOMrfu,FP2)
       Sample (1,BtmWqFDOMqsu,FP2)
@@ -2514,6 +2544,7 @@ DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the
     Sample (1,WqChlugL,FP2)
     Sample (1,WqChlRFU,FP2)
     Sample (1,WqDepthFt,FP2)
+    Sample (1,WqDepthMeters,FP2)
     Sample (1,WqDOSat,FP2)
     Sample (1,WqFDOMrfu,FP2)
     Sample (1,WqFDOMqsu,FP2)
@@ -2533,6 +2564,7 @@ DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the
       Sample (1,BtmWqChlugL,FP2)
       Sample (1,BtmWqChlRFU,FP2)
       Sample (1,BtmWqDepthFt,FP2)
+      Sample (1,BtmWqDepthMeters,FP2)
       Sample (1,BtmWqDOSat,FP2)
       Sample (1,BtmWqFDOMrfu,FP2)
       Sample (1,BtmWqFDOMqsu,FP2)
@@ -2620,6 +2652,7 @@ DataTable (SVMaq,True,1)
     Sample (1,WqChlugL,FP2)
     Sample (1,WqChlRFU,FP2)
     Sample (1,WqDepthFt,FP2)
+    Sample (1,WqDepthMeters,FP2)
     Sample (1,WqDOSat,FP2)
     Sample (1,WqFDOMrfu,FP2)
     Sample (1,WqFDOMqsu,FP2)
@@ -2639,6 +2672,7 @@ DataTable (SVMaq,True,1)
       Sample (1,BtmWqChlugL,FP2)
       Sample (1,BtmWqChlRFU,FP2)
       Sample (1,BtmWqDepthFt,FP2)
+      Sample (1,BtmWqDepthMeters,FP2)
       Sample (1,BtmWqDOSat,FP2)
       Sample (1,BtmWqFDOMrfu,FP2)
       Sample (1,BtmWqFDOMqsu,FP2)
@@ -3081,6 +3115,7 @@ Sub Initialize
     WqPHmv = 0
     WqORP = 0
     WqDepthFt = 0
+    WqDepthMeters = 0
     WqBattV = 0
     WqBGAugl = 0
     WqBGArfu = 0
@@ -3110,6 +3145,7 @@ Sub Initialize
       BtmWqPHmv = 0
       BtmWqORP = 0
       BtmWqDepthFt = 0
+      BtmWqDepthMeters = 0
       BtmWqBattV = 0
       BtmWqBGAugl = 0
       BtmWqBGArfu = 0
@@ -3711,21 +3747,22 @@ EndSub
     WqLocTurbFNU = t(6)
     WqLocDoSat = t(7)
     WqLocDOmgL = t(8)
-    WqLocDepth = t(9)
-    WqLocBatt = t(10)
-    WqLocpH = t(11)
-    WqLocpHmV = t(12)
-    WqLocORP = t(13)
-    WqLocChlugL = t(14)
-    WqLocChlRFU = t(15)
-    WqLocBGApcRFU = t(16)
-    WqLocBGApcugL = t(17)
-    WqLocFDomRFU = t(18)
-    WqLocFDomQSU = t(19)
-    WqLocNH4 = t(20)
-    WqLocNO3 = t(21)
-    WqLocCL = t(22)
-    WqLocWiperPos = t(23)
+    WqLocDepthFt = t(9)
+    WqLocDepthMeters = t(10)
+    WqLocBatt = t(11)
+    WqLocpH = t(12)
+    WqLocpHmV = t(13)
+    WqLocORP = t(14)
+    WqLocChlugL = t(15)
+    WqLocChlRFU = t(16)
+    WqLocBGApcRFU = t(17)
+    WqLocBGApcugL = t(18)
+    WqLocFDomRFU = t(19)
+    WqLocFDomQSU = t(20)
+    WqLocNH4 = t(21)
+    WqLocNO3 = t(22)
+    WqLocCL = t(23)
+    WqLocWiperPos = t(24)
     #If TopBottom Then
       BtmWqLocDate = BTM_t(1)
       BtmWqLocTime = BTM_t(2)
@@ -3735,21 +3772,22 @@ EndSub
       BtmWqLocTurbFNU = BTM_t(6)
       BtmWqLocDoSat = BTM_t(7)
       BtmWqLocDOmgL = BTM_t(8)
-      BtmWqLocDepth = BTM_t(9)
-      BtmWqLocBatt = BTM_t(10)
-      BtmWqLocpH = BTM_t(11)
-      BtmWqLocpHmV = BTM_t(12)
-      BtmWqLocORP = BTM_t(13)
-      BtmWqLocChlugL = BTM_t(14)
-      BtmWqLocChlRFU = BTM_t(15)
-      BtmWqLocBGApcRFU = BTM_t(16)
-      BtmWqLocBGApcugL = BTM_t(17)
-      BtmWqLocFDomRFU = BTM_t(18)
-      BtmWqLocFDomQSU = BTM_t(19)
-      BtmWqLocNH4 = BTM_t(20)
-      BtmWqLocNO3 = BTM_t(21)
-      BtmWqLocCL = BTM_t(22)
-      BtmWqLocWiperPos = BTM_t(23)
+      BtmWqLocDepthFt = BTM_t(9)
+      BtmWqLocDepthMeters = BTM_t(10)
+      BtmWqLocBatt = BTM_t(11)
+      BtmWqLocpH = BTM_t(12)
+      BtmWqLocpHmV = BTM_t(13)
+      BtmWqLocORP = BTM_t(14)
+      BtmWqLocChlugL = BTM_t(15)
+      BtmWqLocChlRFU = BTM_t(16)
+      BtmWqLocBGApcRFU = BTM_t(17)
+      BtmWqLocBGApcugL = BTM_t(18)
+      BtmWqLocFDomRFU = BTM_t(19)
+      BtmWqLocFDomQSU = BTM_t(20)
+      BtmWqLocNH4 = BTM_t(21)
+      BtmWqLocNO3 = BTM_t(22)
+      BtmWqLocCL = BTM_t(23)
+      BtmWqLocWiperPos = BTM_t(24)
     #EndIf
   EndSub
 #EndIf
@@ -3888,7 +3926,8 @@ EndSub
     If WqLocTurbFNU > 0 Then WqTurbFNU = WqData(WqLocTurbFNU)
     If WqLocDoSat > 0 Then WqDOSat = WqData(WqLocDoSat)
     If WqLocDOmgL > 0 Then WqDOMgl = WqData(WqLocDOmgL)
-    If WqLocDepth > 0 Then WqDepthFt = WqData(WqLocDepth)
+    If WqLocDepthFt > 0 Then WqDepthFt = WqData(WqLocDepthFt)
+    If WqLocDepthMeters > 0 Then WqDepthMeters = WqData(WqLocDepthMeters)
     If WqLocBatt > 0 Then WqBattV = WqData(WqLocBatt)
     If WqLocpH > 0 Then WqPH = WqData(WqLocpH)
     If WqLocpHmV > 0 Then WqPHmv = WqData(WqLocpHmV)
@@ -3927,7 +3966,8 @@ EndSub
       If BtmWqLocTurbFNU > 0 Then BtmWqTurbFNU = BtmWqData(BtmWqLocTurbFNU)
       If BtmWqLocDoSat > 0 Then BtmWqDOSat = BtmWqData(BtmWqLocDoSat)
       If BtmWqLocDOmgL > 0 Then BtmWqDOMgl = BtmWqData(BtmWqLocDOmgL)
-      If BtmWqLocDepth > 0 Then BtmWqDepthFt = BtmWqData(BtmWqLocDepth)
+      If BtmWqLocDepthFt > 0 Then BtmWqDepthFt = BtmWqData(BtmWqLocDepthFt)
+      If BtmWqLocDepthMeters > 0 Then BtmWqDepthMeters = BtmWqData(BtmWqLocDepthMeters)
       If BtmWqLocBatt > 0 Then BtmWqBattV = BtmWqData(BtmWqLocBatt)
       If BtmWqLocpH > 0 Then BtmWqPH = BtmWqData(BtmWqLocpH)
       If BtmWqLocpHmV > 0 Then BtmWqPHmv = BtmWqData(BtmWqLocpHmV)
@@ -3956,21 +3996,22 @@ EndSub
     t(6) = FindSpa (TurbFNUCode,TurbFNUCode,1,WqParamOrder())
     t(7) = FindSpa (DoSatCode,DoSatCode,1,WqParamOrder())
     t(8) = FindSpa (DOmgLCode,DOmgLCode,1,WqParamOrder())
-    t(9) = FindSpa (DepthCode,DepthCode,1,WqParamOrder())
-    t(10) = FindSpa (BattCode,BattCode,1,WqParamOrder())
-    t(11) = FindSpa (pHCode,pHCode,1,WqParamOrder())
-    t(12) = FindSpa (pHmVCode,pHmVCode,1,WqParamOrder())
-    t(13) = FindSpa (ORPCode,ORPCode,1,WqParamOrder())
-    t(14) = FindSpa (ChlugLCode,ChlugLCode,1,WqParamOrder())
-    t(15) = FindSpa (ChlRFUCode,ChlRFUCode,1,WqParamOrder())
-    t(16) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,WqParamOrder())
-    t(17) = FindSpa (BGApcugLCode,BGApcugLCode,1,WqParamOrder())
-    t(18) = FindSpa (FDomRFU,FDomRFU,1,WqParamOrder())
-    t(19) = FindSpa (FDomQSU,FDomQSU,1,WqParamOrder())
-    t(20) = FindSpa (NH4Code,NH4Code,1,WqParamOrder())
-    t(21) = FindSpa (NO3Code,NO3Code,1,WqParamOrder())
-    t(22) = FindSpa (CLCode,CLCode,1,WqParamOrder())
-    t(23) = FindSpa (WiperPos,WiperPos,1,WqParamOrder())
+    t(9) = FindSpa (DepthFtCode,DepthFtCode,1,WqParamOrder())
+    t(10) = FindSpa (DepthMetersCode,DepthMetersCode,1,WqParamOrder())
+    t(11) = FindSpa (BattCode,BattCode,1,WqParamOrder())
+    t(12) = FindSpa (pHCode,pHCode,1,WqParamOrder())
+    t(13) = FindSpa (pHmVCode,pHmVCode,1,WqParamOrder())
+    t(14) = FindSpa (ORPCode,ORPCode,1,WqParamOrder())
+    t(15) = FindSpa (ChlugLCode,ChlugLCode,1,WqParamOrder())
+    t(16) = FindSpa (ChlRFUCode,ChlRFUCode,1,WqParamOrder())
+    t(17) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,WqParamOrder())
+    t(18) = FindSpa (BGApcugLCode,BGApcugLCode,1,WqParamOrder())
+    t(19) = FindSpa (FDomRFU,FDomRFU,1,WqParamOrder())
+    t(20) = FindSpa (FDomQSU,FDomQSU,1,WqParamOrder())
+    t(21) = FindSpa (NH4Code,NH4Code,1,WqParamOrder())
+    t(22) = FindSpa (NO3Code,NO3Code,1,WqParamOrder())
+    t(23) = FindSpa (CLCode,CLCode,1,WqParamOrder())
+    t(24) = FindSpa (WiperPos,WiperPos,1,WqParamOrder())
     #If TopBottom Then
       BTM_t(1) = FindSpa (DateCode,DateCode,1,BtmWqParamOrder())
       BTM_t(2) = FindSpa (TimeCode,TimeCode,1,BtmWqParamOrder())
@@ -3980,21 +4021,22 @@ EndSub
       BTM_t(6) = FindSpa (TurbFNUCode,TurbFNUCode,1,BtmWqParamOrder())
       BTM_t(7) = FindSpa (DoSatCode,DoSatCode,1,BtmWqParamOrder())
       BTM_t(8) = FindSpa (DOmgLCode,DOmgLCode,1,BtmWqParamOrder())
-      BTM_t(9) = FindSpa (DepthCode,DepthCode,1,BtmWqParamOrder())
-      BTM_t(10) = FindSpa (BattCode,BattCode,1,BtmWqParamOrder())
-      BTM_t(11) = FindSpa (pHCode,pHCode,1,BtmWqParamOrder())
-      BTM_t(12) = FindSpa (pHmVCode,pHmVCode,1,BtmWqParamOrder())
-      BTM_t(13) = FindSpa (ORPCode,ORPCode,1,BtmWqParamOrder())
-      BTM_t(14) = FindSpa (ChlugLCode,ChlugLCode,1,BtmWqParamOrder())
-      BTM_t(15) = FindSpa (ChlRFUCode,ChlRFUCode,1,BtmWqParamOrder())
-      BTM_t(16) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,BtmWqParamOrder())
-      BTM_t(17) = FindSpa (BGApcugLCode,BGApcugLCode,1,BtmWqParamOrder())
-      BTM_t(18) = FindSpa (FDomRFU,FDomRFU,1,BtmWqParamOrder())
-      BTM_t(19) = FindSpa (FDomQSU,FDomQSU,1,BtmWqParamOrder())
-      BTM_t(20) = FindSpa (NH4Code,NH4Code,1,BtmWqParamOrder())
-      BTM_t(21) = FindSpa (NO3Code,NO3Code,1,BtmWqParamOrder())
-      BTM_t(22) = FindSpa (CLCode,CLCode,1,BtmWqParamOrder())
-      BTM_t(23) = FindSpa (WiperPos,WiperPos,1,BtmWqParamOrder())
+      BTM_t(9) = FindSpa (DepthFtCode,DepthFtCode,1,BtmWqParamOrder())
+      BTM_t(10) = FindSpa (DepthMetersCode,DepthMetersCode,1,BtmWqParamOrder())
+      BTM_t(11) = FindSpa (BattCode,BattCode,1,BtmWqParamOrder())
+      BTM_t(12) = FindSpa (pHCode,pHCode,1,BtmWqParamOrder())
+      BTM_t(13) = FindSpa (pHmVCode,pHmVCode,1,BtmWqParamOrder())
+      BTM_t(14) = FindSpa (ORPCode,ORPCode,1,BtmWqParamOrder())
+      BTM_t(15) = FindSpa (ChlugLCode,ChlugLCode,1,BtmWqParamOrder())
+      BTM_t(16) = FindSpa (ChlRFUCode,ChlRFUCode,1,BtmWqParamOrder())
+      BTM_t(17) = FindSpa (BGApcRFUCode,BGApcRFUCode,1,BtmWqParamOrder())
+      BTM_t(18) = FindSpa (BGApcugLCode,BGApcugLCode,1,BtmWqParamOrder())
+      BTM_t(19) = FindSpa (FDomRFU,FDomRFU,1,BtmWqParamOrder())
+      BTM_t(20) = FindSpa (FDomQSU,FDomQSU,1,BtmWqParamOrder())
+      BTM_t(21) = FindSpa (NH4Code,NH4Code,1,BtmWqParamOrder())
+      BTM_t(22) = FindSpa (NO3Code,NO3Code,1,BtmWqParamOrder())
+      BTM_t(23) = FindSpa (CLCode,CLCode,1,BtmWqParamOrder())
+      BTM_t(24) = FindSpa (WiperPos,WiperPos,1,BtmWqParamOrder())
     #EndIf
   EndSub
 #EndIf
@@ -4117,7 +4159,8 @@ EndSub
     If WqLocTurbFNU > 0 Then BurstTurbFNU = BurstData(WqLocTurbFNU)
     If WqLocDoSat > 0 Then BurstDOSat = BurstData(WqLocDoSat)
     If WqLocDOmgL > 0 Then BurstDOmgL = BurstData(WqLocDOmgL)
-    If WqLocDepth > 0 Then BurstDepthFt = BurstData(WqLocDepth)
+    If WqLocDepthFt > 0 Then BurstDepthFt = BurstData(WqLocDepthFt)
+    If WqLocDepthMeters > 0 Then BurstDepthMeters = BurstData(WqLocDepthMeters)
     If WqLocBatt > 0 Then BurstBattV = BurstData(WqLocBatt)
     If WqLocpH > 0 Then BurstpH = BurstData(WqLocpH)
     If WqLocpHmV > 0 Then BurstpHmV = BurstData(WqLocpHmV)
@@ -4152,7 +4195,8 @@ EndSub
       If BtmWqLocTurbFNU > 0 Then BtmBurstTurbFNU = BtmBurstData(BtmWqLocTurbFNU)
       If BtmWqLocDoSat > 0 Then BtmBurstDOSat = BtmBurstData(BtmWqLocDoSat)
       If BtmWqLocDOmgL > 0 Then BtmBurstDOmgL = BtmBurstData(BtmWqLocDOmgL)
-      If BtmWqLocDepth > 0 Then BtmBurstDepthFt = BtmBurstData(BtmWqLocDepth)
+      If BtmWqLocDepthFt > 0 Then BtmBurstDepthFt = BtmBurstData(BtmWqLocDepthFt)
+      If BtmWqLocDepthMeters > 0 Then BtmBurstDepthMeters = BtmBurstData(BtmWqLocDepthMeters)
       If BtmWqLocBatt > 0 Then BtmBurstBattV = BtmBurstData(BtmWqLocBatt)
       If BtmWqLocpH > 0 Then BtmBurstpH = BtmBurstData(BtmWqLocpH)
       If BtmWqLocpHmV > 0 Then BtmBurstpHmV = BtmBurstData(BtmWqLocpHmV)
@@ -4185,6 +4229,7 @@ EndSub
     MedDOmgL= BadDataIndicator
     MedORP= BadDataIndicator
     MedDepthFt = BadDataIndicator
+    MedDepthMeters = BadDataIndicator
     MedBattV= BadDataIndicator
     MedpH= BadDataIndicator
     MedpHmV= BadDataIndicator
@@ -4211,6 +4256,7 @@ EndSub
       BtmMedDOmgL= BadDataIndicator
       BtmMedORP= BadDataIndicator
       BtmMedDepthFt = BadDataIndicator
+      BtmMedDepthMeters = BadDataIndicator
       BtmMedBattV= BadDataIndicator
       BtmMedpH= BadDataIndicator
       BtmMedpHmV= BadDataIndicator
@@ -4239,6 +4285,7 @@ EndSub
     MedDOmgL= Burst.BurstDOmgL_Med
     MedORP= Burst.BurstORP_Med
     MedDepthFt = Burst.BurstDepthFt_Med
+    MedDepthMeters = Burst.BurstDepthMeters_Med
     MedBattV= Burst.BurstBattV_Med
     MedpH= Burst.BurstpH_Med
     MedpHmV= Burst.BurstpHmV_Med
@@ -4267,6 +4314,7 @@ EndSub
       BtmMedDOmgL= BtmBurst.BtmBurstDOmgL_Med
       BtmMedORP= BtmBurst.BtmBurstORP_Med
       BtmMedDepthFt = BtmBurst.BtmBurstDepthFt_Med
+      BtmMedDepthMeters = BtmBurst.BtmBurstDepthMeters_Med
       BtmMedBattV= BtmBurst.BtmBurstBattV_Med
       BtmMedpH= BtmBurst.BtmBurstpH_Med
       BtmMedpHmV= BtmBurst.BtmBurstpHmV_Med
@@ -4375,7 +4423,8 @@ EndSub
       If LocDOSat > 0 Then WqDOSat = WqSDI12Sensor(LocDOSat)
       If LocPH > 0 Then WqPH = WqSDI12Sensor(LocPH)
       If LocORP > 0 Then WqORP = WqSDI12Sensor(LocORP)
-      If LocDepth > 0 Then WqDepthFt = WqSDI12Sensor(LocDepth)
+      If LocDepthFt > 0 Then WqDepthFt = WqSDI12Sensor(LocDepthFt)
+      If LocDepthMeters > 0 Then WqDepthMeters = WqSDI12Sensor(LocDepthMeters)
       If LocTurbFNU > 0 Then WqTurbFNU = WqSDI12Sensor(LocTurbFNU)
       If LocFdomRFU > 0 Then WqFDOMrfu = WqSDI12Sensor(LocFdomRFU)
       If LocFdomQSU > 0 Then WqFDOMqsu = WqSDI12Sensor(LocFdomQSU)
@@ -4465,6 +4514,7 @@ EndSub
     WqPHmv = BadDataIndicator
     WqORP = BadDataIndicator
     WqDepthFt = BadDataIndicator
+    WqDepthMeters = BadDataIndicator
     WqBattV = BadDataIndicator
     WqBGAugl = BadDataIndicator
     WqBGArfu = BadDataIndicator
@@ -4492,6 +4542,7 @@ EndSub
       BtmWqPHmv = BadDataIndicator
       BtmWqORP = BadDataIndicator
       BtmWqDepthFt = BadDataIndicator
+      BtmWqDepthMeters = BadDataIndicator
       BtmWqBattV = BadDataIndicator
       BtmWqBGAugl = BadDataIndicator
       BtmWqBGArfu = BadDataIndicator
@@ -6888,6 +6939,14 @@ Sub ResetSunaTimers
         SunaReady = False
         WipeSuna = False
         PortSet (SunaWipeSwitch,0)' keep wiper off
+        If ManualSunaOn = True Then
+          SerialOpen(SunaPort,115200,0,0,3000)
+          PortSet(SunaSwitch,1)
+          Else
+          SerialFlush(SunaPort)
+          SerialClose(SunaPort)
+          PortSet(SunaSwitch,0)
+        EndIf
         If Mod15Minutes = 840 Then 'if minute 14
           WipeSuna = True 'set the wiper flag to true
           Timer (SunaWipeTimer,mSec,2) 'start a timer so we can wipe late in the scan
@@ -7613,6 +7672,12 @@ Sub ResetSunaTimers
       If StoreVariablesFlg = true Then Call StoreVariables
       #If HasSuna Then 'if there's a suna
         If WipeSuna = True Then 'if wipe flag was set to true based on the Mod15Min
+          If ManualSunaOn = True Then 'if the Suna was manually turned on, turn it back off before we wipe to get ready for sample.
+            ManualSunaOn = False
+            SerialFlush(SunaPort)
+            SerialClose(SunaPort)
+            PortSet(SunaSwitch,0)
+          EndIf
           Do 'Start a Do/Loop
             WipeStart = Timer(SunaWipeTimer,mSec,4) 'read the timer in
             WipeStart = WipeStart/1000 'convert mSec to Seconds
