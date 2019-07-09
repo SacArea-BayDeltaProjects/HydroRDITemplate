@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190705
-Const ProgramVersion = "4.1"
+Const ProgramVersionDate = 20190709
+Const ProgramVersion = "4.11"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -254,6 +254,7 @@ Const ProgramVersion = "4.1"
 '20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
 '20190703 - MRI Implemented easier to track program versioning with variable "ProgramVersion". Starting at 4.0. Adjustment of the version number should reflect severity of the changes made.
 '20190705 - TAV Added V1, V2, V3, V4 to DataOut table.
+'20190705 - TAV Increased buffer for SUNA port when it's opened to record data. Eliminated delay between opening the SerialIn command. Adjusted when the Suna gets turned off if it was manually turned on.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -6954,7 +6955,7 @@ Sub ResetSunaTimers
         WipeSuna = False
         PortSet (SunaWipeSwitch,0)' keep wiper off
         If ManualSunaOn = True Then
-          SerialOpen(SunaPort,115200,0,0,3000)
+          SerialOpen(SunaPort,115200,0,0,6000)
           PortSet(SunaSwitch,1)
           Else
           SerialFlush(SunaPort)
@@ -6964,6 +6965,10 @@ Sub ResetSunaTimers
         If Mod15Minutes = 840 Then 'if minute 14
           WipeSuna = True 'set the wiper flag to true
           Timer (SunaWipeTimer,mSec,2) 'start a timer so we can wipe late in the scan
+          SerialFlush(SunaPort)
+          SerialClose(SunaPort)
+          PortSet(SunaSwitch,0)
+          ManualSunaOn = False
         Else
           WipeSuna = False 'otherwise, don't wipe
         EndIf
@@ -6971,7 +6976,7 @@ Sub ResetSunaTimers
           PortSet (SunaSwitch,1) 'turn the Suna power ON
           Timer (SunaSampleTimer,mSec,2) 'start a timer to sample in 15sec
           SampleSuna = True 'set flag to trigger sampling routine
-        Else
+        ElseIf Mod15Minutes <> 0 AND ManualSunaOn = False
           PortSet (SunaSwitch,0) 'otherwise, keep suna off
           SampleSuna = False 'don't trigger sampling
         EndIf
@@ -7686,12 +7691,6 @@ Sub ResetSunaTimers
       If StoreVariablesFlg = true Then Call StoreVariables
       #If HasSuna Then 'if there's a suna
         If WipeSuna = True Then 'if wipe flag was set to true based on the Mod15Min
-          If ManualSunaOn = True Then 'if the Suna was manually turned on, turn it back off before we wipe to get ready for sample.
-            ManualSunaOn = False
-            SerialFlush(SunaPort)
-            SerialClose(SunaPort)
-            PortSet(SunaSwitch,0)
-          EndIf
           Do 'Start a Do/Loop
             WipeStart = Timer(SunaWipeTimer,mSec,4) 'read the timer in
             WipeStart = WipeStart/1000 'convert mSec to Seconds
@@ -7717,7 +7716,7 @@ Sub ResetSunaTimers
           Do 'start Do/Loop
             SunaTimer = Timer(SunaSampleTimer,mSec,4) 'read sampling timer
             SunaTimer = SunaTimer/1000 'convert from mSec to Sec
-            If SunaTimer >= 13 Then 'if the Suna has been on for at least 13 seconds (warm up)- get remaining two seconds in the delay after opening SerialPort
+            If SunaTimer >= 15 Then 'if the Suna has been on for at least 15 seconds (warm up)
               SunaReady = True 'we are ready to actually read in data
               ExitDo 'Exit the loop
             Else
@@ -7726,19 +7725,18 @@ Sub ResetSunaTimers
             Delay (1,250,mSec) 'delay 0.25 sec before checking time again
           Loop 'continue loop until we are ready
           If SunaReady = True Then 'now that we're ready
-            SerialOpen(SunaPort,115200,0,0,3000) 'open the serial port
+            SerialOpen(SunaPort,115200,0,0,6000) 'open the serial port with enough buffer to hold 3 full strings
             oCount = 1 'start a counter at 1
-            Delay(1,2,Sec) 'delay for 2 seconds to give port time to open and finish warm up time
             SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
             SunaSampleStart = SunaSampleStart/1000
             For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
               SunaMissedCnt = 0 'set the missed count to 0
               Do 'start Do/Loop
-                SerialIn(SunaBurstIn,SunaPort,50,CHR(13)+CHR(10),3000) 'read data into SunaBurstIn string
+                SerialIn(SunaBurstIn,SunaPort,50,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string
                 SunaStringLen = Len(SunaBurstIn) 'get the length of the string
                 If SunaStringLen <> 0 Then 'if the string is longer than 0 bytes (maybe play with this?)
                   LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (only want to store LightFrames)
-                  Delay (1,50,mSec) 'delay 0.5sec
+                  Delay (1,50,mSec) 'delay 50 millisec
                   If LocLF = 5 Then 'if the L is found at byte 5
                     LFrame = True 'we know it's a LightFrame
                   Else
