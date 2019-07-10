@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190709
-Const ProgramVersion = "4.11"
+Const ProgramVersionDate = 20190710
+Const ProgramVersion = "4.12"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -254,7 +254,8 @@ Const ProgramVersion = "4.11"
 '20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
 '20190703 - MRI Implemented easier to track program versioning with variable "ProgramVersion". Starting at 4.0. Adjustment of the version number should reflect severity of the changes made.
 '20190705 - TAV Added V1, V2, V3, V4 to DataOut table.
-'20190705 - TAV Increased buffer for SUNA port when it's opened to record data. Eliminated delay between opening the SerialIn command. Adjusted when the Suna gets turned off if it was manually turned on.
+'20190709 - TAV Increased buffer for SUNA port when it's opened to record data. Eliminated delay between opening the SerialIn command. Adjusted when the Suna gets turned off if it was manually turned on.
+'20190710 - TAV Added Program info to SVMaq table for easy access in case it's needed before midnight when QAQC gets written.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -2635,6 +2636,9 @@ EndTable
 DataTable (SVMaq,True,1)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
+  Sample (1,Program,String)
+  Sample (1,ProgVersDate,String)
+  Sample (1,ProgVersion, String)
   Sample (1,CR1Volts,FP2)
   #If HasVM <> False Then
     Sample (1,StagePrime,FP2)
