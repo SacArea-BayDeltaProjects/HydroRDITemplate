@@ -5,7 +5,7 @@
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
 Const ProgramVersionDate = 20190711
-Const ProgramVersion = "4.13"
+Const ProgramVersion = "4.2"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -257,6 +257,8 @@ Const ProgramVersion = "4.13"
 '20190709 - TAV Increased buffer for SUNA port when it's opened to record data. Eliminated delay between opening the SerialIn command. Adjusted when the Suna gets turned off if it was manually turned on.
 '20190710 - TAV Added Program info to SVMaq table for easy access in case it's needed before midnight when QAQC gets written.
 '20190711 - TAV Put "MaxBins" in the Customize Constants section to more easily establish how many bins are wanted at the site.
+'           TAV Fixed some problems with conditional compiling if WqSonde = "NONE". Still some more work to do with other Customuze Constant options.
+
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -905,8 +907,8 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public GetBurst As Boolean
   Public StartTopBurstTimer
   #If TopBottom = False Then
-  Public StartTopBurst As Boolean
-  Public TopBurstDelay
+    Public StartTopBurst As Boolean
+    Public TopBurstDelay
   #EndIf
   #If TopBottom Then
     Public GetBtmBurst As Boolean
@@ -1274,208 +1276,206 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       '  Public BtmWqManualCycle As Boolean
     #EndIf
   #EndIf
-  Public IsWQNClosed As Boolean 'Keep this outside conditional compile until we take time to actually fix it. Works like this though.
-  'variables for aquarius table
-  Public AvgIndexVel As Float
-  Public AvgVMTemp As Float
-  Public AvgVMPitch As Float
-  Public AvgVMRoll As Float
-  Public AvgPS1Stg As Float
-  Public AvgPS2Stg As Float
-  Public AvgUpBeamStg As Float
-  'Public AvgLoggerQcfs As Float
-  'Public AvgLoggerMeanVel As Float  Maybe bring this into Aquarius for internal use if we deem it necessary?
-  'Public AvgStagePrime As Float
-  'Public AvgStageSec As Float
+#EndIf
+Public IsWQNClosed As Boolean 'Keep this outside conditional compile until we take time to actually fix it. Works like this though.
+'variables for aquarius table
+Public AvgIndexVel As Float
+Public AvgVMTemp As Float
+Public AvgVMPitch As Float
+Public AvgVMRoll As Float
+Public AvgPS1Stg As Float
+Public AvgPS2Stg As Float
+Public AvgUpBeamStg As Float
+'Public AvgLoggerQcfs As Float
+'Public AvgLoggerMeanVel As Float  Maybe bring this into Aquarius for internal use if we deem it necessary?
+'Public AvgStagePrime As Float
+'Public AvgStageSec As Float
 
-  'Public WqSondeDead As Boolean 'indicator that the YSI is flatlined or out
-  'Public WqSondeDeadCnt As Long 'how long has it been flatlined or out?
-  'Public WqErrCount As Long
-  'Public WqError As Boolean
-
-
-  'Declare variables for velocity meter data
-  Public VMtempF As Float
-  Public VMupBeam As Float
-  Public VMpressure As Float
-  Public WHpressure As Float
-  Public VMHeading As Float
-  Public VMpitch As Float
-  Public VMroll As Float
-  Public VMVolts As Float
-  Public VMtempC As Float
-  Public VMdataIn As Boolean
+'Public WqSondeDead As Boolean 'indicator that the YSI is flatlined or out
+'Public WqSondeDeadCnt As Long 'how long has it been flatlined or out?
+'Public WqErrCount As Long
+'Public WqError As Boolean
 
 
-  '-------------------------------------------------------DEBUGGIMG!!!!!-------------------------------------------------
-  #If Debugging = True Then
-    Public DepthMSB As Long 'debugging variables
-    Public DepthMSB1 As Long'debugging variables
-    Public DepthLSB As Long'debugging variables
-    Public DepthLSB1 As Long'debugging variables
-    Public IDwords(14) As Long
-    Public LSBTemp As Long
-    Public LSB1Temp As Long
-    Public MSBTemp As Long
-    Public MSB1Temp As Long
-    Public Subscans As Long
-    Public EnsBytes As Long
-    Public MissedEns As Long
-    Public ADCPLoop As Long
-    Public ADCPDone As Boolean
-    Public ScanDiff As Long
-    Public ScanStart
-    Public ScanEnd
-    Public ADCPEnd
-    Public BeforeBurst
-    Public AfterBurst
-    Public CDMACheckStart
-    Public CDMACheckEnd
-    Public CDMACheckTotTime
-    Public ZeroVMTimeStart
-    Public ZeroVMTimeEnd
-    Public ZeroVMTotTime
-    Public ChkSumChkStart
-    Public ChkSumChkEnd
-    Public ChkSumChkTotTime
-    Public MainDecodeStart
-    Public MainDecodeEnd
-    Public MainDecodeTotTime
-    Public CalcRangeStart
-    Public CalcRangeEnd
-    Public CalcRangeTotTime
-    Public OneMinCalcStart
-    Public OneMinCalcEnd
-    Public OneMinCalcTotTime
-    Public CalcQStart
-    Public CalcQEnd
-    Public CalcQTotTime
-    Public GetVMMemStart
-    Public GetVMMemEnd
-    Public GetVMMemTotTime
-    Public VMTimeStart
-    Public VMTimeEnd
-    Public VMTotTime
-    Public CallBmChkStart
-    Public CallBmChkEnd
-    Public CallBmChkTotTime
-    Public DataTabsStart
-    Public DataTabsEnd
-    Public DataTabsTotTime
-    Public DataOutStart
-    Public DataOutEnd
-    Public DataOutTotTime
-    Public Data1mStart
-    Public Data1mEnd
-    Public Data1mTotTime
-    Public AQTabStart
-    Public AQTabEnd
-    Public AQTabTotTime
-    Public StoreToCrdStart
-    Public StoreToCrdEnd
-    Public StoreToCrdTotTime
-    Public ChkSpikeStart
-    Public ChkSpikeEnd
-    Public ChkSpikeTotTime
-    Public AddSpikeStart
-    Public AddSpikeEnd
-    Public AddSpikeTotTime
-    Public ProcessTime
-    Public DataOutCount
-    Public AQcount
-    Public Data1mCount
-    Public CardBadCount
-    Public CardOkCount
-    Dim DebugTimer
-  #Else
-    Dim DepthMSB As Long 'debugging variables
-    Dim DepthMSB1 As Long'debugging variables
-    Dim DepthLSB As Long'debugging variables
-    Dim DepthLSB1 As Long'debugging variables
-    Dim IDwords(14) As Long
-    Dim LSBTemp As Long
-    Dim LSB1Temp As Long
-    Dim MSBTemp As Long
-    Dim MSB1Temp As Long
-    Dim Subscans As Long
-    Dim EnsBytes As Long
-    Dim MissedEns As Long
-    Dim ADCPLoop As Long
-    Dim ADCPDone As Boolean
-    Dim ScanDiff As Long
-    Dim ScanStart
-    Dim ScanEnd
-    Dim ADCPEnd
-    Dim BeforeBurst
-    Dim AfterBurst
-    Dim CDMACheckStart
-    Dim CDMACheckEnd
-    Dim CDMACheckTotTime
-    Dim ZeroVMTimeStart
-    Dim ZeroVMTimeEnd
-    Dim ZeroVMTotTime
-    Dim ChkSumChkStart
-    Dim ChkSumChkEnd
-    Dim ChkSumChkTotTime
-    Dim MainDecodeStart
-    Dim MainDecodeEnd
-    Dim MainDecodeTotTime
-    Dim CalcRangeStart
-    Dim CalcRangeEnd
-    Dim CalcRangeTotTime
-    Dim OneMinCalcStart
-    Dim OneMinCalcEnd
-    Dim OneMinCalcTotTime
-    Dim CalcQStart
-    Dim CalcQEnd
-    Dim CalcQTotTime
-    Dim GetVMMemStart
-    Dim GetVMMemEnd
-    Dim GetVMMemTotTime
-    Dim VMTimeStart
-    Dim VMTimeEnd
-    Dim VMTotTime
-    Dim CallBmChkStart
-    Dim CallBmChkEnd
-    Dim CallBmChkTotTime
-    Dim DataTabsStart
-    Dim DataTabsEnd
-    Dim DataTabsTotTime
-    Dim DataOutStart
-    Dim DataOutEnd
-    Dim DataOutTotTime
-    Dim Data1mStart
-    Dim Data1mEnd
-    Dim Data1mTotTime
-    Dim AQTabStart
-    Dim AQTabEnd
-    Dim AQTabTotTime
-    Dim StoreToCrdStart
-    Dim StoreToCrdEnd
-    Dim StoreToCrdTotTime
-    Dim ChkSpikeStart
-    Dim ChkSpikeEnd
-    Dim ChkSpikeTotTime
-    Dim AddSpikeStart
-    Dim AddSpikeEnd
-    Dim AddSpikeTotTime
-    Dim ProcessTime
-    Dim DataOutCount
-    Dim AQcount
-    Dim Data1mCount
-    Dim CardBadCount
-    Dim CardOkCount
-    Dim DebugTimer
-  #EndIf
-  '---------------------------------------------------------DEBUGGING!---------------------------------------------------------
+'Declare variables for velocity meter data
+Public VMtempF As Float
+Public VMupBeam As Float
+Public VMpressure As Float
+Public WHpressure As Float
+Public VMHeading As Float
+Public VMpitch As Float
+Public VMroll As Float
+Public VMVolts As Float
+Public VMtempC As Float
+Public VMdataIn As Boolean
+'------------------------String used to send specific data through serial communications to another logger-------------------
+'Public OutString As String * 1000 'string of variables/values to be sent out to another datalogger
+Public SendFlowData As Boolean 'user selectable flag to send only flow data
 
-  '---------VM Diagnostic Variables
-  'Public PowerSwitch As Boolean 'does user want to allow power to be cycled on ADCP
-  Public Banner As String * 200 'ADCP response from sending a break
-  Public Warning As String * 2000 'echo of ADCP response for anything other than a break
-  Public VMMemString As String * 200 'response for "get free memory" command
-  'Public PT3Full As String * 2000 'Response from PT3 command
 
+'-------------------------------------------------------DEBUGGIMG!!!!!-------------------------------------------------
+#If Debugging = True Then
+  Public DepthMSB As Long 'debugging variables
+  Public DepthMSB1 As Long'debugging variables
+  Public DepthLSB As Long'debugging variables
+  Public DepthLSB1 As Long'debugging variables
+  Public IDwords(14) As Long
+  Public LSBTemp As Long
+  Public LSB1Temp As Long
+  Public MSBTemp As Long
+  Public MSB1Temp As Long
+  Public Subscans As Long
+  Public EnsBytes As Long
+  Public MissedEns As Long
+  Public ADCPLoop As Long
+  Public ADCPDone As Boolean
+  Public ScanDiff As Long
+  Public ScanStart
+  Public ScanEnd
+  Public ADCPEnd
+  Public BeforeBurst
+  Public AfterBurst
+  Public CDMACheckStart
+  Public CDMACheckEnd
+  Public CDMACheckTotTime
+  Public ZeroVMTimeStart
+  Public ZeroVMTimeEnd
+  Public ZeroVMTotTime
+  Public ChkSumChkStart
+  Public ChkSumChkEnd
+  Public ChkSumChkTotTime
+  Public MainDecodeStart
+  Public MainDecodeEnd
+  Public MainDecodeTotTime
+  Public CalcRangeStart
+  Public CalcRangeEnd
+  Public CalcRangeTotTime
+  Public OneMinCalcStart
+  Public OneMinCalcEnd
+  Public OneMinCalcTotTime
+  Public CalcQStart
+  Public CalcQEnd
+  Public CalcQTotTime
+  Public GetVMMemStart
+  Public GetVMMemEnd
+  Public GetVMMemTotTime
+  Public VMTimeStart
+  Public VMTimeEnd
+  Public VMTotTime
+  Public CallBmChkStart
+  Public CallBmChkEnd
+  Public CallBmChkTotTime
+  Public DataTabsStart
+  Public DataTabsEnd
+  Public DataTabsTotTime
+  Public DataOutStart
+  Public DataOutEnd
+  Public DataOutTotTime
+  Public Data1mStart
+  Public Data1mEnd
+  Public Data1mTotTime
+  Public AQTabStart
+  Public AQTabEnd
+  Public AQTabTotTime
+  Public StoreToCrdStart
+  Public StoreToCrdEnd
+  Public StoreToCrdTotTime
+  Public ChkSpikeStart
+  Public ChkSpikeEnd
+  Public ChkSpikeTotTime
+  Public AddSpikeStart
+  Public AddSpikeEnd
+  Public AddSpikeTotTime
+  Public ProcessTime
+  Public DataOutCount
+  Public AQcount
+  Public Data1mCount
+  Public CardBadCount
+  Public CardOkCount
+  Dim DebugTimer
+#Else
+  Dim DepthMSB As Long 'debugging variables
+  Dim DepthMSB1 As Long'debugging variables
+  Dim DepthLSB As Long'debugging variables
+  Dim DepthLSB1 As Long'debugging variables
+  Dim IDwords(14) As Long
+  Dim LSBTemp As Long
+  Dim LSB1Temp As Long
+  Dim MSBTemp As Long
+  Dim MSB1Temp As Long
+  Dim Subscans As Long
+  Dim EnsBytes As Long
+  Dim MissedEns As Long
+  Dim ADCPLoop As Long
+  Dim ADCPDone As Boolean
+  Dim ScanDiff As Long
+  Dim ScanStart
+  Dim ScanEnd
+  Dim ADCPEnd
+  Dim BeforeBurst
+  Dim AfterBurst
+  Dim CDMACheckStart
+  Dim CDMACheckEnd
+  Dim CDMACheckTotTime
+  Dim ZeroVMTimeStart
+  Dim ZeroVMTimeEnd
+  Dim ZeroVMTotTime
+  Dim ChkSumChkStart
+  Dim ChkSumChkEnd
+  Dim ChkSumChkTotTime
+  Dim MainDecodeStart
+  Dim MainDecodeEnd
+  Dim MainDecodeTotTime
+  Dim CalcRangeStart
+  Dim CalcRangeEnd
+  Dim CalcRangeTotTime
+  Dim OneMinCalcStart
+  Dim OneMinCalcEnd
+  Dim OneMinCalcTotTime
+  Dim CalcQStart
+  Dim CalcQEnd
+  Dim CalcQTotTime
+  Dim GetVMMemStart
+  Dim GetVMMemEnd
+  Dim GetVMMemTotTime
+  Dim VMTimeStart
+  Dim VMTimeEnd
+  Dim VMTotTime
+  Dim CallBmChkStart
+  Dim CallBmChkEnd
+  Dim CallBmChkTotTime
+  Dim DataTabsStart
+  Dim DataTabsEnd
+  Dim DataTabsTotTime
+  Dim DataOutStart
+  Dim DataOutEnd
+  Dim DataOutTotTime
+  Dim Data1mStart
+  Dim Data1mEnd
+  Dim Data1mTotTime
+  Dim AQTabStart
+  Dim AQTabEnd
+  Dim AQTabTotTime
+  Dim StoreToCrdStart
+  Dim StoreToCrdEnd
+  Dim StoreToCrdTotTime
+  Dim ChkSpikeStart
+  Dim ChkSpikeEnd
+  Dim ChkSpikeTotTime
+  Dim AddSpikeStart
+  Dim AddSpikeEnd
+  Dim AddSpikeTotTime
+  Dim ProcessTime
+  Dim DataOutCount
+  Dim AQcount
+  Dim Data1mCount
+  Dim CardBadCount
+  Dim CardOkCount
+  Dim DebugTimer
+#EndIf
+'---------------------------------------------------------DEBUGGING!---------------------------------------------------------
+
+#If HasVM Then
   #If GetNoiseFloor = Yes Then
     Public NoiseFlrParsed As String * 105 '"RSSI Noise Floor" pasrsed from PT3 Command
     Public FilterString As String * 5 'Holds string that the "InStr" instruction searches for
@@ -1487,6 +1487,12 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public SendPT3 As Boolean
     Public PT3Time As Long
   #EndIf
+  '---------VM Diagnostic Variables
+  'Public PowerSwitch As Boolean 'does user want to allow power to be cycled on ADCP
+  Public Banner As String * 200 'ADCP response from sending a break
+  Public Warning As String * 2000 'echo of ADCP response for anything other than a break
+  Public VMMemString As String * 200 'response for "get free memory" command
+  'Public PT3Full As String * 2000 'Response from PT3 command
   Public CMD As String 'user entered command for the ADCP, ex: make bin size 250cm = "ws250"
   Public CSCmd As String * 10 'echo of CS (deploy command) to ensure ADCP deployed properly
   Public SendCMD As Boolean 'after command is input in "CMD" user must turn this to "true" to actually send the command to ADCP
@@ -1500,129 +1506,130 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public VMNoMemCount As Float 'how many times has the ADCP had no internal memory remaining
   Public RecErased As Boolean 'flag indicating the internal memory was erased
   Public RecEraseString As String * 200 'echo of response from ADCP when internal memory is erased (also acts as indicator to trigger "RecErased" flag)
+#EndIf
 
-  #If RadioNetwork = True Then
-    #If IsMaster = True Then
-      ConstTable
-        Const NetworkSlaves = 2 'How many nodes are in the system?
-      EndConstTable
-      #If NetworkSlaves = 1 Then 'Declare how many nodes are in the system with conditional compile
-        Public NeighborApb = 3 'PakBus address of Node "A"
-        Public NeighborASecCode = "0000" 'Security code of neighbor A (use "0000" if no security code is set)
-      #ElseIf NetworkSlaves = 2 Then
-        Public NeighborApb = 3
-        Public NeighborASecCode = "0000"
-        Public NeighborBpb = 4 'PakBus address of Node "B"
-        Public NeighborBSecCode = "0000" 'Security code of neighbor B (use "0000" if no security code is set)
-      #ElseIf NetworkSlaves = 3 Then
-        Public NeighborApb = 3
-        Public NeighborASecCode = "0000"
-        Public NeighborBpb = 4
-        Public NeighborBSecCode = "0000"
-        Public NeighborCpb = 5 'PakBus address of Node "C"
-        Public NeighborCSecCode = "0000" 'Security code of neighbor C (use "0000" if no security code is set)
-      #ElseIf NetworkSlaves = 4 Then
-        Public NeighborApb = 3
-        Public NeighborASecCode = "0000"
-        Public NeighborBpb = 4
-        Public NeighborBSecCode = "0000"
-        Public NeighborCpb = 5
-        Public NeighborCSecCode = "0000"
-        Public NeighborDpb = 6 'PakBus address of Node "D"
-        Public NeighborDSecCode = "0000" 'Security code of neighbor D (use "0000" if no security code is set)
-      #EndIf 'If Master
-    #ElseIf IsMaster = False Then 'if it's part of a radio network but not the master datalogger
-      Public MasterPB = 2 'PakBus address of master datalogger
-      Public MasterSecCode = "0000" 'security code of master datalogger
-    #EndIf 'If Slave
+#If RadioNetwork = True Then
+  #If IsMaster = True Then
+    ConstTable
+      Const NetworkSlaves = 2 'How many nodes are in the system?
+    EndConstTable
+    #If NetworkSlaves = 1 Then 'Declare how many nodes are in the system with conditional compile
+      Public NeighborApb = 3 'PakBus address of Node "A"
+      Public NeighborASecCode = "0000" 'Security code of neighbor A (use "0000" if no security code is set)
+    #ElseIf NetworkSlaves = 2 Then
+      Public NeighborApb = 3
+      Public NeighborASecCode = "0000"
+      Public NeighborBpb = 4 'PakBus address of Node "B"
+      Public NeighborBSecCode = "0000" 'Security code of neighbor B (use "0000" if no security code is set)
+    #ElseIf NetworkSlaves = 3 Then
+      Public NeighborApb = 3
+      Public NeighborASecCode = "0000"
+      Public NeighborBpb = 4
+      Public NeighborBSecCode = "0000"
+      Public NeighborCpb = 5 'PakBus address of Node "C"
+      Public NeighborCSecCode = "0000" 'Security code of neighbor C (use "0000" if no security code is set)
+    #ElseIf NetworkSlaves = 4 Then
+      Public NeighborApb = 3
+      Public NeighborASecCode = "0000"
+      Public NeighborBpb = 4
+      Public NeighborBSecCode = "0000"
+      Public NeighborCpb = 5
+      Public NeighborCSecCode = "0000"
+      Public NeighborDpb = 6 'PakBus address of Node "D"
+      Public NeighborDSecCode = "0000" 'Security code of neighbor D (use "0000" if no security code is set)
+    #EndIf 'If Master
+  #ElseIf IsMaster = False Then 'if it's part of a radio network but not the master datalogger
+    Public MasterPB = 2 'PakBus address of master datalogger
+    Public MasterSecCode = "0000" 'security code of master datalogger
+  #EndIf 'If Slave
+#EndIf
+' Declare placeholders for all RF451 Settings
+#If RadioNetwork = True Then
+  Public ReadRadSettings As Boolean 'Trigger to read in radio settings
+  Public SetRadSettings As Boolean 'Trigger to reset radio settings
+  Public SetRadToDefault As Boolean 'Trigger to Reset radio to factory defaults
+  Public RadOn As Long 'Radio Enabled (0= False, 1 = True)
+  Public RadOpMode As Long 'Operation mode (Point to Multipoint Master = 2, Point to Multipoint Slave = 3, Point to Multipoint Repeater = 7)
+  Public RadFreqKey As Long  'Frequency Key (Min = 0, Max = 14)
+  Public RadMaxPacket As Long '(Min = 0, Max = 9)
+  Public RadMinPacket As Long '(Min = 0, Max = 9)
+  Public RadDataRate As Long '(3 = Normal 115Kbps, 2 = High 153Kbps)
+  Public RadTxPwr As Long 'Transmit power, 0=min, 10=max)
+  Public RadRetryTO As Long 'Retry timeout, sets delay the radio will wait before dropping the connection to a master or repeater (factory=255 (if 1 in 255 packets is successful, link is maintained, Min = 8, Max = 255)
+  Public RadLowPwr As Long 'Sets how many "slots" the transceiver sleeps (min = 2, max = 31)
+  Public RadRepeaters As Long 'Are repeaters used in system (0 = no repeaters, 1 = repeaters used)
+  Public RadPacketRepeat As Long 'hOw many times is the packet transmitted? (min= 0 (1 transmission), max = 9 (10 transmissions))
+  Public RadSlaveRetry As Long 'How many times should the slave retrasmit a packet to master? (min = 0, max =9)
+  Public RadFreqRepeat As Long '0 = Use Master Freq Key, 1= Use Repeater Freq Key
+  Public RadSlaveRepeat As Long '0 = Normal, 1 = Enable Slave/Repeater
+  Public RadRxSubID As Long 'Min = 0, Max = 15
+  Public RadTxSubID As Long 'Min = 0, Max = 15
+  Public RadNetID As Long 'Network ID, Min= 0, Max = 4095
+
+  #If IsMaster = False Then 'If Not master then define Reset Slave
+    Public ResetSlave As Boolean 'Set to true (automatically or manually) to reset the slave radio
   #EndIf
-  ' Declare placeholders for all RF451 Settings
-  #If RadioNetwork = True Then
-    Public ReadRadSettings As Boolean 'Trigger to read in radio settings
-    Public SetRadSettings As Boolean 'Trigger to reset radio settings
-    Public SetRadToDefault As Boolean 'Trigger to Reset radio to factory defaults
-    Public RadOn As Long 'Radio Enabled (0= False, 1 = True)
-    Public RadOpMode As Long 'Operation mode (Point to Multipoint Master = 2, Point to Multipoint Slave = 3, Point to Multipoint Repeater = 7)
-    Public RadFreqKey As Long  'Frequency Key (Min = 0, Max = 14)
-    Public RadMaxPacket As Long '(Min = 0, Max = 9)
-    Public RadMinPacket As Long '(Min = 0, Max = 9)
-    Public RadDataRate As Long '(3 = Normal 115Kbps, 2 = High 153Kbps)
-    Public RadTxPwr As Long 'Transmit power, 0=min, 10=max)
-    Public RadRetryTO As Long 'Retry timeout, sets delay the radio will wait before dropping the connection to a master or repeater (factory=255 (if 1 in 255 packets is successful, link is maintained, Min = 8, Max = 255)
-    Public RadLowPwr As Long 'Sets how many "slots" the transceiver sleeps (min = 2, max = 31)
-    Public RadRepeaters As Long 'Are repeaters used in system (0 = no repeaters, 1 = repeaters used)
-    Public RadPacketRepeat As Long 'hOw many times is the packet transmitted? (min= 0 (1 transmission), max = 9 (10 transmissions))
-    Public RadSlaveRetry As Long 'How many times should the slave retrasmit a packet to master? (min = 0, max =9)
-    Public RadFreqRepeat As Long '0 = Use Master Freq Key, 1= Use Repeater Freq Key
-    Public RadSlaveRepeat As Long '0 = Normal, 1 = Enable Slave/Repeater
-    Public RadRxSubID As Long 'Min = 0, Max = 15
-    Public RadTxSubID As Long 'Min = 0, Max = 15
-    Public RadNetID As Long 'Network ID, Min= 0, Max = 4095
 
-    #If IsMaster = False Then 'If Not master then define Reset Slave
-      Public ResetSlave As Boolean 'Set to true (automatically or manually) to reset the slave radio
+  Public ResetTried As Boolean 'indicates whether a reset of the radio was attempted
+  Public NextTryCnt As Float 'counter to see how long it's been since last reset
+  Public MaxNextTryCnt = 10 'user threshold for how long to wait between reset attempts
+  Public ResetTryOK As Boolean 'flag to tell logger enough time passed to try a reset again. Set to True on Compile, then to false once a reset has been tried
+  Public RadResetAttempts As Float 'how many times has the radio attempted a reset?
+
+  Const MaxLinksDeadCnt = 10 'max number of times all links can be dead before a reset is attempted.
+#EndIf 'If Radio Network
+'Declare variables based on if the logger is in a radio network and whether it's the master in the network or not.
+#If IsMaster = True AND RadioNetwork = True Then
+  #If NetworkSlaves > 0 Then
+    Public AllLinksDead As Float 'counter to record how many times all links have been dead
+    Public SendToNetwork As Float 'Placeholder variable to send to the network, used to get response from loggers whether communication is successful or not
+    Public ResetMaster As Boolean
+    #If NetworkSlaves = 1 Then 'if there is only one node in the network (Simple Master/Slave communication, 2 dataloggers in network, 1 master, 1 slave)
+      Public SendToAresult As Float 'Result of whether the SendVariable worked or not (cue for if comms were successful)
+      Public SendToAFailCnt As Float 'count for how many times the comms have failed
+      Public MaxAFails = 5 'max number of times comms can fail before resetting itself
+      Public LinkToAdead As Boolean 'is the link to SlaveX considered dead (counter exceeds threshold)
+    #ElseIf NetworkSlaves = 2 Then 'if there are two nodes in the network (both communicating directly through master, 3 dataloggers in network, 1 master, 2 slaves)
+      Public SendToAresult As Float
+      Public SendToAFailCnt As Float
+      Public MaxAFails = 5
+      Public LinkToAdead As Boolean
+      Public SendToBresult As Float
+      Public SendToBFailCnt As Float
+      Public MaxBFails = 5
+      Public LinkToBdead As Boolean
+    #ElseIf NetworkSlaves = 3 Then 'if there are three nodes in the network (all three communicating directly through master, 4 dataloggers in network, 1 master, 3 slaves)
+      Public SendToAresult As Float
+      Public SendToAFailCnt As Float
+      Public MaxAFails = 5
+      Public LinkToAdead As Boolean
+      Public SendToBresult As Float
+      Public SendToBFailCnt As Float
+      Public MaxBFails = 5
+      Public LinkToBdead As Boolean
+      Public SendToCresult As Float
+      Public SendToCFailCnt As Float
+      Public MaxCFails = 5
+      Public LinkToCdead As Boolean
+    #ElseIf NetworkSlaves = 4 Then 'if there are four nodes in the network (all four communicating directly through master 5 dataloggers in network, 1 master, 4 slaves)
+      Public SendToAresult As Float
+      Public SendToAFailCnt As Float
+      Public MaxAFails = 5
+      Public LinkToAdead As Boolean
+      Public SendToBresult As Float
+      Public SendToBFailCnt As Float
+      Public MaxBFails = 5
+      Public LinkToBdead As Boolean
+      Public SendToCresult As Float
+      Public SendToCFailCnt As Float
+      Public MaxCFails = 5
+      Public LinkToCdead As Boolean
+      Public SendToDresult As Float
+      Public SendToDFailCnt As Float
+      Public MaxDFails = 5
+      Public LinkToDdead As Boolean
     #EndIf
-
-    Public ResetTried As Boolean 'indicates whether a reset of the radio was attempted
-    Public NextTryCnt As Float 'counter to see how long it's been since last reset
-    Public MaxNextTryCnt = 10 'user threshold for how long to wait between reset attempts
-    Public ResetTryOK As Boolean 'flag to tell logger enough time passed to try a reset again. Set to True on Compile, then to false once a reset has been tried
-    Public RadResetAttempts As Float 'how many times has the radio attempted a reset?
-
-    Const MaxLinksDeadCnt = 10 'max number of times all links can be dead before a reset is attempted.
-  #EndIf
-  'Declare variables based on if the logger is in a radio network and whether it's the master in the network or not.
-  #If IsMaster = True AND RadioNetwork = True Then
-    #If NetworkSlaves > 0 Then
-      Public AllLinksDead As Float 'counter to record how many times all links have been dead
-      Public SendToNetwork As Float 'Placeholder variable to send to the network, used to get response from loggers whether communication is successful or not
-      Public ResetMaster As Boolean
-      #If NetworkSlaves = 1 Then 'if there is only one node in the network (Simple Master/Slave communication, 2 dataloggers in network, 1 master, 1 slave)
-        Public SendToAresult As Float 'Result of whether the SendVariable worked or not (cue for if comms were successful)
-        Public SendToAFailCnt As Float 'count for how many times the comms have failed
-        Public MaxAFails = 5 'max number of times comms can fail before resetting itself
-        Public LinkToAdead As Boolean 'is the link to SlaveX considered dead (counter exceeds threshold)
-      #ElseIf NetworkSlaves = 2 Then 'if there are two nodes in the network (both communicating directly through master, 3 dataloggers in network, 1 master, 2 slaves)
-        Public SendToAresult As Float
-        Public SendToAFailCnt As Float
-        Public MaxAFails = 5
-        Public LinkToAdead As Boolean
-        Public SendToBresult As Float
-        Public SendToBFailCnt As Float
-        Public MaxBFails = 5
-        Public LinkToBdead As Boolean
-      #ElseIf NetworkSlaves = 3 Then 'if there are three nodes in the network (all three communicating directly through master, 4 dataloggers in network, 1 master, 3 slaves)
-        Public SendToAresult As Float
-        Public SendToAFailCnt As Float
-        Public MaxAFails = 5
-        Public LinkToAdead As Boolean
-        Public SendToBresult As Float
-        Public SendToBFailCnt As Float
-        Public MaxBFails = 5
-        Public LinkToBdead As Boolean
-        Public SendToCresult As Float
-        Public SendToCFailCnt As Float
-        Public MaxCFails = 5
-        Public LinkToCdead As Boolean
-      #ElseIf NetworkSlaves = 4 Then 'if there are four nodes in the network (all four communicating directly through master 5 dataloggers in network, 1 master, 4 slaves)
-        Public SendToAresult As Float
-        Public SendToAFailCnt As Float
-        Public MaxAFails = 5
-        Public LinkToAdead As Boolean
-        Public SendToBresult As Float
-        Public SendToBFailCnt As Float
-        Public MaxBFails = 5
-        Public LinkToBdead As Boolean
-        Public SendToCresult As Float
-        Public SendToCFailCnt As Float
-        Public MaxCFails = 5
-        Public LinkToCdead As Boolean
-        Public SendToDresult As Float
-        Public SendToDFailCnt As Float
-        Public MaxDFails = 5
-        Public LinkToDdead As Boolean
-      #EndIf
-    #EndIf
+    ' #EndIf
   #ElseIf IsMaster = False AND RadioNetwork = True Then 'if the datalogger is in the network, but not the master
     Public MasterReceive As Float 'Variable to store value from the master datalogger
     Public GetResult As Float 'was the communication successful (0 = successful)
@@ -1630,519 +1637,518 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public MaxGetFails = 5 'threshold for how many times comms can fail before resetting the radio
     Public LinkDead As Boolean 'flag to indicate the link is considered dead (counter exceeded threshold)
   #EndIf
-  '------------------------String used to send specific data through serial communications to another logger-------------------
-  'Public OutString As String * 1000 'string of variables/values to be sent out to another datalogger
-  Public SendFlowData As Boolean 'user selectable flag to send only flow data
+#EndIf
 
-  #If HasSuna Then
-    Public SampleSuna As Boolean 'Trigger to say when it's time to sample/turn on the SUNA
-    Public SunaReady As Boolean 'Trigger to say when the SUNA is warmed up
-    Public SunaMissedCnt 'Counter for when the SUNA missed (Either DarkFrame, or no data)
-    Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
-    Public SunaOnTime 'How long was the SUNA powered
-    Public SunaSampleStart 'How long into the scan did the Suna Sampling Start
-    Public SunaStringLen 'Length of the String read in
-    Public LocLF 'Variable to store where the L occurs in the string
-    Public LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
-    Public Lcount As Long 'Counter for the ForNext loop to read in the SUNA data
-    Public SunaHeader As String * 7
-    Public SunaSN 'Suna Parameters
-    Public SunaSampleTime
-    Public SunaNitrateuM
-    Public SunaNitratemgL
-    Public SunaFittingResult
-    Public A254
-    Public TLamp
-    Public TSpec
-    Public SunaLampTime
-    Public SunaHumid
-    Public SunaSpecAve
-    Public SunaDarkAve
-    Public SunaVoltMain
-    Public SunaVoltLamp
-    Public SunaTimer 'Timer Name for specifying when to power the SUNA and Wiper
-    Public WipeSuna As Boolean 'Is it time to wipe?
-    Public RecSunaData As Boolean 'Flag to Trigger the SunaStats table
-    Public AvgSunaNitrateuM 'Variables to copy from SunaStats to variables, then "Sample" the stats in AQ table
-    Public  MedSunaNitrateuM
-    Public  StdSunaNitrateuM
-    Public AvgSunaNitratemgL
-    Public  MedSunaNitratemgL
-    Public  AvgSunaFittingResult
-    Public  StdSunaFittingResult
-    Public  AvgA254
-    Public  AvgSunaDarkAve
-    Public  AvgSunaSpecAve
-    Public  AvgTSpec
-    Public  AvgTLamp
-    Public  AvgSunaHumid
-    Public  AvgSunaLampTime
-    Public  AvgSunaVoltMain
-    Public  AvgSunaVoltLamp
-    Dim SSN 'Location definitions used to parse data to correct locations
-    Dim SST
-    Dim SNuM
-    Dim SNmgL
-    Dim SFR
-    Dim STL
-    Dim STS
-    Dim SLT
-    Dim SH
-    Dim SSA
-    Dim SDA
-    Dim SVL
-    Dim SVM
-    Dim SA254
-    Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
-    Dim SunaBurstArray(MaxSunaBurst,282) 'Multi-dimension array to store the MaxSunaBurst number of values
-    Dim SunaBurstData(282) 'Parsed data per single sample
-    Dim SpectrumData(256) 'Raw Spectrum data parsed from full array
-    Dim mCount 'counters for loops
-    Dim nCount
-    Dim oCount
-    Dim SunaSampleTimer 'Timer names to know when Suna is ready or wipes
-    Dim SunaWipeTimer
-    Dim WipeStart 'Start time (within the minute) of the wipe
-    Dim StartWipe As Boolean 'Trigger to start the wipe
-    Dim WipeEnd 'End time of the wipe (when the port gets switched off)
-    Dim SunaWipeTotTime 'Total time it took for port to turn on/off
-    Dim SunaProcessStart 'Start time of tables being written (within the minute, not Actual timestamp
-    Dim SunaProcessEnd 'End time of tables being written
-    Dim SunaProcessTotTime 'Total time for tables to be written
-  #EndIf
+#If HasSuna Then
+  Public SampleSuna As Boolean 'Trigger to say when it's time to sample/turn on the SUNA
+  Public SunaReady As Boolean 'Trigger to say when the SUNA is warmed up
+  Public SunaMissedCnt 'Counter for when the SUNA missed (Either DarkFrame, or no data)
+  Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
+  Public SunaOnTime 'How long was the SUNA powered
+  Public SunaSampleStart 'How long into the scan did the Suna Sampling Start
+  Public SunaStringLen 'Length of the String read in
+  Public LocLF 'Variable to store where the L occurs in the string
+  Public LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
+  Public Lcount As Long 'Counter for the ForNext loop to read in the SUNA data
+  Public SunaHeader As String * 7
+  Public SunaSN 'Suna Parameters
+  Public SunaSampleTime
+  Public SunaNitrateuM
+  Public SunaNitratemgL
+  Public SunaFittingResult
+  Public A254
+  Public TLamp
+  Public TSpec
+  Public SunaLampTime
+  Public SunaHumid
+  Public SunaSpecAve
+  Public SunaDarkAve
+  Public SunaVoltMain
+  Public SunaVoltLamp
+  Public SunaTimer 'Timer Name for specifying when to power the SUNA and Wiper
+  Public WipeSuna As Boolean 'Is it time to wipe?
+  Public RecSunaData As Boolean 'Flag to Trigger the SunaStats table
+  Public AvgSunaNitrateuM 'Variables to copy from SunaStats to variables, then "Sample" the stats in AQ table
+  Public  MedSunaNitrateuM
+  Public  StdSunaNitrateuM
+  Public AvgSunaNitratemgL
+  Public  MedSunaNitratemgL
+  Public  AvgSunaFittingResult
+  Public  StdSunaFittingResult
+  Public  AvgA254
+  Public  AvgSunaDarkAve
+  Public  AvgSunaSpecAve
+  Public  AvgTSpec
+  Public  AvgTLamp
+  Public  AvgSunaHumid
+  Public  AvgSunaLampTime
+  Public  AvgSunaVoltMain
+  Public  AvgSunaVoltLamp
+  Dim SSN 'Location definitions used to parse data to correct locations
+  Dim SST
+  Dim SNuM
+  Dim SNmgL
+  Dim SFR
+  Dim STL
+  Dim STS
+  Dim SLT
+  Dim SH
+  Dim SSA
+  Dim SDA
+  Dim SVL
+  Dim SVM
+  Dim SA254
+  Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
+  Dim SunaBurstArray(MaxSunaBurst,282) 'Multi-dimension array to store the MaxSunaBurst number of values
+  Dim SunaBurstData(282) 'Parsed data per single sample
+  Dim SpectrumData(256) 'Raw Spectrum data parsed from full array
+  Dim mCount 'counters for loops
+  Dim nCount
+  Dim oCount
+  Dim SunaSampleTimer 'Timer names to know when Suna is ready or wipes
+  Dim SunaWipeTimer
+  Dim WipeStart 'Start time (within the minute) of the wipe
+  Dim StartWipe As Boolean 'Trigger to start the wipe
+  Dim WipeEnd 'End time of the wipe (when the port gets switched off)
+  Dim SunaWipeTotTime 'Total time it took for port to turn on/off
+  Dim SunaProcessStart 'Start time of tables being written (within the minute, not Actual timestamp
+  Dim SunaProcessEnd 'End time of tables being written
+  Dim SunaProcessTotTime 'Total time for tables to be written
+#EndIf
 
-  PreserveVariables 'preserve values in case of power outages
-  SetStatus ("USRDriveSize",16384)
-  '__________________________Define Output Tables___________________________________________
-  'table for startup, holds only "true" OR "false"
-  'DataTable (Startup,True,2)
-  '  Sample (1,StartPrams,String)
-  'EndTable
 
-  '15 MINUTE DATA OUTPUT TABLE
-  'data output table has no DataInterval instruction
-  'execution of table is controlled completely by main code logic below.
-  #If (WqSonde <> "NONE") Then
-    DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
-      OpenInterval 'tells table to process from last execution of table
-      CardOut (0,17280) 'sends copy of data to CF card
-      Sample (1,SiteID,String)
-      Sample (1,SiteNum,String)
-      Sample (1,IndexVel,IEEE4)
-      Average (1,IndexVel,IEEE4,BadVelFlag)
-      Average (1,MeanVel,IEEE4,BadQFlag)
-      Average (1,Qcfs,IEEE4,BadQFlag)
-      Sample (1,StagePrime,IEEE4)
-      Average (1,StagePrime,IEEE4,BadStgFlag)
-      Sample (1,StageSecnd,FP2)
-      Average (1,StageSecnd,IEEE4,false)
-      Average (1,PS1Stg,IEEE4,false)
-      Average (1,PS2Stg,IEEE4,false)
-      Average (1,UpBeamStg,IEEE4,false)
-      Average (1,VMPressStg,IEEE4,false)
-      Average (1,SondeStg,IEEE4,false)
-      Average (1,StgDiff,IEEE4,False)
-      Sample (1,StgSelect,String)
-      Average (1,VMpitch,FP2,False)
-      Average (1,VMroll,FP2,False)
-      Sample (1,VMHeading,FP2)
-      Average (1,VMtempC,FP2,False)
-      Minimum (1,CR1Volts,FP2,False,False)
-      Minimum (1,VMVolts,FP2,False,False)
-      Sample (1,BadStgCount,FP2)
-      Sample (1,BadVelCount,FP2)
-      Sample (1,BadQCount,FP2)
-      Average(1,AvgSwathRSSI,FP2,False)
-      Sample (1,LowRatVel,FP2)
-      Sample (1,HighRatVel,FP2)
-      Minimum (1,ExtWHConvertVolt,FP2,False,False)
-      Minimum (1,ExtSolarVolt,FP2,False,False)
-      Average (1,RangedBin,FP2,False)
-      Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
-      Average(MaxBins,V1(),FP2,V1Disable())
-      Average(MaxBins,V2(),FP2,V2Disable())
-      Average(MaxBins,V3(),FP2,V3Disable())
-      Average(MaxBins,V4(),FP2,V4disable())
-      'WQ data
-      Average (1,TempDiff,IEEE4,False)
-      Sample (1,WqTempC,FP2)
-      Sample (1,WqSpCond,IEEE4)
-      Sample (1,WqBattV,FP2)
-      Sample (1,WqDOMgl,FP2)
-      Sample (1,WqPH,FP2)
-      Sample (1,WqTurbFNU,FP2)
-      Average (1,WqTurbFNU,FP2,WqBadData)
-      Median (1,WqTurbFNU,15,FP2,WqBadData)
-      Sample (1,WqChlugL,FP2)
-      Sample (1,WqChlRFU,FP2)
-      Average (1,WqDepthFt,FP2,WqBadData)
-      Average (1,WqDepthMeters,FP2,WqBadData)
-      Sample (1,WqDOSat,FP2)
-      Sample (1,WqORP,FP2)
-      Sample (1,WqFDOMrfu,FP2)
-      Sample (1,WqFDOMqsu,FP2)
-      Sample (1,WqBGAugl,FP2)
-      Sample (1,WqNH4mgl,FP2)
-      Sample (1,WqNO3mgl,FP2)
-      Sample (1,WqCLmgl,FP2)
-      Sample (1,WqWiperPos,FP2)
-      #If TopBottom Then
-        Sample (1,BtmWqTempC,FP2)
-        Sample (1,BtmWqSpCond,IEEE4)
-        Sample (1,BtmWqBattV,FP2)
-        Sample (1,BtmWqDOMgl,FP2)
-        Sample (1,BtmWqPH,FP2)
-        Sample (1,BtmWqTurbFNU,FP2)
-        Average (1,BtmWqTurbFNU,FP2,BtmWqBadData)
-        Median (1,BtmWqTurbFNU,15,FP2,BtmWqBadData)
-        Sample (1,BtmWqChlugL,FP2)
-        Sample (1,BtmWqChlRFU,FP2)
-        Average (1,BtmWqDepthFt,FP2,BtmWqBadData)
-        Average (1,BtmWqDepthMeters,FP2,BtmWqBadData)
-        Sample (1,BtmWqDOSat,FP2)
-        Sample (1,BtmWqORP,FP2)
-        Sample (1,BtmWqFDOMrfu,FP2)
-        Sample (1,BtmWqFDOMqsu,FP2)
-        Sample (1,BtmWqBGAugl,FP2)
-        Sample (1,BtmWqNH4mgl,FP2)
-        Sample (1,BtmWqNO3mgl,FP2)
-        Sample (1,BtmWqCLmgl,FP2)
-        Sample (1,BtmWqWiperPos,FP2)
-      #EndIf
-    EndTable
-  #EndIf
+PreserveVariables 'preserve values in case of power outages
+SetStatus ("USRDriveSize",16384)
+'__________________________Define Output Tables___________________________________________
+'table for startup, holds only "true" OR "false"
+'DataTable (Startup,True,2)
+'  Sample (1,StartPrams,String)
+'EndTable
 
-  #If (WqSonde = "NONE") Then 'Don't store non-existent WQ data in the DataOutTable
-    DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
-      OpenInterval 'tells table to process from last execution of table
-      CardOut (0,17280) 'sends copy of data to CF card
-      Sample (1,SiteID,String)
-      Sample (1,SiteNum,String)
-      Sample (1,IndexVel,IEEE4)
-      Average (1,IndexVel,IEEE4,BadVelFlag)
-      Average (1,MeanVel,IEEE4,BadQFlag)
-      Average (1,Qcfs,IEEE4,BadQFlag)
-      Sample (1,StagePrime,IEEE4)
-      Average (1,StagePrime,IEEE4,BadStgFlag)
-      Sample (1,StageSecnd,FP2)
-      Average (1,StageSecnd,IEEE4,false)
-      Average (1,PS1Stg,IEEE4,false)
-      Average (1,PS2Stg,IEEE4,false)
-      Average (1,UpBeamStg,IEEE4,false)
-      Average (1,VMPressStg,IEEE4,false)
-      Average (1,SondeStg,IEEE4,false)
-      Average (1,StgDiff,IEEE4,False)
-      Sample (1,StgSelect,String)
-      Average (1,VMpitch,FP2,False)
-      Average (1,VMroll,FP2,False)
-      Average (1,VMtempC,FP2,False)
-      Sample (1,VMHeading,FP2)
-      Minimum (1,CR1Volts,FP2,False,False)
-      Minimum (1,VMVolts,FP2,False,False)
-      Sample (1,BadStgCount,FP2)
-      Sample (1,BadVelCount,FP2)
-      Sample (1,BadQCount,FP2)
-      'Maximum (1,LastGoodBin,FP2,False,False)
-      Sample (1,LowRatVel,FP2)
-      Sample (1,HighRatVel,FP2)
-      Minimum (1,ExtWHConvertVolt,FP2,False,False)
-      Minimum (1,ExtSolarVolt,FP2,False,False)
-      Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
-      Average(MaxBins,V1(),FP2,V1Disable())
-      Average(MaxBins,V2(),FP2,V2Disable())
-      Average(MaxBins,V3(),FP2,V3Disable())
-      Average(MaxBins,V4(),FP2,V4disable())
-      Average(1,AvgSwathRSSI,FP2,False)
-    EndTable
-  #EndIf
-  'Data table that is only used for obtaining an EXO burst (1 minute burst of one second dat, once every 15 minutes
-  #If WqSonde = "WQ_SERIAL_BURST" Then
-    DataTable(Burst,RecBurstFlag,-1)
+'15 MINUTE DATA OUTPUT TABLE
+'data output table has no DataInterval instruction
+'execution of table is controlled completely by main code logic below.
+#If (WqSonde <> "NONE") Then
+  DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
+    OpenInterval 'tells table to process from last execution of table
+    CardOut (0,17280) 'sends copy of data to CF card
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,IndexVel,IEEE4)
+    Average (1,IndexVel,IEEE4,BadVelFlag)
+    Average (1,MeanVel,IEEE4,BadQFlag)
+    Average (1,Qcfs,IEEE4,BadQFlag)
+    Sample (1,StagePrime,IEEE4)
+    Average (1,StagePrime,IEEE4,BadStgFlag)
+    Sample (1,StageSecnd,FP2)
+    Average (1,StageSecnd,IEEE4,false)
+    Average (1,PS1Stg,IEEE4,false)
+    Average (1,PS2Stg,IEEE4,false)
+    Average (1,UpBeamStg,IEEE4,false)
+    Average (1,VMPressStg,IEEE4,false)
+    Average (1,SondeStg,IEEE4,false)
+    Average (1,StgDiff,IEEE4,False)
+    Sample (1,StgSelect,String)
+    Average (1,VMpitch,FP2,False)
+    Average (1,VMroll,FP2,False)
+    Sample (1,VMHeading,FP2)
+    Average (1,VMtempC,FP2,False)
+    Minimum (1,CR1Volts,FP2,False,False)
+    Minimum (1,VMVolts,FP2,False,False)
+    Sample (1,BadStgCount,FP2)
+    Sample (1,BadVelCount,FP2)
+    Sample (1,BadQCount,FP2)
+    Average(1,AvgSwathRSSI,FP2,False)
+    Sample (1,LowRatVel,FP2)
+    Sample (1,HighRatVel,FP2)
+    Minimum (1,ExtWHConvertVolt,FP2,False,False)
+    Minimum (1,ExtSolarVolt,FP2,False,False)
+    Average (1,RangedBin,FP2,False)
+    Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
+    Average(MaxBins,V1(),FP2,V1Disable())
+    Average(MaxBins,V2(),FP2,V2Disable())
+    Average(MaxBins,V3(),FP2,V3Disable())
+    Average(MaxBins,V4(),FP2,V4disable())
+    'WQ data
+    Average (1,TempDiff,IEEE4,False)
+    Sample (1,WqTempC,FP2)
+    Sample (1,WqSpCond,IEEE4)
+    Sample (1,WqBattV,FP2)
+    Sample (1,WqDOMgl,FP2)
+    Sample (1,WqPH,FP2)
+    Sample (1,WqTurbFNU,FP2)
+    Average (1,WqTurbFNU,FP2,WqBadData)
+    Median (1,WqTurbFNU,15,FP2,WqBadData)
+    Sample (1,WqChlugL,FP2)
+    Sample (1,WqChlRFU,FP2)
+    Average (1,WqDepthFt,FP2,WqBadData)
+    Average (1,WqDepthMeters,FP2,WqBadData)
+    Sample (1,WqDOSat,FP2)
+    Sample (1,WqORP,FP2)
+    Sample (1,WqFDOMrfu,FP2)
+    Sample (1,WqFDOMqsu,FP2)
+    Sample (1,WqBGAugl,FP2)
+    Sample (1,WqNH4mgl,FP2)
+    Sample (1,WqNO3mgl,FP2)
+    Sample (1,WqCLmgl,FP2)
+    Sample (1,WqWiperPos,FP2)
+    #If TopBottom Then
+      Sample (1,BtmWqTempC,FP2)
+      Sample (1,BtmWqSpCond,IEEE4)
+      Sample (1,BtmWqBattV,FP2)
+      Sample (1,BtmWqDOMgl,FP2)
+      Sample (1,BtmWqPH,FP2)
+      Sample (1,BtmWqTurbFNU,FP2)
+      Average (1,BtmWqTurbFNU,FP2,BtmWqBadData)
+      Median (1,BtmWqTurbFNU,15,FP2,BtmWqBadData)
+      Sample (1,BtmWqChlugL,FP2)
+      Sample (1,BtmWqChlRFU,FP2)
+      Average (1,BtmWqDepthFt,FP2,BtmWqBadData)
+      Average (1,BtmWqDepthMeters,FP2,BtmWqBadData)
+      Sample (1,BtmWqDOSat,FP2)
+      Sample (1,BtmWqORP,FP2)
+      Sample (1,BtmWqFDOMrfu,FP2)
+      Sample (1,BtmWqFDOMqsu,FP2)
+      Sample (1,BtmWqBGAugl,FP2)
+      Sample (1,BtmWqNH4mgl,FP2)
+      Sample (1,BtmWqNO3mgl,FP2)
+      Sample (1,BtmWqCLmgl,FP2)
+      Sample (1,BtmWqWiperPos,FP2)
+    #EndIf
+  EndTable
+#EndIf
+
+#If (WqSonde = "NONE") Then 'Don't store non-existent WQ data in the DataOutTable
+  DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
+    OpenInterval 'tells table to process from last execution of table
+    CardOut (0,17280) 'sends copy of data to CF card
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,IndexVel,IEEE4)
+    Average (1,IndexVel,IEEE4,BadVelFlag)
+    Average (1,MeanVel,IEEE4,BadQFlag)
+    Average (1,Qcfs,IEEE4,BadQFlag)
+    Sample (1,StagePrime,IEEE4)
+    Average (1,StagePrime,IEEE4,BadStgFlag)
+    Sample (1,StageSecnd,FP2)
+    Average (1,StageSecnd,IEEE4,false)
+    Average (1,PS1Stg,IEEE4,false)
+    Average (1,PS2Stg,IEEE4,false)
+    Average (1,UpBeamStg,IEEE4,false)
+    Average (1,VMPressStg,IEEE4,false)
+    Average (1,SondeStg,IEEE4,false)
+    Average (1,StgDiff,IEEE4,False)
+    Sample (1,StgSelect,String)
+    Average (1,VMpitch,FP2,False)
+    Average (1,VMroll,FP2,False)
+    Average (1,VMtempC,FP2,False)
+    Sample (1,VMHeading,FP2)
+    Minimum (1,CR1Volts,FP2,False,False)
+    Minimum (1,VMVolts,FP2,False,False)
+    Sample (1,BadStgCount,FP2)
+    Sample (1,BadVelCount,FP2)
+    Sample (1,BadQCount,FP2)
+    'Maximum (1,LastGoodBin,FP2,False,False)
+    Sample (1,LowRatVel,FP2)
+    Sample (1,HighRatVel,FP2)
+    Minimum (1,ExtWHConvertVolt,FP2,False,False)
+    Minimum (1,ExtSolarVolt,FP2,False,False)
+    Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
+    Average(MaxBins,V1(),FP2,V1Disable())
+    Average(MaxBins,V2(),FP2,V2Disable())
+    Average(MaxBins,V3(),FP2,V3Disable())
+    Average(MaxBins,V4(),FP2,V4disable())
+    Average(1,AvgSwathRSSI,FP2,False)
+  EndTable
+#EndIf
+'Data table that is only used for obtaining an EXO burst (1 minute burst of one second dat, once every 15 minutes
+#If WqSonde = "WQ_SERIAL_BURST" Then
+  DataTable(Burst,RecBurstFlag,-1)
+    'DataInterval(0,1,Min,-1)
+    CardOut (0,17280)
+    OpenInterval
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,BurstDate,IEEE4)
+    Sample (1,BurstTime,IEEE4)
+    Sample (1, BurstPeriod, IEEE4)
+    '    Sample (1,BurstMedDate,IEEE4)
+    '    Sample (1,BurstMedTime,IEEE4)
+    Median (1,BurstDate,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTime,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstORP,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstDepthMeters,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstBattV,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BurstpH,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BurstpHmV,MaxBurstCnt,FP2,BurstMissed)
+    Median (1,BurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
+    Median (1,BurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
+    StdDev (1,BurstTempC,IEEE4,False)
+    Minimum (1,BurstTempC,IEEE4,False,0)
+    Maximum (1,BurstTempC,IEEE4,False,0)
+    StdDev (1,BurstSpCond,IEEE4,False)
+    Minimum (1,BurstSpCond,IEEE4,False,0)
+    Maximum (1,BurstSpCond,IEEE4,False,0)
+    StdDev (1,BurstTurbFNU,IEEE4,False)
+    Minimum (1,BurstTurbFNU,IEEE4,False,0)
+    Maximum (1,BurstTurbFNU,IEEE4,False,0)
+    StdDev (1,BurstDOSat,IEEE4,False)
+    Minimum (1,BurstDOSat,IEEE4,False,0)
+    Maximum (1,BurstDOSat,IEEE4,False,0)
+    StdDev (1,BurstDOmgL,IEEE4,False)
+    Minimum (1,BurstDOmgL,IEEE4,False,0)
+    Maximum (1,BurstDOmgL,IEEE4,False,0)
+    StdDev (1,BurstORP,IEEE4,False)
+    Minimum (1,BurstORP,IEEE4,False,0)
+    Maximum (1,BurstORP,IEEE4,False,0)
+    StdDev (1,BurstDepthFt,IEEE4,False)
+    Minimum (1,BurstDepthFt,IEEE4,False,0)
+    Maximum (1,BurstDepthFt,IEEE4,False,0)
+    StdDev (1,BurstDepthMeters,IEEE4,False)
+    Minimum (1,BurstDepthMeters,IEEE4,False,0)
+    Maximum (1,BurstDepthMeters,IEEE4,False,0)
+    StdDev (1,BurstBattV,FP2,False)
+    Minimum (1,BurstBattV,FP2,False,0)
+    Maximum (1,BurstBattV,FP2,False,0)
+    StdDev (1,BurstpH,FP2,False)
+    Minimum (1,BurstpH,FP2,False,0)
+    Maximum (1,BurstpH,FP2,False,0)
+    StdDev (1,BurstpHmV,FP2,False)
+    Minimum (1,BurstpHmV,FP2,False,0)
+    Maximum (1,BurstpHmV,FP2,False,0)
+    StdDev (1,BurstChlugL,IEEE4,False)
+    Minimum (1,BurstChlugL,IEEE4,False,0)
+    Maximum (1,BurstChlugL,IEEE4,False,0)
+    StdDev (1,BurstChlRFU,IEEE4,False)
+    Minimum (1,BurstChlRFU,IEEE4,False,0)
+    Maximum (1,BurstChlRFU,IEEE4,False,0)
+    StdDev (1,BurstBGApcRFU,IEEE4,False)
+    Minimum (1,BurstBGApcRFU,IEEE4,False,0)
+    Maximum (1,BurstBGApcRFU,IEEE4,False,0)
+    StdDev (1,BurstBGApcugL,IEEE4,False)
+    Minimum (1,BurstBGApcugL,IEEE4,False,0)
+    Maximum (1,BurstBGApcugL,IEEE4,False,0)
+    StdDev (1,BurstFdomRFU,IEEE4,False)
+    Minimum (1,BurstFdomRFU,IEEE4,False,0)
+    Maximum (1,BurstFdomRFU,IEEE4,False,0)
+    StdDev (1,BurstFDomQSU,IEEE4,False)
+    Minimum (1,BurstFDomQSU,IEEE4,False,0)
+    Maximum (1,BurstFDomQSU,IEEE4,False,0)
+    StdDev (1,BurstNH4Amgl,IEEE4,False)
+    Minimum (1,BurstNH4Amgl,IEEE4,False,0)
+    Maximum (1,BurstNH4Amgl,IEEE4,False,0)
+    StdDev (1,BurstNO3Nmgl,IEEE4,False)
+    Minimum (1,BurstNO3Nmgl,IEEE4,False,0)
+    Maximum (1,BurstNO3Nmgl,IEEE4,False,0)
+    StdDev (1,BurstCLmgl,IEEE4,False)
+    Minimum (1,BurstCLmgl,IEEE4,False,0)
+    Maximum (1,BurstCLmgl,IEEE4,False,0)
+    StdDev (1,BurstWiperPos,FP2,False)
+    Minimum (1,BurstWiperPos,FP2,False,0)
+    Maximum (1,BurstWiperPos,FP2,False,0)
+    Sample (1,TotalBurstVals,FP2)
+    Sample (1,BurstMissed,Boolean)
+    Sample (1,BurstErrCnt,FP2)
+  EndTable
+
+  '__________________________________________Metadata for each burst sample_____________________________________
+  '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
+  DataTable(SecBurst,True,-1)
+    'DataInterval(0,1,Min,-1)
+    CardOut (0,350000)
+    OpenInterval
+    Sample (1,SiteID,String)
+    Sample (1,SiteNum,String)
+    Sample (1,BurstDate,IEEE4)
+    Sample (1,BurstTime,IEEE4)
+    Sample (1,BurstTempC,IEEE4)
+    Sample (1,BurstTempF,IEEE4)
+    Sample (1,BurstSpCond,IEEE4)
+    Sample (1,BurstTurbFNU,IEEE4)
+    Sample (1,BurstDOSat,IEEE4)
+    Sample (1,BurstDOmgL,IEEE4)
+    Sample (1,BurstORP,IEEE4)
+    Sample (1,BurstDepthFt,IEEE4)
+    Sample (1,BurstDepthMeters,IEEE4)
+    Sample (1,BurstBattV,FP2)
+    Sample (1,BurstpH,FP2)
+    Sample (1,BurstpHmV,FP2)
+    Sample (1,BurstChlugL,IEEE4)
+    Sample (1,BurstChlRFU,IEEE4)
+    Sample (1,BurstBGApcRFU,IEEE4)
+    Sample (1,BurstBGApcugL,IEEE4)
+    Sample (1,BurstFdomRFU,IEEE4)
+    Sample (1,BurstFDomQSU,IEEE4)
+    Sample (1,BurstNH4Amgl,IEEE4)
+    Sample (1,BurstNO3Nmgl,IEEE4)
+    Sample (1,BurstCLmgl,IEEE4)
+    Sample (1,BurstWiperPos,FP2)
+    Sample (1,TotalBurstVals,FP2)
+    Sample (1,jCount,FP2)
+    Sample (1,BurstMissed,Boolean)
+    Sample (1,BurstErrCnt,FP2)
+  EndTable
+
+  '__________________________Bottom Sonde Burst Data Tables_________________________________
+  #If TopBottom Then  'remove these tables if there is no bottom sonde
+    DataTable(BtmBurst,RecBurstFlag,-1)
       'DataInterval(0,1,Min,-1)
       CardOut (0,17280)
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
-      Sample (1,BurstDate,IEEE4)
-      Sample (1,BurstTime,IEEE4)
-      Sample (1, BurstPeriod, IEEE4)
+      Sample (1,BtmBurstDate,IEEE4)
+      Sample (1,BtmBurstTime,IEEE4)
+      Sample (1,BurstPeriod, IEEE4)
       '    Sample (1,BurstMedDate,IEEE4)
       '    Sample (1,BurstMedTime,IEEE4)
-      Median (1,BurstDate,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstTime,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstORP,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstDepthMeters,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstBattV,MaxBurstCnt,FP2,BurstMissed)
-      Median (1,BurstpH,MaxBurstCnt,FP2,BurstMissed)
-      Median (1,BurstpHmV,MaxBurstCnt,FP2,BurstMissed)
-      Median (1,BurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
-      StdDev (1,BurstTempC,IEEE4,False)
-      Minimum (1,BurstTempC,IEEE4,False,0)
-      Maximum (1,BurstTempC,IEEE4,False,0)
-      StdDev (1,BurstSpCond,IEEE4,False)
-      Minimum (1,BurstSpCond,IEEE4,False,0)
-      Maximum (1,BurstSpCond,IEEE4,False,0)
-      StdDev (1,BurstTurbFNU,IEEE4,False)
-      Minimum (1,BurstTurbFNU,IEEE4,False,0)
-      Maximum (1,BurstTurbFNU,IEEE4,False,0)
-      StdDev (1,BurstDOSat,IEEE4,False)
-      Minimum (1,BurstDOSat,IEEE4,False,0)
-      Maximum (1,BurstDOSat,IEEE4,False,0)
-      StdDev (1,BurstDOmgL,IEEE4,False)
-      Minimum (1,BurstDOmgL,IEEE4,False,0)
-      Maximum (1,BurstDOmgL,IEEE4,False,0)
-      StdDev (1,BurstORP,IEEE4,False)
-      Minimum (1,BurstORP,IEEE4,False,0)
-      Maximum (1,BurstORP,IEEE4,False,0)
-      StdDev (1,BurstDepthFt,IEEE4,False)
-      Minimum (1,BurstDepthFt,IEEE4,False,0)
-      Maximum (1,BurstDepthFt,IEEE4,False,0)
-      StdDev (1,BurstDepthMeters,IEEE4,False)
-      Minimum (1,BurstDepthMeters,IEEE4,False,0)
-      Maximum (1,BurstDepthMeters,IEEE4,False,0)
-      StdDev (1,BurstBattV,FP2,False)
-      Minimum (1,BurstBattV,FP2,False,0)
-      Maximum (1,BurstBattV,FP2,False,0)
-      StdDev (1,BurstpH,FP2,False)
-      Minimum (1,BurstpH,FP2,False,0)
-      Maximum (1,BurstpH,FP2,False,0)
-      StdDev (1,BurstpHmV,FP2,False)
-      Minimum (1,BurstpHmV,FP2,False,0)
-      Maximum (1,BurstpHmV,FP2,False,0)
-      StdDev (1,BurstChlugL,IEEE4,False)
-      Minimum (1,BurstChlugL,IEEE4,False,0)
-      Maximum (1,BurstChlugL,IEEE4,False,0)
-      StdDev (1,BurstChlRFU,IEEE4,False)
-      Minimum (1,BurstChlRFU,IEEE4,False,0)
-      Maximum (1,BurstChlRFU,IEEE4,False,0)
-      StdDev (1,BurstBGApcRFU,IEEE4,False)
-      Minimum (1,BurstBGApcRFU,IEEE4,False,0)
-      Maximum (1,BurstBGApcRFU,IEEE4,False,0)
-      StdDev (1,BurstBGApcugL,IEEE4,False)
-      Minimum (1,BurstBGApcugL,IEEE4,False,0)
-      Maximum (1,BurstBGApcugL,IEEE4,False,0)
-      StdDev (1,BurstFdomRFU,IEEE4,False)
-      Minimum (1,BurstFdomRFU,IEEE4,False,0)
-      Maximum (1,BurstFdomRFU,IEEE4,False,0)
-      StdDev (1,BurstFDomQSU,IEEE4,False)
-      Minimum (1,BurstFDomQSU,IEEE4,False,0)
-      Maximum (1,BurstFDomQSU,IEEE4,False,0)
-      StdDev (1,BurstNH4Amgl,IEEE4,False)
-      Minimum (1,BurstNH4Amgl,IEEE4,False,0)
-      Maximum (1,BurstNH4Amgl,IEEE4,False,0)
-      StdDev (1,BurstNO3Nmgl,IEEE4,False)
-      Minimum (1,BurstNO3Nmgl,IEEE4,False,0)
-      Maximum (1,BurstNO3Nmgl,IEEE4,False,0)
-      StdDev (1,BurstCLmgl,IEEE4,False)
-      Minimum (1,BurstCLmgl,IEEE4,False,0)
-      Maximum (1,BurstCLmgl,IEEE4,False,0)
-      StdDev (1,BurstWiperPos,FP2,False)
-      Minimum (1,BurstWiperPos,FP2,False,0)
-      Maximum (1,BurstWiperPos,FP2,False,0)
-      Sample (1,TotalBurstVals,FP2)
-      Sample (1,BurstMissed,Boolean)
-      Sample (1,BurstErrCnt,FP2)
+      Median (1,BtmBurstDate,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstTime,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstORP,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstDepthMeters,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstBattV,MaxBurstCnt,FP2,BurstMissed)
+      Median (1,BtmBurstpH,MaxBurstCnt,FP2,BurstMissed)
+      Median (1,BtmBurstpHmV,MaxBurstCnt,FP2,BurstMissed)
+      Median (1,BtmBurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
+      Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
+      StdDev (1,BtmBurstTempC,IEEE4,False)
+      Minimum (1,BtmBurstTempC,IEEE4,False,0)
+      Maximum (1,BtmBurstTempC,IEEE4,False,0)
+      StdDev (1,BtmBurstSpCond,IEEE4,False)
+      Minimum (1,BtmBurstSpCond,IEEE4,False,0)
+      Maximum (1,BtmBurstSpCond,IEEE4,False,0)
+      StdDev (1,BtmBurstTurbFNU,IEEE4,False)
+      Minimum (1,BtmBurstTurbFNU,IEEE4,False,0)
+      Maximum (1,BtmBurstTurbFNU,IEEE4,False,0)
+      StdDev (1,BtmBurstDOSat,IEEE4,False)
+      Minimum (1,BtmBurstDOSat,IEEE4,False,0)
+      Maximum (1,BtmBurstDOSat,IEEE4,False,0)
+      StdDev (1,BtmBurstDOmgL,IEEE4,False)
+      Minimum (1,BtmBurstDOmgL,IEEE4,False,0)
+      Maximum (1,BtmBurstDOmgL,IEEE4,False,0)
+      StdDev (1,BtmBurstORP,IEEE4,False)
+      Minimum (1,BtmBurstORP,IEEE4,False,0)
+      Maximum (1,BtmBurstORP,IEEE4,False,0)
+      StdDev (1,BtmBurstDepthFt,IEEE4,False)
+      Minimum (1,BtmBurstDepthFt,IEEE4,False,0)
+      Maximum (1,BtmBurstDepthFt,IEEE4,False,0)
+      StdDev (1,BtmBurstDepthMeters,IEEE4,False)
+      Minimum (1,BtmBurstDepthMeters,IEEE4,False,0)
+      Maximum (1,BtmBurstDepthMeters,IEEE4,False,0)
+      StdDev (1,BtmBurstBattV,FP2,False)
+      Minimum (1,BtmBurstBattV,FP2,False,0)
+      Maximum (1,BtmBurstBattV,FP2,False,0)
+      StdDev (1,BtmBurstpH,FP2,False)
+      Minimum (1,BtmBurstpH,FP2,False,0)
+      Maximum (1,BtmBurstpH,FP2,False,0)
+      StdDev (1,BtmBurstpHmV,FP2,False)
+      Minimum (1,BtmBurstpHmV,FP2,False,0)
+      Maximum (1,BtmBurstpHmV,FP2,False,0)
+      StdDev (1,BtmBurstChlugL,IEEE4,False)
+      Minimum (1,BtmBurstChlugL,IEEE4,False,0)
+      Maximum (1,BtmBurstChlugL,IEEE4,False,0)
+      StdDev (1,BtmBurstChlRFU,IEEE4,False)
+      Minimum (1,BtmBurstChlRFU,IEEE4,False,0)
+      Maximum (1,BtmBurstChlRFU,IEEE4,False,0)
+      StdDev (1,BtmBurstBGApcRFU,IEEE4,False)
+      Minimum (1,BtmBurstBGApcRFU,IEEE4,False,0)
+      Maximum (1,BtmBurstBGApcRFU,IEEE4,False,0)
+      StdDev (1,BtmBurstBGApcugL,IEEE4,False)
+      Minimum (1,BtmBurstBGApcugL,IEEE4,False,0)
+      Maximum (1,BtmBurstBGApcugL,IEEE4,False,0)
+      StdDev (1,BtmBurstFdomRFU,IEEE4,False)
+      Minimum (1,BtmBurstFdomRFU,IEEE4,False,0)
+      Maximum (1,BtmBurstFdomRFU,IEEE4,False,0)
+      StdDev (1,BtmBurstFDomQSU,IEEE4,False)
+      Minimum (1,BtmBurstFDomQSU,IEEE4,False,0)
+      Maximum (1,BtmBurstFDomQSU,IEEE4,False,0)
+      StdDev (1,BtmBurstNH4Amgl,IEEE4,False)
+      Minimum (1,BtmBurstNH4Amgl,IEEE4,False,0)
+      Maximum (1,BtmBurstNH4Amgl,IEEE4,False,0)
+      StdDev (1,BtmBurstNO3Nmgl,IEEE4,False)
+      Minimum (1,BtmBurstNO3Nmgl,IEEE4,False,0)
+      Maximum (1,BtmBurstNO3Nmgl,IEEE4,False,0)
+      StdDev (1,BtmBurstCLmgl,IEEE4,False)
+      Minimum (1,BtmBurstCLmgl,IEEE4,False,0)
+      Maximum (1,BtmBurstCLmgl,IEEE4,False,0)
+      StdDev (1,BtmBurstWiperPos,FP2,False)
+      Minimum (1,BtmBurstWiperPos,FP2,False,0)
+      Maximum (1,BtmBurstWiperPos,FP2,False,0)
+      Sample (1,BtmTotalBurstVals,FP2)
+      Sample (1,BtmBurstMissed,Boolean)
+      Sample (1,BtmBurstErrCnt,FP2)
     EndTable
 
     '__________________________________________Metadata for each burst sample_____________________________________
     '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
-    DataTable(SecBurst,True,-1)
+    DataTable(BtmSecBurst,True,-1)
       'DataInterval(0,1,Min,-1)
       CardOut (0,350000)
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
-      Sample (1,BurstDate,IEEE4)
-      Sample (1,BurstTime,IEEE4)
-      Sample (1,BurstTempC,IEEE4)
-      Sample (1,BurstTempF,IEEE4)
-      Sample (1,BurstSpCond,IEEE4)
-      Sample (1,BurstTurbFNU,IEEE4)
-      Sample (1,BurstDOSat,IEEE4)
-      Sample (1,BurstDOmgL,IEEE4)
-      Sample (1,BurstORP,IEEE4)
-      Sample (1,BurstDepthFt,IEEE4)
-      Sample (1,BurstDepthMeters,IEEE4)
-      Sample (1,BurstBattV,FP2)
-      Sample (1,BurstpH,FP2)
-      Sample (1,BurstpHmV,FP2)
-      Sample (1,BurstChlugL,IEEE4)
-      Sample (1,BurstChlRFU,IEEE4)
-      Sample (1,BurstBGApcRFU,IEEE4)
-      Sample (1,BurstBGApcugL,IEEE4)
-      Sample (1,BurstFdomRFU,IEEE4)
-      Sample (1,BurstFDomQSU,IEEE4)
-      Sample (1,BurstNH4Amgl,IEEE4)
-      Sample (1,BurstNO3Nmgl,IEEE4)
-      Sample (1,BurstCLmgl,IEEE4)
-      Sample (1,BurstWiperPos,FP2)
-      Sample (1,TotalBurstVals,FP2)
+      Sample (1,BtmBurstDate,IEEE4)
+      Sample (1,BtmBurstTime,IEEE4)
+      Sample (1,BtmBurstTempC,IEEE4)
+      Sample (1,BtmBurstTempF,IEEE4)
+      Sample (1,BtmBurstSpCond,IEEE4)
+      Sample (1,BtmBurstTurbFNU,IEEE4)
+      Sample (1,BtmBurstDOSat,IEEE4)
+      Sample (1,BtmBurstDOmgL,IEEE4)
+      Sample (1,BtmBurstORP,IEEE4)
+      Sample (1,BtmBurstDepthFt,IEEE4)
+      Sample (1,BtmBurstDepthMeters,IEEE4)
+      Sample (1,BtmBurstBattV,FP2)
+      Sample (1,BtmBurstpH,FP2)
+      Sample (1,BtmBurstpHmV,FP2)
+      Sample (1,BtmBurstChlugL,IEEE4)
+      Sample (1,BtmBurstChlRFU,IEEE4)
+      Sample (1,BtmBurstBGApcRFU,IEEE4)
+      Sample (1,BtmBurstBGApcugL,IEEE4)
+      Sample (1,BtmBurstFdomRFU,IEEE4)
+      Sample (1,BtmBurstFDomQSU,IEEE4)
+      Sample (1,BtmBurstNH4Amgl,IEEE4)
+      Sample (1,BtmBurstNO3Nmgl,IEEE4)
+      Sample (1,BtmBurstCLmgl,IEEE4)
+      Sample (1,BtmBurstWiperPos,FP2)
+      Sample (1,BtmTotalBurstVals,FP2)
       Sample (1,jCount,FP2)
-      Sample (1,BurstMissed,Boolean)
-      Sample (1,BurstErrCnt,FP2)
+      Sample (1,BtmBurstMissed,Boolean)
+      Sample (1,BtmBurstErrCnt,FP2)
     EndTable
-
-    '__________________________Bottom Sonde Burst Data Tables_________________________________
-    #If TopBottom Then  'remove these tables if there is no bottom sonde
-      DataTable(BtmBurst,RecBurstFlag,-1)
-        'DataInterval(0,1,Min,-1)
-        CardOut (0,17280)
-        OpenInterval
-        Sample (1,SiteID,String)
-        Sample (1,SiteNum,String)
-        Sample (1,BtmBurstDate,IEEE4)
-        Sample (1,BtmBurstTime,IEEE4)
-        Sample (1,BurstPeriod, IEEE4)
-        '    Sample (1,BurstMedDate,IEEE4)
-        '    Sample (1,BurstMedTime,IEEE4)
-        Median (1,BtmBurstDate,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstTime,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstORP,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstDepthMeters,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstBattV,MaxBurstCnt,FP2,BurstMissed)
-        Median (1,BtmBurstpH,MaxBurstCnt,FP2,BurstMissed)
-        Median (1,BtmBurstpHmV,MaxBurstCnt,FP2,BurstMissed)
-        Median (1,BtmBurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstFdomRFU,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstNH4Amgl,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstNO3Nmgl,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstCLmgl,MaxBurstCnt,IEEE4,BurstMissed)
-        Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
-        StdDev (1,BtmBurstTempC,IEEE4,False)
-        Minimum (1,BtmBurstTempC,IEEE4,False,0)
-        Maximum (1,BtmBurstTempC,IEEE4,False,0)
-        StdDev (1,BtmBurstSpCond,IEEE4,False)
-        Minimum (1,BtmBurstSpCond,IEEE4,False,0)
-        Maximum (1,BtmBurstSpCond,IEEE4,False,0)
-        StdDev (1,BtmBurstTurbFNU,IEEE4,False)
-        Minimum (1,BtmBurstTurbFNU,IEEE4,False,0)
-        Maximum (1,BtmBurstTurbFNU,IEEE4,False,0)
-        StdDev (1,BtmBurstDOSat,IEEE4,False)
-        Minimum (1,BtmBurstDOSat,IEEE4,False,0)
-        Maximum (1,BtmBurstDOSat,IEEE4,False,0)
-        StdDev (1,BtmBurstDOmgL,IEEE4,False)
-        Minimum (1,BtmBurstDOmgL,IEEE4,False,0)
-        Maximum (1,BtmBurstDOmgL,IEEE4,False,0)
-        StdDev (1,BtmBurstORP,IEEE4,False)
-        Minimum (1,BtmBurstORP,IEEE4,False,0)
-        Maximum (1,BtmBurstORP,IEEE4,False,0)
-        StdDev (1,BtmBurstDepthFt,IEEE4,False)
-        Minimum (1,BtmBurstDepthFt,IEEE4,False,0)
-        Maximum (1,BtmBurstDepthFt,IEEE4,False,0)
-        StdDev (1,BtmBurstDepthMeters,IEEE4,False)
-        Minimum (1,BtmBurstDepthMeters,IEEE4,False,0)
-        Maximum (1,BtmBurstDepthMeters,IEEE4,False,0)
-        StdDev (1,BtmBurstBattV,FP2,False)
-        Minimum (1,BtmBurstBattV,FP2,False,0)
-        Maximum (1,BtmBurstBattV,FP2,False,0)
-        StdDev (1,BtmBurstpH,FP2,False)
-        Minimum (1,BtmBurstpH,FP2,False,0)
-        Maximum (1,BtmBurstpH,FP2,False,0)
-        StdDev (1,BtmBurstpHmV,FP2,False)
-        Minimum (1,BtmBurstpHmV,FP2,False,0)
-        Maximum (1,BtmBurstpHmV,FP2,False,0)
-        StdDev (1,BtmBurstChlugL,IEEE4,False)
-        Minimum (1,BtmBurstChlugL,IEEE4,False,0)
-        Maximum (1,BtmBurstChlugL,IEEE4,False,0)
-        StdDev (1,BtmBurstChlRFU,IEEE4,False)
-        Minimum (1,BtmBurstChlRFU,IEEE4,False,0)
-        Maximum (1,BtmBurstChlRFU,IEEE4,False,0)
-        StdDev (1,BtmBurstBGApcRFU,IEEE4,False)
-        Minimum (1,BtmBurstBGApcRFU,IEEE4,False,0)
-        Maximum (1,BtmBurstBGApcRFU,IEEE4,False,0)
-        StdDev (1,BtmBurstBGApcugL,IEEE4,False)
-        Minimum (1,BtmBurstBGApcugL,IEEE4,False,0)
-        Maximum (1,BtmBurstBGApcugL,IEEE4,False,0)
-        StdDev (1,BtmBurstFdomRFU,IEEE4,False)
-        Minimum (1,BtmBurstFdomRFU,IEEE4,False,0)
-        Maximum (1,BtmBurstFdomRFU,IEEE4,False,0)
-        StdDev (1,BtmBurstFDomQSU,IEEE4,False)
-        Minimum (1,BtmBurstFDomQSU,IEEE4,False,0)
-        Maximum (1,BtmBurstFDomQSU,IEEE4,False,0)
-        StdDev (1,BtmBurstNH4Amgl,IEEE4,False)
-        Minimum (1,BtmBurstNH4Amgl,IEEE4,False,0)
-        Maximum (1,BtmBurstNH4Amgl,IEEE4,False,0)
-        StdDev (1,BtmBurstNO3Nmgl,IEEE4,False)
-        Minimum (1,BtmBurstNO3Nmgl,IEEE4,False,0)
-        Maximum (1,BtmBurstNO3Nmgl,IEEE4,False,0)
-        StdDev (1,BtmBurstCLmgl,IEEE4,False)
-        Minimum (1,BtmBurstCLmgl,IEEE4,False,0)
-        Maximum (1,BtmBurstCLmgl,IEEE4,False,0)
-        StdDev (1,BtmBurstWiperPos,FP2,False)
-        Minimum (1,BtmBurstWiperPos,FP2,False,0)
-        Maximum (1,BtmBurstWiperPos,FP2,False,0)
-        Sample (1,BtmTotalBurstVals,FP2)
-        Sample (1,BtmBurstMissed,Boolean)
-        Sample (1,BtmBurstErrCnt,FP2)
-      EndTable
-
-      '__________________________________________Metadata for each burst sample_____________________________________
-      '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
-      DataTable(BtmSecBurst,True,-1)
-        'DataInterval(0,1,Min,-1)
-        CardOut (0,350000)
-        OpenInterval
-        Sample (1,SiteID,String)
-        Sample (1,SiteNum,String)
-        Sample (1,BtmBurstDate,IEEE4)
-        Sample (1,BtmBurstTime,IEEE4)
-        Sample (1,BtmBurstTempC,IEEE4)
-        Sample (1,BtmBurstTempF,IEEE4)
-        Sample (1,BtmBurstSpCond,IEEE4)
-        Sample (1,BtmBurstTurbFNU,IEEE4)
-        Sample (1,BtmBurstDOSat,IEEE4)
-        Sample (1,BtmBurstDOmgL,IEEE4)
-        Sample (1,BtmBurstORP,IEEE4)
-        Sample (1,BtmBurstDepthFt,IEEE4)
-        Sample (1,BtmBurstDepthMeters,IEEE4)
-        Sample (1,BtmBurstBattV,FP2)
-        Sample (1,BtmBurstpH,FP2)
-        Sample (1,BtmBurstpHmV,FP2)
-        Sample (1,BtmBurstChlugL,IEEE4)
-        Sample (1,BtmBurstChlRFU,IEEE4)
-        Sample (1,BtmBurstBGApcRFU,IEEE4)
-        Sample (1,BtmBurstBGApcugL,IEEE4)
-        Sample (1,BtmBurstFdomRFU,IEEE4)
-        Sample (1,BtmBurstFDomQSU,IEEE4)
-        Sample (1,BtmBurstNH4Amgl,IEEE4)
-        Sample (1,BtmBurstNO3Nmgl,IEEE4)
-        Sample (1,BtmBurstCLmgl,IEEE4)
-        Sample (1,BtmBurstWiperPos,FP2)
-        Sample (1,BtmTotalBurstVals,FP2)
-        Sample (1,jCount,FP2)
-        Sample (1,BtmBurstMissed,Boolean)
-        Sample (1,BtmBurstErrCnt,FP2)
-      EndTable
-    #EndIf 'endif for top bottom
-  #EndIf 'endif for burst
-
+  #EndIf 'endif for top bottom
+#EndIf 'endif for burst
+#If WqSonde = "WQ_SERIAL_BURST" Then
   DataTable (Aquarius,Rec15minFlag,-1) 'guaruntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
     OpenInterval
@@ -3327,6 +3333,7 @@ EndSub
   EndSub
 #EndIf
 
+#If HasVM = True Then
 '---------------------Send a command to the ADCP -- Check Responses
 'This subroutine is primarily used for 'expert' operators to issue command changes to the ADCP.  As written, only one command at a time can be issued from the
 'user interface.  The ADCP echos and responsed are viewed from the "banner", "warning" and "CS" response variables. This capability is not available from the
@@ -3395,6 +3402,7 @@ Sub OpenADCPPort
     EndIf
   #EndIf
 EndSub
+#EndIf
 
 #If WqSonde <> "NONE"
   Sub OpenWQPort
@@ -4371,7 +4379,7 @@ EndSub
     SplitStr (WqDelay,WqIn,"",1,0)
     SerialFlush (WqSerialPort)
   EndSub
-  
+
   #If TopBottom Then
     Sub WipeBtmWQ
       Call OpenWQPort
@@ -6520,7 +6528,7 @@ EndSub
     #EndIf
   #EndIf
 
-'________________________________Sub to copy the burst stats to a new variable to store to the AQ table_______________________
+  '________________________________Sub to copy the burst stats to a new variable to store to the AQ table_______________________
   #If HasSuna = True Then
     Sub CopySunaStats
       AvgSunaNitrateuM = SunaStats.SunaNitrateuM_Avg
@@ -6541,7 +6549,7 @@ EndSub
       AvgSunaVoltLamp = SunaStats.SunaVoltLamp_Avg
     EndSub
 
-'_____________________________Sub to reset the new variables back to NANs so if data don't come in, we don't populate duplicate values into AQ____________________
+    '_____________________________Sub to reset the new variables back to NANs so if data don't come in, we don't populate duplicate values into AQ____________________
     Sub ResetSunaStats
       AvgSunaNitrateuM = BadDataIndicator
       MedSunaNitrateuM = BadDataIndicator
@@ -6560,18 +6568,18 @@ EndSub
       AvgSunaVoltMain = BadDataIndicator
       AvgSunaVoltLamp = BadDataIndicator
     EndSub
-    
-'___________________________________________Reset Timers for Suna____________________
-Sub ResetSunaTimers
-    WipeStart = 0
-    WipeEnd = 0
-    SunaWipeTotTime = 0
-    SunaSampleStart = 0
-    SunaOnTime = 0
-    SunaProcessStart = 0
-    SunaProcessEnd = 0
-    SunaProcessTotTime = 0
- EndSub
+
+    '___________________________________________Reset Timers for Suna____________________
+    Sub ResetSunaTimers
+      WipeStart = 0
+      WipeEnd = 0
+      SunaWipeTotTime = 0
+      SunaSampleStart = 0
+      SunaOnTime = 0
+      SunaProcessStart = 0
+      SunaProcessEnd = 0
+      SunaProcessTotTime = 0
+    EndSub
   #EndIf
 
   '__________________________________Keypad Menus________________________________________
@@ -6966,7 +6974,7 @@ Sub ResetSunaTimers
         If ManualSunaOn = True Then
           SerialOpen(SunaPort,115200,0,0,6000)
           PortSet(SunaSwitch,1)
-          Else
+        Else
           SerialFlush(SunaPort)
           SerialClose(SunaPort)
           PortSet(SunaSwitch,0)
@@ -6999,7 +7007,7 @@ Sub ResetSunaTimers
           SetEXOTimeFlg = True
         #EndIf
         StoreVariablesFlg = True 'set flag to store the necessary variables to the USR drive
-        Else
+      Else
         Rec24HrFlag = False
       EndIf
       If ModDay = 300 Then 'Reset bad data counter at 5 minutes after Midnight
@@ -7013,14 +7021,14 @@ Sub ResetSunaTimers
         Rec15minFlag = True ' set flag to record AQ and DataOut tables
         RecBeamCheckFlag = True 'set flag to record BeamCheck Table
         If RecordAll = True Then RecAllVelFlag = True 'set flag to record VelData table for special studies
-        Else
+      Else
         Rec15minFlag = False
         RecAllVelFlag = False
         RecBeamCheckFlag = False
       EndIf
       If RecCalibData = True Then 'if we want 1 min data
         Rec1MinFlag = True
-        Else 'if the user set it back to false
+      Else 'if the user set it back to false
         Rec1MinFlag = False 'stop recording 1min data
         OneMinCount = 0 'reset the counter
       EndIf
@@ -7033,37 +7041,37 @@ Sub ResetSunaTimers
         EndIf
       EndIf
       #If WqSonde = "WQ_SERIAL_BURST" Then
-      'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
+        'On initial compile the burstperiod is set to zero. Have it switch to the standard 1150 unless user declares otherwise.
         If BurstPeriod = 0 Then
           BurstPeriod = 1150 'this is adjustable here and in the public table. Minimum value is 250 for the sonde. A cr6 seems to work at that rate or slower. A CR1000 needs a rate of no faster than 1150.
         ElseIf BurstPeriod < 250 Then 'if user enters values less than 250, but not 0, bring it up to 250. This is the max rate that the sonde can collect.
           BurstPeriod = 250
         EndIf
-      #If TopBottom Then 'if we have a Top/Bottom sonde setup
-        If Mod15Minutes = 720 Then 'if the 12th minute
-          BtmWipeflag = True 'set flag to wipe the bottom sonde
+        #If TopBottom Then 'if we have a Top/Bottom sonde setup
+          If Mod15Minutes = 720 Then 'if the 12th minute
+            BtmWipeflag = True 'set flag to wipe the bottom sonde
           Else
-          BtmWipeflag = False
-        EndIf
-        If Mod15Minutes = 780 Then 'If the 13th minute
-        Timer(StartBtmBurstTimer,mSec,2) 'Start Timer to use to delay the burst to later in the minute
-          GetBtmBurst = True 'set flag to initiate sample
+            BtmWipeflag = False
+          EndIf
+          If Mod15Minutes = 780 Then 'If the 13th minute
+            Timer(StartBtmBurstTimer,mSec,2) 'Start Timer to use to delay the burst to later in the minute
+            GetBtmBurst = True 'set flag to initiate sample
+          Else
+            GetBtmBurst = False
+          EndIf
+        #EndIf
+        If Mod15Minutes = 780 Then 'if the 13th minute
+          Wipeflag = True 'wipe the top sonde (or only sonde not Top/Bottom
         Else
-          GetBtmBurst = False
+          Wipeflag = False
+        EndIf
+        If Mod15Minutes = 840 Then 'if the 14th minute
+          Timer (StartTopBurstTimer,mSec,2) 'start timer for delaying the burst to later in the minute
+          GetBurst = True
+        Else
+          GetBurst = False
         EndIf
       #EndIf
-      If Mod15Minutes = 780 Then 'if the 13th minute
-        Wipeflag = True 'wipe the top sonde (or only sonde not Top/Bottom
-        Else
-        Wipeflag = False
-      EndIf
-      If Mod15Minutes = 840 Then 'if the 14th minute
-        Timer (StartTopBurstTimer,mSec,2) 'start timer for delaying the burst to later in the minute
-        GetBurst = True
-        Else
-        GetBurst = False
-      EndIf
-    #EndIf
       Dim InCount As Long
       EnsBytes = 0
       Subscans = 0
@@ -7085,7 +7093,7 @@ Sub ResetSunaTimers
       If (SendCMD) Then Call SendSetup
       #If GetNoiseFloor = True Then
         'If SendPT3 = True AND TimeIntoInterval(PT3Time,5,Min) Then 'used for debugging
-        If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) and OneMinConsistent = False Then '3 minutes before midnight. Skip this if OneMinConsistent is true.
+        If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) AND OneMinConsistent = False Then '3 minutes before midnight. Skip this if OneMinConsistent is true.
           CMD = "PT3"
           SendCMD = True
           Call SendSetup
@@ -7250,9 +7258,9 @@ Sub ResetSunaTimers
           BadEnsemble = BadEnsemble + 1
           BadChecksum = BadChecksum + 1
           VMdataIn = No
-        ChkSumChkEnd = Timer(DebugTimer,msec,4)
-        ChkSumChkEnd = ChkSumChkEnd/1000
-        ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
+          ChkSumChkEnd = Timer(DebugTimer,msec,4)
+          ChkSumChkEnd = ChkSumChkEnd/1000
+          ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
           'SerialFlush(AdcpPort)
         Else
           VMdataIn = Yes
@@ -7302,17 +7310,17 @@ Sub ResetSunaTimers
               ' if it didn't respond to the previous "data" attempt
               BurstReachedMod = Mod15Minutes
               #If TopBottom = False Then 'if we don't have a top/bottom sonde, get the burst sample as close to the 15min mark as we can by delaying
-              Do
-                TopBurstDelay = Timer(StartTopBurstTimer,mSec,4)
-                TopBurstDelay = TopBurstDelay/1000
-                If TopBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
-                  StartTopBurst = True
-                  ExitDo 'we reached out time threshold, start burst
+                Do
+                  TopBurstDelay = Timer(StartTopBurstTimer,mSec,4)
+                  TopBurstDelay = TopBurstDelay/1000
+                  If TopBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
+                    StartTopBurst = True
+                    ExitDo 'we reached out time threshold, start burst
                   Else
-                  StartTopBurst = False
-                EndIf
-                Delay(1,250,mSec) 'delay 0.25sec before checking time again
-              Loop
+                    StartTopBurst = False
+                  EndIf
+                  Delay(1,250,mSec) 'delay 0.25sec before checking time again
+                Loop
               #EndIf
               BurstTimeReached = Timer(DebugTimer,mSec,4)
               BurstTimeReached = BurstTimeReached/1000
@@ -7391,15 +7399,15 @@ Sub ResetSunaTimers
                 ' if it didn't respond to the previous "data" attempt
                 BurstReachedMod = Mod15Minutes
                 Do
-                BtmBurstDelay = Timer(StartBtmBurstTimer,mSec,4)
-                BtmBurstDelay = BtmBurstDelay/1000
-                If BtmBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
-                  StartBtmBurst = True
-                  ExitDo 'continue loop until we've reached the proper time
-                Else
-                  StartBtmBurst = False
-                EndIf
-                Delay(1,250,mSec) 'delay 0.25sec before returning to top of loop
+                  BtmBurstDelay = Timer(StartBtmBurstTimer,mSec,4)
+                  BtmBurstDelay = BtmBurstDelay/1000
+                  If BtmBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
+                    StartBtmBurst = True
+                    ExitDo 'continue loop until we've reached the proper time
+                  Else
+                    StartBtmBurst = False
+                  EndIf
+                  Delay(1,250,mSec) 'delay 0.25sec before returning to top of loop
                 Loop
                 BurstTimeReached = Timer(DebugTimer,mSec,4)
                 BurstTimeReached = BurstTimeReached/1000
@@ -7505,6 +7513,22 @@ Sub ResetSunaTimers
         AfterBurst = Timer(DebugTimer,msec,4)
         AfterBurst = AfterBurst/1000
 
+        #If WqSonde <>"NONE" Then
+          TempDiff = WqTempC - VMtempC
+          If WqError = true Then
+            WqBadData = True
+          Else
+            WqBadData = False
+          EndIf
+        #EndIf
+        If SetEXOTimeFlg = True Then
+          Call SetEXOTime
+        EndIf
+        If WqManualCycle = true Then
+          Call CycleWQpower
+        EndIf
+      #EndIf
+      #If HasVM Then
         If VMdataIn = Yes Then 'only process data if we have it
           VmDeadCount = 0
           MainDecodeStart = Timer(DebugTimer,msec,4)
@@ -7513,23 +7537,6 @@ Sub ResetSunaTimers
           MainDecodeEnd = Timer(DebugTimer,msec,4)
           MainDecodeEnd = MainDecodeEnd/1000
           MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
-          #If WqSonde <>"NONE" Then
-            TempDiff = WqTempC - VMtempC
-          #EndIf
-          #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
-            If WqError = true Then
-              WqBadData = True
-            Else
-              WqBadData = False
-            EndIf
-          #ElseIf WqSonde = "WQ_SDI12" Then
-            If WqError = true Then
-              WqBadData = True
-            Else
-              WqBadData = False
-            EndIf
-          #EndIf
-
           #If UseAutoRange = true
             CalcRangeStart = Timer(DebugTimer,msec,4)
             CalcRangeStart = CalcRangeStart/1000
@@ -7561,37 +7568,37 @@ Sub ResetSunaTimers
 
           'now call the DataOut tables (need to be seen on every scan)
           'if hasVM = False and we're getting vm data we need to disable these two tables because they are called later
-          #If HasVM Then
-            #If IsSpecStudy = Yes Then 'although the table is called, it will not record anything unless
-              'vm is 3-4 beams and set to beam or earth coords or the RecordAll boolean is toggled
-              CallTable VelData
-            #EndIf
-            RecAllVelFlag = false
-            'Rec15minFlag = false 'turn data table flag back off
-            'make sure spike stuff is not called if hasvm is false
-            If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
-              ChkSpikeStart = Timer(DebugTimer,msec,4)
-              ChkSpikeStart = ChkSpikeStart/1000
-              Call CheckSpikes
-              ChkSpikeEnd = Timer(DebugTimer,msec,4)
-              ChkSpikeEnd = ChkSpikeEnd/1000
-              ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
-              #If StoreAllToCard Then
-                StoreToCrdStart = Timer(DebugTimer,msec,4)
-                StoreToCrdStart = StoreToCrdStart/1000
-                Call StoreAllData
-                StoreToCrdEnd = Timer(DebugTimer,msec,4)
-                StoreToCrdEnd = StoreToCrdEnd/1000
-                StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
-              #EndIf
-            EndIf
-            AddSpikeStart = Timer(DebugTimer,msec,4)
-            AddSpikeStart = AddSpikeStart/1000
-            Call AddSpikes 'make sure buffer is full before checking
-            AddSpikeEnd = Timer(DebugTimer,msec,4)
-            AddSpikeEnd = AddSpikeEnd/1000
-            AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
+
+          #If IsSpecStudy = Yes Then 'although the table is called, it will not record anything unless
+            'vm is 3-4 beams and set to beam or earth coords or the RecordAll boolean is toggled
+            CallTable VelData
           #EndIf
+          RecAllVelFlag = false
+          'Rec15minFlag = false 'turn data table flag back off
+          'make sure spike stuff is not called if hasvm is false
+          If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
+            ChkSpikeStart = Timer(DebugTimer,msec,4)
+            ChkSpikeStart = ChkSpikeStart/1000
+            Call CheckSpikes
+            ChkSpikeEnd = Timer(DebugTimer,msec,4)
+            ChkSpikeEnd = ChkSpikeEnd/1000
+            ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
+            #If StoreAllToCard Then
+              StoreToCrdStart = Timer(DebugTimer,msec,4)
+              StoreToCrdStart = StoreToCrdStart/1000
+              Call StoreAllData
+              StoreToCrdEnd = Timer(DebugTimer,msec,4)
+              StoreToCrdEnd = StoreToCrdEnd/1000
+              StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
+            #EndIf
+          EndIf
+          AddSpikeStart = Timer(DebugTimer,msec,4)
+          AddSpikeStart = AddSpikeStart/1000
+          Call AddSpikes 'make sure buffer is full before checking
+          AddSpikeEnd = Timer(DebugTimer,msec,4)
+          AddSpikeEnd = AddSpikeEnd/1000
+          AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
+
         Else 'if no vm data in
           VmDeadCount = VmDeadCount + 1
         EndIf 'if vm data in
@@ -7603,12 +7610,6 @@ Sub ResetSunaTimers
         Call GetSN
         If SetVMTimeFlg Then
           Call SetVMTime
-        EndIf
-        If SetEXOTimeFlg = True Then
-          Call SetEXOTime
-        EndIf
-        If WqManualCycle = true Then
-          Call CycleWQpower
         EndIf
       #EndIf
       'Call All Data Tables (time them to make sure nothing is being hung up.
@@ -7765,13 +7766,13 @@ Sub ResetSunaTimers
               EndIf
               Delay (1,200,mSec) 'delay 0.2 sec
               SplitStr(SunaBurstArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the multi-dimensioned array based on the counter
-                                                                          'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
+              'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
               SplitStr(SunaHeader,SunaBurstIn,"",1,1)
               If SunaBurstArray(oCount,1) < 1000 Then
                 SunaHeader = SunaHeader + "0"
               Else
                 SunaHeader = SunaHeader
-              EndIf  
+              EndIf
               Delay(1,500,mSec) 'delay to wait for next value
               Erase(SunaBurstIn) 'erase the string
               SerialFlush(SunaPort) 'flush the port
@@ -7792,7 +7793,7 @@ Sub ResetSunaTimers
                 Next nCount
                 If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
                   If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
-                    SSN = 1 'set locations for parameters 
+                    SSN = 1 'set locations for parameters
                     SST = 2
                     SNuM = 3
                     SNmgL = 4
