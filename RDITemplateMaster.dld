@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190711
-Const ProgramVersion = "4.2"
-'Last Modified by: Trevor Violette
+Const ProgramVersionDate = 20190712
+Const ProgramVersion = "4.21"
+'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -258,6 +258,7 @@ Const ProgramVersion = "4.2"
 '20190710 - TAV Added Program info to SVMaq table for easy access in case it's needed before midnight when QAQC gets written.
 '20190711 - TAV Put "MaxBins" in the Customize Constants section to more easily establish how many bins are wanted at the site.
 '           TAV Fixed some problems with conditional compiling if WqSonde = "NONE". Still some more work to do with other Customuze Constant options.
+'20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
 
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
@@ -4419,6 +4420,9 @@ EndSub
       EndIf
     #EndIf
     WqPwrCycleCnt = 0
+    #If TopBottom Then
+      BtmWqPwrCycleCnt = 0
+      #EndIf
     WqManualCycle = False
     ErrorEvent = "Cycle Sonde Power"
     #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -5762,10 +5766,10 @@ End Function
     Dim CorrTemp(16) As Float
     Dim VelTemp(16) As Float
     #If SeeAllVel = True Then
-      Public Binspikes(30) As Long
+      Public Binspikes(MaxBins) As Long
       Public BinResults(2) As Long
     #Else
-      Dim Binspikes(30) As Long
+      Dim Binspikes(MaxBins) As Long
       Public BinResults(2) As Long
     #EndIf
     Dim n As Long
@@ -5868,7 +5872,7 @@ End Function
       QueueAvgStage = Round(QueueAvgStage,2)
       QueueVel = Round(IndexVel,2)
       TimeOut = Ftime(Public.Timestamp)
-      MaxSpa(BinResults(),30,Binspikes())
+      MaxSpa(BinResults(),MaxBins,Binspikes())
       If BinResults(1) < 2 Then
         BinResults(1) = 0
         BinResults(2) = 0
