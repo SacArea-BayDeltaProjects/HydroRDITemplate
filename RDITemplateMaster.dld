@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190712
-Const ProgramVersion = "4.21"
+Const ProgramVersionDate = 20190809
+Const ProgramVersion = "4.22"
 'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -259,6 +259,7 @@ Const ProgramVersion = "4.21"
 '20190711 - TAV Put "MaxBins" in the Customize Constants section to more easily establish how many bins are wanted at the site.
 '           TAV Fixed some problems with conditional compiling if WqSonde = "NONE". Still some more work to do with other Customuze Constant options.
 '20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
+'20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value.
 
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
@@ -6045,8 +6046,8 @@ Sub ReadVariables
     '    'set error txt
     ExitSub
   EndIf
-  Dim InVar(40) As String
-  SplitStr(InVar,PreserveFile,",",40,0)
+  Dim InVar(41) As String
+  SplitStr(InVar,PreserveFile,",",41,0)
   StartBin = InVar(1)
   EndBin = InVar(2)
   StartEbbBin = InVar(3)
@@ -6087,13 +6088,14 @@ Sub ReadVariables
   isVMNClosed = InVar(38)
   BurstPeriod = InVar(39)
   OneMinConsistent= InVar(40) 'if you want constant 1min data this will keep it on in case of power cycle
+  FlowSign = InVar(41)
 EndSub
 
 'Store Variables to USR File (preserve variables)
 '--------------------------------------------------
 Sub StoreVariables
   'store variables out
-  Dim Var(40) As String
+  Dim Var(41) As String
   Public SendVarString As String * 500
   Public VarStringLen As Long
   Public VarHandle = Long
@@ -6140,9 +6142,10 @@ Sub StoreVariables
   Var(38) = isVMNClosed
   Var(39) = BurstPeriod
   Var(40) = OneMinConsistent
+  Var(41) = FlowSign
   'build send string
   SendVarString = Var(1)
-  For VarCnt = 2 To 40
+  For VarCnt = 2 To 41
     SendVarString = SendVarString + "," + Var(VarCnt)
   Next VarCnt
   VarStringLen = Len(SendVarString)
