@@ -259,7 +259,7 @@ Const ProgramVersion = "4.22"
 '20190711 - TAV Put "MaxBins" in the Customize Constants section to more easily establish how many bins are wanted at the site.
 '           TAV Fixed some problems with conditional compiling if WqSonde = "NONE". Still some more work to do with other Customuze Constant options.
 '20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
-'20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value.
+'20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value. 20190819-altered beamcheck table to be MaxBins*4 instead of just 108 incase we use more than 27 bins.
 
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
@@ -2631,8 +2631,8 @@ DataTable (BeamCheck,RecBeamCheckFlag,-1)
   Sample (1,EndBin,Long)
   Sample (1,VMpitch,FP2)
   Sample (1,VMroll,FP2)
-  Average (108,ensRSSI(),UINT2,False)
-  Average (108,ensCorr(),UINT2,False)
+  Average (MaxBins*4,ensRSSI(),UINT2,False)
+  Average (MaxBins*4,ensCorr(),UINT2,False)
   Sample (1,VMupBeam,IEEE4)
   Average (1,VMupBeam,IEEE4,False)
   Sample (1,VMtempC,IEEE4)
