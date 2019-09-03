@@ -260,7 +260,7 @@ Const ProgramVersion = "4.22"
 '           TAV Fixed some problems with conditional compiling if WqSonde = "NONE". Still some more work to do with other Customuze Constant options.
 '20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
 '20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value. 20190819-altered beamcheck table to be MaxBins*4 instead of just 108 incase we use more than 27 bins.
-
+'20190903 - MRI 4.23 Added additional timers for ADVM process to help with further troubleshooting. Altered position of some timers out of If statements because if conditions were not met the timers would remain at the last value and not reset for each scan. This gave the appearance of processes happening "back in time"
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -1334,7 +1334,15 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public ScanDiff As Long
   Public ScanStart
   Public ScanEnd
-  Public ADCPEnd
+  Public WakeVMStart
+  Public WakeVMEnd
+  Public WakeVMTotTime
+  Public VMInfoStart
+  Public VMInfoEnd
+  Public VMInfoTotTime
+  Public VMLoopStart
+  Public VMLoopEnd
+  Public VMLoopTotTime
   Public BeforeBurst
   Public AfterBurst
   Public CDMACheckStart
@@ -1413,7 +1421,15 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim ScanDiff As Long
   Dim ScanStart
   Dim ScanEnd
-  Dim ADCPEnd
+  Dim WakeVMStart
+  Dim WakeVMEnd
+  Dim WakeVMTotTime
+  Dim VMInfoStart
+  Dim VMInfoEnd
+  Dim VMInfoTotTime
+  Dim VMLoopStart
+  Dim VMLoopEnd
+  Dim VMLoopTotTime
   Dim BeforeBurst
   Dim AfterBurst
   Dim CDMACheckStart
@@ -2743,7 +2759,15 @@ DataTable (Debugger,True,-1)
   CardOut (0,1440)
   Sample (1,ScanStart,FP2)
   Sample (1,ScanEnd,FP2)
-  Sample (1,ADCPEnd,FP2)
+  Sample (1,WakeVMStart,FP2)
+  Sample (1,WakeVMEnd,FP2)
+  Sample (1,WakeVMTotTime,FP2)
+  Sample (1,VMInfoStart,FP2)
+  Sample (1,VMInfoEnd,FP2)
+  Sample (1,VMInfoTotTime,FP2)
+  Sample (1,VMLoopStart,FP2)
+  Sample (1,VMLoopEnd,FP2)
+  Sample (1,VMLoopTotTime,FP2)
   Sample (1,BeforeBurst,FP2)
   Sample (1,AfterBurst,FP2)
   #If (WqSonde <> "NONE") Then
@@ -7159,13 +7183,23 @@ EndSub
 
       'If user elects to wake up Channel Master because it has gone to sleep for some reason
       #If HasVM Then
+      WakeVMStart = Timer(DebugTimer,msec,4)
+      WakeVMStart = WakeVMStart/1000
         If WakeUpVM Then
           Call WakeVM
           WakeUpVM = No
         EndIf
+      WakeVMEnd = Timer(DebugTimer,msec,4)
+      WakeVMEnd = WakeVMEnd/1000
+      WakeVMTotTime = WakeVMEnd-WakeVMStart
       #EndIf
+      VMInfoStart = Timer(DebugTimer,msec,4)
+      VMInfoStart = VMInfoStart/1000
       Call GetLastScan
       Call GetSysInfo
+      VMInfoEnd = Timer(DebugTimer,msec,4)
+      VMInfoEnd = VMInfoEnd/1000
+      VMInfoTotTime = VMInfoEnd-VMInfoStart
       Call KeypadMenu
       #If ReadExtPwr Then
         Call ExtPwrSource
@@ -7194,6 +7228,8 @@ EndSub
       ADCPDone = False
       Numbytes = 0 'Zero counters for ADCP Decoder
       InCount=0
+      VMLoopStart = Timer(DebugTimer,msec,4)
+      VMLoopStart = VMLoopStart/1000
       #If HasVM = true Then
         For ADCPLoop = 1 To 2
           Do While SerialInChk(AdcpPort)
@@ -7228,19 +7264,21 @@ EndSub
           Delay (1,5,Sec) 'Wait a bit for incoming ensemble, but not more than 10 seconds
         Next
       #EndIf
-      ADCPEnd = Timer(DebugTimer,mSec,4)
-      ADCPEnd = ADCPEnd/1000
+      VMLoopEnd = Timer(DebugTimer,msec,4)
+      VMLoopEnd = VMLoopEnd/1000
+      VMLoopTotTime = VMLoopEnd-VMLoopStart
 
-      If Numbytes = ((EnsBytes *2) +4) Then MissedEns = MissedEns + 1
       CDMACheckStart = Timer(DebugTimer,msec,4)
       CDMACheckStart = CDMACheckStart/1000
+      If Numbytes = ((EnsBytes *2) +4) Then MissedEns = MissedEns + 1
       Call CDMAcheck
       CDMACheckEnd = Timer(DebugTimer,msec,4)
       CDMACheckEnd = CDMACheckEnd/1000
       CDMACheckTotTime = CDMACheckEnd-CDMACheckStart
+      
       #If HasVM = True Then
-        ZeroVMTimeStart = Timer(DebugTimer,msec,4)
-        ZeroVMTimeStart = ZeroVMTimeStart/1000
+       ZeroVMTimeStart = Timer(DebugTimer,msec,4)
+       ZeroVMTimeStart = ZeroVMTimeStart/1000
         If NumbytesZero > 7 Then
           BadEnsemble = BadEnsemble + 1
           Call ZeroVMArrays
@@ -7265,13 +7303,13 @@ EndSub
           BadEnsemble = BadEnsemble + 1
           BadChecksum = BadChecksum + 1
           VMdataIn = No
-          ChkSumChkEnd = Timer(DebugTimer,msec,4)
-          ChkSumChkEnd = ChkSumChkEnd/1000
-          ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
           'SerialFlush(AdcpPort)
         Else
           VMdataIn = Yes
         EndIf
+        ChkSumChkEnd = Timer(DebugTimer,msec,4)
+        ChkSumChkEnd = ChkSumChkEnd/1000
+        ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
       #EndIf
       BeforeBurst = Timer(DebugTimer,msec,4)
       BeforeBurst = BeforeBurst/1000
