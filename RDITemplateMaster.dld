@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190809
-Const ProgramVersion = "4.22"
+Const ProgramVersionDate = 20190903
+Const ProgramVersion = "4.23"
 'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
