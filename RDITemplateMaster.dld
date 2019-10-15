@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190903
-Const ProgramVersion = "4.23"
+Const ProgramVersionDate = 20191015
+Const ProgramVersion = "4.30"
 'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -261,6 +261,7 @@ Const ProgramVersion = "4.23"
 '20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
 '20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value. 20190819-altered beamcheck table to be MaxBins*4 instead of just 108 incase we use more than 27 bins.
 '20190903 - MRI 4.23 Added additional timers for ADVM process to help with further troubleshooting. Altered position of some timers out of If statements because if conditions were not met the timers would remain at the last value and not reset for each scan. This gave the appearance of processes happening "back in time"
+'20191015 - MRI 4.30 Added backup iridium radio transmission capability for important sites. Done by turning the DCP into a SDI-12 sensor and taking Aquarius table data
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -307,6 +308,9 @@ Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
 Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
+'value = True
+'value = False
+Const HasIridium = True
 'value = True
 'value = False
 Const MaxSunaBurst = 30
@@ -394,6 +398,7 @@ Const ReadExtPwr = False
   Const WqSerialPort = Com4
   Const VMSwitchPort = 4 'only used if not using sw12
   Const WqSwitchPort = 6
+  Const IridiumCom = 5
   Const PS1Com3 = 3
   Const PS1Com5 = 5
   Const PS2Com3 = 3
@@ -413,6 +418,7 @@ Const ReadExtPwr = False
   Const WqSwitchPort = U6
   Const UseSW12_2_forWQ = False
   Const VMSwitchPort = U4
+  Const IridiumCom = C1
   Const PS1Com3 = U3
   Const PS1Com5 = U5
   Const PS2Com3 = U3
@@ -1734,6 +1740,48 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SunaProcessTotTime 'Total time for tables to be written
 #EndIf
 
+'If we are using iridium declare the appropriate variables based on the type of water quality being collected
+#If HasIridium=True Then
+'Iridium Radio Variables
+
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") OR (WqSonde = "WQ_SERIAL_BURST") Then
+Const IridiumVars = 14'need 14 places in the array for extra water quality parameters
+#EndIf
+#If WqSonde = "NONE" Then
+  Const IridiumVars = 8'base array only need 8 for stage and ADVM data
+#EndIf
+
+Public IridiumOutArray(IridiumVars)
+
+'always will be used
+Public CR1Volts_IRD
+Public AvgPS1Stg_IRD
+Public AvgPS2Stg_IRD
+Public AvgUpBeamStg_IRD
+Public AvgIndexVel_IRD
+Public AvgVMTemp_IRD
+Public AvgVMPitch_IRD
+Public AvgVMRoll_IRD
+
+#If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ variables
+Public MedBurstDate_IRD
+Public MedBurstTime_IRD
+Public WQBattV_Min_IRD
+Public MedTempC_IRD
+Public MedSpCond_IRD
+Public MedTurbFNU_IRD
+#EndIf
+
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ varialbes
+  Public WqDate_IRD
+  Public WqTime_IRD
+  Public WqTempC_IRD
+  Public WqSpCond_IRD
+  Public WqTurbFNU_IRD
+  Public WQBattV_Min_IRD 
+#EndIf
+
+#EndIf
 
 PreserveVariables 'preserve values in case of power outages
 SetStatus ("USRDriveSize",16384)
@@ -6613,6 +6661,72 @@ EndSub
     EndSub
   #EndIf
 
+#If HasIridium = True Then
+  '___________________________________________Iridium SDI12 Output___________________
+  Sub IridiumDataOut
+'  Create new variables to capture important data from the Aquarius field
+  'these varialbes will always be present
+  CR1Volts_IRD = Aquarius.CR1volts_Min
+  AvgPS1Stg_IRD = Aquarius.AvgPS1Stg
+  AvgPS2Stg_IRD = Aquarius.AvgPS2Stg
+  AvgUpBeamStg_IRD = Aquarius.AvgUpBeamStg
+  AvgIndexVel_IRD = Aquarius.AvgIndexVel
+  AvgVMTemp_IRD = Aquarius.AvgVMTemp
+  AvgVMPitch_IRD = Aquarius.AvgVMPitch
+  AvgVMRoll_IRD = Aquarius.AvgVMRoll
+  
+#If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ data
+  MedBurstDate_IRD = Aquarius.MedBurstDAte
+  MedBurstTime_IRD = Aquarius.MedBurstTime
+  WQBattV_Min_IRD = Aquarius.WQBattV_Min
+  MedTempC_IRD = Aquarius.MedTempC
+  MedSpCond_IRD = Aquarius.MedSpCond
+  MedTurbFNU_IRD = Aquarius.MedTurbFNU
+#EndIf
+
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ data
+  WqDate_IRD = Aquarius.WqDate
+  WqTime_IRD = Aquarius.WqTime
+  WQBattV_Min_IRD = Aquarius.WqBattV_Min
+  WqTempC_IRD = Aquarius.WqTempC
+  WQSpCond_IRD = Aquarius.WqSpCond
+  WQTurbFNU_IRD = Aquarius.WqTurbFNU
+#EndIf
+'  
+  'Build the array
+  'with the data that will always be there
+  IridiumOutArray(1) = CR1Volts_IRD
+  IridiumOutArray(2) = AvgIndexVel_IRD
+  IridiumOutArray(3) = AvgPS1Stg_IRD
+  IridiumOutArray(4) = AvgPS2Stg_IRD
+  IridiumOutArray(5) = AvgUpBeamStg_IRD
+  IridiumOutArray(6) = AvgVMTemp_IRD
+  IridiumOutArray(7) = AvgVMPitch_IRD
+  IridiumOutArray(8) = AvgVMRoll_IRD
+  
+#If WqSonde = "WQ_SERIAL_BURST" Then 'add on the burst water quality data
+  IridiumOutArray(9) = MedBurstDate_IRD
+  IridiumOutArray(10) = MedBurstTime_IRD
+  IridiumOutArray(11) = MedTempC_IRD
+  IridiumOutArray(12) = MedSpCond_IRD
+  IridiumOutArray(13) = MedTurbFNU_IRD
+  IridiumOutArray(14) = WQBattV_Min_IRD
+#EndIf
+
+#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'or just add on the non-burst WQ data
+  IridiumOutArray(9) = WqDate_IRD
+  IridiumOutArray(10) = WqTime_IRD
+  IridiumOutArray(11) = WqTempC_IRD
+  IridiumOutArray(12) = WqSpCond_IRD
+  IridiumOutArray(13) = WqTurbFNU_IRD
+  IridiumOutArray(14) = WQBattV_Min_IRD
+#EndIf
+
+  EndSub
+  
+#EndIf
+
+
   '__________________________________Keypad Menus________________________________________
   Sub KeypadMenu
     DisplayMenu ("Main Menu",-4)
@@ -7918,6 +8032,9 @@ EndSub
       '      AvgStageSec = Dataout.StageSecnd_Avg
       Delay(1,50,mSec)
       CallTable Aquarius 'call the table, if Rec15MinFlag is true, record it. Otherwise, store data in background until we are ready to record the data
+      #If HasIridium = True Then
+      Call IridiumDataOut 'Call Iridium subroutine after you know Aquarius table has been written/updated
+      #EndIf
       AQcount = AQcount + 1 'debug counter
       AQTabEnd = Timer (DebugTimer,msec,4) 'end time of AQ table
       AQTabEnd = AQTabEnd/1000 'convert
@@ -7939,4 +8056,15 @@ EndSub
       CallTable Debugger 'call/store debugging info
       CallTable SVMaq 'call SVMaq table
     NextScan
+    
+#If HasIridium = True Then
+'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio    
+SlowSequence
+Do
+  SDI12SensorSetup (IridiumVars,IridiumCom,0,5)'turns selected port into an SDI12 port. Use setting to adjust port and address. Number of repetions should match IridiumOutArray count. Test on address 1 and had issues. Address 0 seems to work fine.
+  Delay (1,5,sec) 'delay to make sure value are present
+  SDI12SensorResponse(IridiumOutArray)'sensor will respond with entire array when Iridium Radio queries DCP
+Loop
+#EndIf
+
   EndProg
