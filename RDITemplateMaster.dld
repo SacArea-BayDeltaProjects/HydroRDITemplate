@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20190903
-Const ProgramVersion = "4.23"
+Const ProgramVersionDate = 20191018
+Const ProgramVersion = "4.24"
 'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -261,6 +261,7 @@ Const ProgramVersion = "4.23"
 '20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
 '20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value. 20190819-altered beamcheck table to be MaxBins*4 instead of just 108 incase we use more than 27 bins.
 '20190903 - MRI 4.23 Added additional timers for ADVM process to help with further troubleshooting. Altered position of some timers out of If statements because if conditions were not met the timers would remain at the last value and not reset for each scan. This gave the appearance of processes happening "back in time"
+'20191018 - MRI 4.24 Altered timing for the delay prior to taking the WQ serial burst sample to avoid skipped scans in a CR1000 due to its slower processing speed.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -918,6 +919,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public StartBtmBurst As Boolean
     Public BtmBurstDelay
   #EndIf
+  Public BurstDelayCnt
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
   Public BurstComs As String * 10000
@@ -6961,6 +6963,13 @@ EndSub
         UseCommsZeroForSonde = True 'then we need to uses comms mode zero to speak standard RS232
       EndIf
     #EndIf
+    #If WqSonde = "WQ_SERIAL_BURST" Then
+        If LoggerType = CR6 Then
+          BurstDelayCnt = 8 'the CR6's faster processing speed makes it so we can really push the end of the minute without worrying about getting beyond 60seconds and skipping a scan
+        Else
+          BurstDelayCnt = 15 'During burst waiting as long as a CR6 resulted in some scans taking 62+ seconds. Giving the CR1000 an extra 7 seconds to process after the burst avoids skipped scans
+        EndIf
+    #EndIf
     PanelTemp(PTempC,250)
     PTempF = PTempC * 9/5 + 32
     Call GetStartup 'setup all the statup\default info
@@ -7358,7 +7367,7 @@ EndSub
                 Do
                   TopBurstDelay = Timer(StartTopBurstTimer,mSec,4)
                   TopBurstDelay = TopBurstDelay/1000
-                  If TopBurstDelay >= 60 - (MaxBurstCnt + 8) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
+                  If TopBurstDelay >= 60 - (MaxBurstCnt + BurstDelayCnt) Then 'delay until there will be a few seconds to spare at end of scan (sample rate is 1.15sec * 30 = 34.5seconds to complete)
                     StartTopBurst = True
                     ExitDo 'we reached out time threshold, start burst
                   Else
