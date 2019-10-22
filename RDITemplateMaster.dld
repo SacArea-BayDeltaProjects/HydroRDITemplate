@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20191018
-Const ProgramVersion = "4.24"
-'Last Modified by: Mark Inc
+Const ProgramVersionDate = 20191022
+Const ProgramVersion = "4.25"
+'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -262,6 +262,8 @@ Const ProgramVersion = "4.24"
 '20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value. 20190819-altered beamcheck table to be MaxBins*4 instead of just 108 incase we use more than 27 bins.
 '20190903 - MRI 4.23 Added additional timers for ADVM process to help with further troubleshooting. Altered position of some timers out of If statements because if conditions were not met the timers would remain at the last value and not reset for each scan. This gave the appearance of processes happening "back in time"
 '20191018 - MRI 4.24 Altered timing for the delay prior to taking the WQ serial burst sample to avoid skipped scans in a CR1000 due to its slower processing speed.
+'20191022 - TAV 4.25 Altered SerialIn TimeOut for the SUNA to account for longer integration periods and potentially timing out before the next value comes in from the sensor. Also open the SunaPort before the scan so it's immediately dedicated as a ComPort (for emulator purposes).
+
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -6969,6 +6971,11 @@ EndSub
           BurstDelayCnt = 15 'During burst waiting as long as a CR6 resulted in some scans taking 62+ seconds. Giving the CR1000 an extra 7 seconds to process after the burst avoids skipped scans
         EndIf
     #EndIf
+    #If HasSuna = True Then 'programatically establish SunaPort as a ComPort before the scan. Otherwise, it waits until the 15th minute to allow a user to open/watch the port for in the emulator.
+      SerialOpen(SunaPort,115200,0,0,6000)
+      SerialFlush(SunaPort)
+      SerialClose(SunaPort)
+    #EndIf
     PanelTemp(PTempC,250)
     PTempF = PTempC * 9/5 + 32
     Call GetStartup 'setup all the statup\default info
@@ -7795,7 +7802,7 @@ EndSub
             For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
               SunaMissedCnt = 0 'set the missed count to 0
               Do 'start Do/Loop
-                SerialIn(SunaBurstIn,SunaPort,50,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string
+                SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
                 SunaStringLen = Len(SunaBurstIn) 'get the length of the string
                 If SunaStringLen <> 0 Then 'if the string is longer than 0 bytes (maybe play with this?)
                   LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (only want to store LightFrames)
