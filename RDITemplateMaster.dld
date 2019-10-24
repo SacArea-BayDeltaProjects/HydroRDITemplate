@@ -309,7 +309,7 @@ Const DWRSonde = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 30
@@ -1665,6 +1665,12 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public SampleSuna As Boolean 'Trigger to say when it's time to sample/turn on the SUNA
   Public SunaReady As Boolean 'Trigger to say when the SUNA is warmed up
   Public SunaMissedCnt 'Counter for when the SUNA missed (Either DarkFrame, or no data)
+  Public TestCount
+  Public oCountTest
+  Public BadData
+  Public TestMiss As Boolean
+  Public LightCount
+  Public TestGoodVals
   Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
   Public SunaOnTime 'How long was the SUNA powered
   Public SunaSampleStart 'How long into the scan did the Suna Sampling Start
@@ -7799,6 +7805,10 @@ EndSub
             oCount = 1 'start a counter at 1
             SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
             SunaSampleStart = SunaSampleStart/1000
+            TestCount = 0
+            oCountTest = 0
+            TestMiss = False
+            LightCount = 0
             For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
               SunaMissedCnt = 0 'set the missed count to 0
               Do 'start Do/Loop
@@ -7809,34 +7819,51 @@ EndSub
                   Delay (1,50,mSec) 'delay 50 millisec
                   If LocLF = 5 Then 'if the L is found at byte 5
                     LFrame = True 'we know it's a LightFrame
+                    LightCount = LightCount + 1
                   Else
                     LFrame = False 'otherwise it's something other than a LightFrame (NANs or DarkFrame)
                   EndIf
                 Else 'if no bytes came through
-                  SunaMissedCnt = SunaMissedCnt + 1 'we missed data
+                  SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
+                  TestCount = TestCount + 1 'we missed data, but this doesn't get reset each loop to prevent us from staying in the loop if it's taking too long between samples
                   If SunaMissedCnt >= 3 Then 'if we miss data for 3 consecutive seconds
                     SunaMissed = True 'set a flag
                   Else
                     SunaMissed = False 'otherwise, don't set flag
                   EndIf
+'                  If TestCount >= 5 Then
+'                    TestMiss = True
+'                  Else
+'                    TestMiss = False
+'                  EndIf
                 EndIf
-              Loop Until LFrame = True OR SunaMissed = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
+              Loop Until LFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
               If SunaMissed = True Then 'if we missed the data
                 ExitFor 'leave the For loop
               EndIf
               Delay (1,200,mSec) 'delay 0.2 sec
+              If SunaBurstIn = "" Then
+                SunaBurstArray() = -9999
+                BadData = BadData + 1
+              Else
               SplitStr(SunaBurstArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the multi-dimensioned array based on the counter
               'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
+'              If SunaBurstArray() = "" Then
+'                 SunaBurstArray() = -9999
+'                 BadData = BadData + 1
+'              EndIf
               SplitStr(SunaHeader,SunaBurstIn,"",1,1)
               If SunaBurstArray(oCount,1) < 1000 Then
                 SunaHeader = SunaHeader + "0"
               Else
                 SunaHeader = SunaHeader
               EndIf
+              EndIf
               Delay(1,500,mSec) 'delay to wait for next value
               Erase(SunaBurstIn) 'erase the string
               SerialFlush(SunaPort) 'flush the port
               oCount=oCount+1 'increase the counter by 1
+              oCountTest = oCountTest + 1
               Delay (1,200,mSec) 'delay another 0.2sec
             Next Lcount 'go back to the to top of the For Loop
             Delay (1,100,mSec) 'delay 0.1sec
@@ -7846,7 +7873,7 @@ EndSub
             SunaOnTime = SunaTimer/1000 'convert timer from mSec to Sec
             SunaProcessStart = Timer(DebugTimer,mSec,4) 'read a timer for the start of the processing
             SunaProcessStart = SunaProcessStart/1000 'convert from mSec to Sec
-            If SunaMissed = False Then 'if we didn't miss data
+            'If SunaMissed = False Then 'if we didn't miss data
               For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse data, mCount loop is for number of seconds
                 For nCount = 1 To 282 'start loop for number of columns
                   SunaBurstData(nCount) = SunaBurstArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
@@ -7908,7 +7935,7 @@ EndSub
                 CallTable RawSpectrum 'store raw 1 second Spectrum data
                 CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
               Next mCount
-            EndIf
+            'EndIf
           EndIf
           SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
           SunaBurstArray() = BadDataIndicator
