@@ -1671,10 +1671,11 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public TestMiss As Boolean
   Public LightCount
   Public TestGoodVals
+  Public SunaBurstIn As String * 2000 'TEMPORARY SPOT FOR THIS!
   Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
   Public SunaOnTime 'How long was the SUNA powered
   Public SunaSampleStart 'How long into the scan did the Suna Sampling Start
-  Public SunaStringLen 'Length of the String read in
+  Public SunaStringLen(MaxSunaBurst) 'Length of the String read in
   Public LocLF 'Variable to store where the L occurs in the string
   Public LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
   Public Lcount As Long 'Counter for the ForNext loop to read in the SUNA data
@@ -1726,10 +1727,13 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SVL
   Dim SVM
   Dim SA254
-  Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
-  Dim SunaBurstArray(MaxSunaBurst,282) 'Multi-dimension array to store the MaxSunaBurst number of values
+  'Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
+  Public SunaBurstArray(MaxSunaBurst,282) 'Multi-dimension array to store the MaxSunaBurst number of values
+  Public GoodSunaArray(MaxSunaBurst,282)
   Dim SunaBurstData(282) 'Parsed data per single sample
+  Public GoodSunaBurstData(282)
   Dim SpectrumData(256) 'Raw Spectrum data parsed from full array
+  Public GoodSpectrumData(256)
   Dim mCount 'counters for loops
   Dim nCount
   Dim oCount
@@ -7809,12 +7813,18 @@ EndSub
             oCountTest = 0
             TestMiss = False
             LightCount = 0
+            TestGoodVals = 0
+            BadData = 0
             For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
               SunaMissedCnt = 0 'set the missed count to 0
+              SunaTimer = Timer(DebugTimer,Sec,4)
+              If SunaTimer >= 55 Then
+                ExitFor
+              EndIf
               Do 'start Do/Loop
                 SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
-                SunaStringLen = Len(SunaBurstIn) 'get the length of the string
-                If SunaStringLen <> 0 Then 'if the string is longer than 0 bytes (maybe play with this?)
+                SunaStringLen(oCount) = Len(SunaBurstIn) 'get the length of the string
+                If SunaStringLen(oCount) <> 0 Then 'if the string is longer than 0 bytes (maybe play with this?)
                   LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (only want to store LightFrames)
                   Delay (1,50,mSec) 'delay 50 millisec
                   If LocLF = 5 Then 'if the L is found at byte 5
@@ -7838,21 +7848,23 @@ EndSub
 '                  EndIf
                 EndIf
               Loop Until LFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
-              If SunaMissed = True Then 'if we missed the data
-                ExitFor 'leave the For loop
-              EndIf
-              Delay (1,200,mSec) 'delay 0.2 sec
+'              If SunaMissed = True Then 'if we missed the data
+'                ExitFor 'leave the For loop
+'              EndIf
+              Delay (1,500,mSec) 'delay 0.2 sec
               If SunaBurstIn = "" Then
-                SunaBurstArray() = -9999
+                SunaBurstArray(oCount,-1)() = -9999
                 BadData = BadData + 1
               Else
-              SplitStr(SunaBurstArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the multi-dimensioned array based on the counter
+                TestGoodVals = TestGoodVals + 1
+              SplitStr(GoodSunaArray(TestGoodVals,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the multi-dimensioned array based on the counter
               'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
 '              If SunaBurstArray() = "" Then
 '                 SunaBurstArray() = -9999
 '                 BadData = BadData + 1
 '              EndIf
               SplitStr(SunaHeader,SunaBurstIn,"",1,1)
+
               If SunaBurstArray(oCount,1) < 1000 Then
                 SunaHeader = SunaHeader + "0"
               Else
@@ -7874,9 +7886,9 @@ EndSub
             SunaProcessStart = Timer(DebugTimer,mSec,4) 'read a timer for the start of the processing
             SunaProcessStart = SunaProcessStart/1000 'convert from mSec to Sec
             'If SunaMissed = False Then 'if we didn't miss data
-              For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse data, mCount loop is for number of seconds
+              For mCount = 1 To TestGoodVals '+ BadData 'start For/Next loop to parse data, mCount loop is for number of seconds
                 For nCount = 1 To 282 'start loop for number of columns
-                  SunaBurstData(nCount) = SunaBurstArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
+                  SunaBurstData(nCount) = GoodSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
                 Next nCount
                 If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
                   If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
@@ -7925,7 +7937,7 @@ EndSub
                 SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
                 SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
                 A254 = SunaBurstData(SA254)
-                If mCount >= MaxSunaBurst Then 'if we've reached our sampling total time
+                If mCount >= TestGoodVals Then 'if we've reached our sampling total time
                   RecSunaData = True 'set the table trigger flag to true
                 Else
                   RecSunaData = False 'otherwise, we aren't ready to record the table
