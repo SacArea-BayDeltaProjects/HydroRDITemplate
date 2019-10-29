@@ -1667,7 +1667,6 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public SunaMissedCnt 'Counter for when the SUNA missed (Either DarkFrame, or no data)
   Public GoodSunaVals
   Public BadSunaVals
-  Public SunaBurstIn As String * 2000 'TEMPORARY SPOT FOR THIS!
   Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
   Public SunaOnTime 'How long was the SUNA powered
   Public SunaSampleStart 'How long into the scan did the Suna Sampling Start
@@ -1723,9 +1722,9 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SVL
   Dim SVM
   Dim SA254
-  'Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
-  Public RawSunaArray(MaxSunaBurst,282) 'Multi-dimension array to store the MaxSunaBurst number of values
-  Public GoodSunaArray(MaxSunaBurst,282)
+  Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
+  Dim RawSunaArray(MaxSunaBurst,282) 'Multi-dimension array to store the MaxSunaBurst number of values
+  Dim GoodSunaArray(MaxSunaBurst,282)
   Dim SunaBurstData(282) 'Parsed data per single sample
   Dim SpectrumData(256) 'Raw Spectrum data parsed from full array
   Dim mCount 'counters for loops
@@ -2371,6 +2370,10 @@ SetStatus ("USRDriveSize",16384)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
+  DataTable (SunaLength,1,-1)
+    CardOut (0,3000)
+    Sample (MaxSunaBurst,SunaStringLen(),FP2)
+  EndTable
 #EndIf
 
 'Store Velocity  data for all bins (used for beam coordinate studies)
@@ -7935,7 +7938,7 @@ EndSub
               Next mCount
               EndIf
               If BadSunaVals >= 2 Then
-                For mCount = 1 To MaxBurstCnt 'start For/Next loop to parse all RAW data, mCount loop is for number of seconds
+                For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse all RAW data, mCount loop is for number of seconds
                   For nCount = 1 To 282 'start loop for number of columns
                     SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
                   Next nCount
@@ -8000,6 +8003,7 @@ EndSub
                 Next mCount
               EndIf
             EndIf
+            CallTable SunaLength
             SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
             RawSunaArray() = BadDataIndicator
             GoodSunaArray() = BadDataIndicator
