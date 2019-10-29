@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20191022
-Const ProgramVersion = "4.25"
+Const ProgramVersionDate = 20191029
+Const ProgramVersion = "4.30"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -263,7 +263,7 @@ Const ProgramVersion = "4.25"
 '20190903 - MRI 4.23 Added additional timers for ADVM process to help with further troubleshooting. Altered position of some timers out of If statements because if conditions were not met the timers would remain at the last value and not reset for each scan. This gave the appearance of processes happening "back in time"
 '20191018 - MRI 4.24 Altered timing for the delay prior to taking the WQ serial burst sample to avoid skipped scans in a CR1000 due to its slower processing speed.
 '20191022 - TAV 4.25 Altered SerialIn TimeOut for the SUNA to account for longer integration periods and potentially timing out before the next value comes in from the sensor. Also open the SunaPort before the scan so it's immediately dedicated as a ComPort (for emulator purposes).
-
+'20191029 - TAV 4.30 Overhauled SUNA sampling to allow for stats to be calculated with less than 30 values as well as record good and bad data in separate tables.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -7815,12 +7815,12 @@ EndSub
             oCount = 1 'start a counter at 1
             SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
             SunaSampleStart = SunaSampleStart/1000
-            GoodSunaVals = 0
-            BadSunaVals = 0
+            GoodSunaVals = 0 'Reset good values counter to 0
+            BadSunaVals = 0 'Reset bad values counter to 0
             For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
               SunaMissedCnt = 0 'set the missed count to 0
               SunaTimer = Timer(DebugTimer,Sec,4)
-              If SunaTimer >= 55 Then
+              If SunaTimer >= 55 Then 'if we didn't complete all samples by 55 seconds, exit the loop to avoid skipping scans. May want to adjust?
                 ExitFor
               EndIf
               Do 'start Do/Loop
@@ -7843,9 +7843,6 @@ EndSub
                   EndIf
                 EndIf
               Loop Until LFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
-              '              If SunaMissed = True Then 'if we missed the data
-              '                ExitFor 'leave the For loop
-              '              EndIf
               Delay (1,200,mSec) 'delay 0.2 sec
               If SunaBurstIn = "" Then
                 RawSunaArray(oCount,-1)() = BadDataIndicator
@@ -7875,7 +7872,7 @@ EndSub
             SunaProcessStart = Timer(DebugTimer,mSec,4) 'read a timer for the start of the processing
             SunaProcessStart = SunaProcessStart/1000 'convert from mSec to Sec
             If GoodSunaVals >= 10 Then 'if we have at least 10 good values
-              For mCount = 1 To GoodSunaVals '+ BadData 'start For/Next loop to parse data, mCount loop is for number of seconds
+              For mCount = 1 To GoodSunaVals 'start For/Next loop to parse data, mCount loop is for number of values
                 For nCount = 1 To 282 'start loop for number of columns
                   SunaBurstData(nCount) = GoodSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
                 Next nCount
@@ -7937,8 +7934,8 @@ EndSub
                 CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
               Next mCount
               EndIf
-              If BadSunaVals >= 2 Then
-                For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse all RAW data, mCount loop is for number of seconds
+              If BadSunaVals >= 2 Then 'if we have more than 2 bad values (missing/Null)
+                For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse all RAW data, mCount loop is for number of values
                   For nCount = 1 To 282 'start loop for number of columns
                     SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
                   Next nCount
