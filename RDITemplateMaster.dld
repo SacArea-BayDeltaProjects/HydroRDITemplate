@@ -164,6 +164,8 @@ Const SeeRawWQ = False
 'Value = True
 'Value = False
 Const ReadExtPwr = False
+'Value = True
+'Value = False
 'End of Constants Customization Section
 
 '------------------------------------------------------------------------------------------
