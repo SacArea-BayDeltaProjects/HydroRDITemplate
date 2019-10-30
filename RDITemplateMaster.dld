@@ -310,7 +310,7 @@ Const DWRSonde = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const HasIridium = True
+Const HasIridium = False
 'value = True
 'value = False
 Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
@@ -1748,44 +1748,44 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
 
 'If we are using iridium declare the appropriate variables based on the type of water quality being collected
 #If HasIridium=True Then
-'Iridium Radio Variables
+  'Iridium Radio Variables
 
-#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") OR (WqSonde = "WQ_SERIAL_BURST") Then
-  Const IridiumVars = 14'need 14 places in the array for extra water quality parameters
-#EndIf
-#If WqSonde = "NONE" Then
-  Const IridiumVars = 8'base array only need 8 for stage and ADVM data
-#EndIf
+  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") OR (WqSonde = "WQ_SERIAL_BURST") Then
+    Const IridiumVars = 14'need 14 places in the array for extra water quality parameters
+  #EndIf
+  #If WqSonde = "NONE" Then
+    Const IridiumVars = 8'base array only need 8 for stage and ADVM data
+  #EndIf
 
-Public IridiumOutArray(IridiumVars)
+  Public IridiumOutArray(IridiumVars)
 
-'always will be used
-Public CR1Volts_IRD
-Public AvgPS1Stg_IRD
-Public AvgPS2Stg_IRD
-Public AvgUpBeamStg_IRD
-Public AvgIndexVel_IRD
-Public AvgVMTemp_IRD
-Public AvgVMPitch_IRD
-Public AvgVMRoll_IRD
+  'always will be used
+  Public CR1Volts_IRD
+  Public AvgPS1Stg_IRD
+  Public AvgPS2Stg_IRD
+  Public AvgUpBeamStg_IRD
+  Public AvgIndexVel_IRD
+  Public AvgVMTemp_IRD
+  Public AvgVMPitch_IRD
+  Public AvgVMRoll_IRD
 
-#If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ variables
-Public MedBurstDate_IRD
-Public MedBurstTime_IRD
-Public WQBattV_Min_IRD
-Public MedTempC_IRD
-Public MedSpCond_IRD
-Public MedTurbFNU_IRD
-#EndIf
+  #If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ variables
+    Public MedBurstDate_IRD
+    Public MedBurstTime_IRD
+    Public WQBattV_Min_IRD
+    Public MedTempC_IRD
+    Public MedSpCond_IRD
+    Public MedTurbFNU_IRD
+  #EndIf
 
-#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ varialbes
-  Public WqDate_IRD
-  Public WqTime_IRD
-  Public WqTempC_IRD
-  Public WqSpCond_IRD
-  Public WqTurbFNU_IRD
-  Public WQBattV_Min_IRD 
-#EndIf
+  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ varialbes
+    Public WqDate_IRD
+    Public WqTime_IRD
+    Public WqTempC_IRD
+    Public WqSpCond_IRD
+    Public WqTurbFNU_IRD
+    Public WQBattV_Min_IRD
+  #EndIf
 
 #EndIf
 
@@ -6680,70 +6680,70 @@ EndSub
     EndSub
   #EndIf
 
-#If HasIridium = True Then
-  '___________________________________________Iridium SDI12 Output___________________
-  Sub IridiumDataOut
-'  Create new variables to capture important data from the Aquarius field
-  'these varialbes will always be present
-  CR1Volts_IRD = Aquarius.CR1volts_Min
-  AvgPS1Stg_IRD = Aquarius.AvgPS1Stg
-  AvgPS2Stg_IRD = Aquarius.AvgPS2Stg
-  AvgUpBeamStg_IRD = Aquarius.AvgUpBeamStg
-  AvgIndexVel_IRD = Aquarius.AvgIndexVel
-  AvgVMTemp_IRD = Aquarius.AvgVMTemp
-  AvgVMPitch_IRD = Aquarius.AvgVMPitch
-  AvgVMRoll_IRD = Aquarius.AvgVMRoll
-  
-#If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ data
-  MedBurstDate_IRD = Aquarius.MedBurstDAte
-  MedBurstTime_IRD = Aquarius.MedBurstTime
-  WQBattV_Min_IRD = Aquarius.WQBattV_Min
-  MedTempC_IRD = Aquarius.MedTempC
-  MedSpCond_IRD = Aquarius.MedSpCond
-  MedTurbFNU_IRD = Aquarius.MedTurbFNU
-#EndIf
+  #If HasIridium = True Then
+    '___________________________________________Iridium SDI12 Output___________________
+    Sub IridiumDataOut
+      '  Create new variables to capture important data from the Aquarius field
+      'these varialbes will always be present
+      CR1Volts_IRD = Aquarius.CR1volts_Min
+      AvgPS1Stg_IRD = Aquarius.AvgPS1Stg
+      AvgPS2Stg_IRD = Aquarius.AvgPS2Stg
+      AvgUpBeamStg_IRD = Aquarius.AvgUpBeamStg
+      AvgIndexVel_IRD = Aquarius.AvgIndexVel
+      AvgVMTemp_IRD = Aquarius.AvgVMTemp
+      AvgVMPitch_IRD = Aquarius.AvgVMPitch
+      AvgVMRoll_IRD = Aquarius.AvgVMRoll
 
-#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ data
-  WqDate_IRD = Aquarius.WqDate
-  WqTime_IRD = Aquarius.WqTime
-  WQBattV_Min_IRD = Aquarius.WqBattV_Min
-  WqTempC_IRD = Aquarius.WqTempC
-  WQSpCond_IRD = Aquarius.WqSpCond
-  WqTurbFNU_IRD = Aquarius.WqTurbFNU
-#EndIf
-'  
-  'Build the array
-  'with the data that will always be there
-  IridiumOutArray(1) = CR1Volts_IRD
-  IridiumOutArray(2) = AvgIndexVel_IRD
-  IridiumOutArray(3) = AvgPS1Stg_IRD
-  IridiumOutArray(4) = AvgPS2Stg_IRD
-  IridiumOutArray(5) = AvgUpBeamStg_IRD
-  IridiumOutArray(6) = AvgVMTemp_IRD
-  IridiumOutArray(7) = AvgVMPitch_IRD
-  IridiumOutArray(8) = AvgVMRoll_IRD
-  
-#If WqSonde = "WQ_SERIAL_BURST" Then 'add on the burst water quality data
-  IridiumOutArray(9) = MedBurstDate_IRD
-  IridiumOutArray(10) = MedBurstTime_IRD
-  IridiumOutArray(11) = MedTempC_IRD
-  IridiumOutArray(12) = MedSpCond_IRD
-  IridiumOutArray(13) = MedTurbFNU_IRD
-  IridiumOutArray(14) = WQBattV_Min_IRD
-#EndIf
+      #If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ data
+        MedBurstDate_IRD = Aquarius.MedBurstDAte
+        MedBurstTime_IRD = Aquarius.MedBurstTime
+        WQBattV_Min_IRD = Aquarius.WQBattV_Min
+        MedTempC_IRD = Aquarius.MedTempC
+        MedSpCond_IRD = Aquarius.MedSpCond
+        MedTurbFNU_IRD = Aquarius.MedTurbFNU
+      #EndIf
 
-#If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'or just add on the non-burst WQ data
-  IridiumOutArray(9) = WqDate_IRD
-  IridiumOutArray(10) = WqTime_IRD
-  IridiumOutArray(11) = WqTempC_IRD
-  IridiumOutArray(12) = WqSpCond_IRD
-  IridiumOutArray(13) = WqTurbFNU_IRD
-  IridiumOutArray(14) = WQBattV_Min_IRD
-#EndIf
+      #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ data
+        WqDate_IRD = Aquarius.WqDate
+        WqTime_IRD = Aquarius.WqTime
+        WQBattV_Min_IRD = Aquarius.WqBattV_Min
+        WqTempC_IRD = Aquarius.WqTempC
+        WqSpCond_IRD = Aquarius.WqSpCond
+        WqTurbFNU_IRD = Aquarius.WqTurbFNU
+      #EndIf
+      '
+      'Build the array
+      'with the data that will always be there
+      IridiumOutArray(1) = CR1Volts_IRD
+      IridiumOutArray(2) = AvgIndexVel_IRD
+      IridiumOutArray(3) = AvgPS1Stg_IRD
+      IridiumOutArray(4) = AvgPS2Stg_IRD
+      IridiumOutArray(5) = AvgUpBeamStg_IRD
+      IridiumOutArray(6) = AvgVMTemp_IRD
+      IridiumOutArray(7) = AvgVMPitch_IRD
+      IridiumOutArray(8) = AvgVMRoll_IRD
 
-  EndSub
-  
-#EndIf
+      #If WqSonde = "WQ_SERIAL_BURST" Then 'add on the burst water quality data
+        IridiumOutArray(9) = MedBurstDate_IRD
+        IridiumOutArray(10) = MedBurstTime_IRD
+        IridiumOutArray(11) = MedTempC_IRD
+        IridiumOutArray(12) = MedSpCond_IRD
+        IridiumOutArray(13) = MedTurbFNU_IRD
+        IridiumOutArray(14) = WQBattV_Min_IRD
+      #EndIf
+
+      #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'or just add on the non-burst WQ data
+        IridiumOutArray(9) = WqDate_IRD
+        IridiumOutArray(10) = WqTime_IRD
+        IridiumOutArray(11) = WqTempC_IRD
+        IridiumOutArray(12) = WqSpCond_IRD
+        IridiumOutArray(13) = WqTurbFNU_IRD
+        IridiumOutArray(14) = WQBattV_Min_IRD
+      #EndIf
+
+    EndSub
+
+  #EndIf
 
   '__________________________________Keypad Menus________________________________________
   Sub KeypadMenu
@@ -8051,126 +8051,130 @@ EndSub
                 CallTable GoodSpectrum 'store raw 1 second Spectrum data
                 CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
               Next mCount
-              EndIf
-              If BadSunaVals >= 2 Then 'if we have more than 2 bad values (missing/Null)
-                For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse all RAW data, mCount loop is for number of values
-                  For nCount = 1 To 282 'start loop for number of columns
-                    SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
-                  Next nCount
-                  If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
-                    If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
-                      SSN = 1 'set locations for parameters
-                      SST = 2
-                      SNuM = 3
-                      SNmgL = 4
-                      SFR = 5
-                      STL = 6
-                      STS = 7
-                      SLT = 8
-                      SH = 9
-                      SSA = 13
-                      SDA = 14
-                      SVL = 10
-                      SVM = 12
-                      SA254 = 90
-                    Else  'otherwise, it's a SUNAV2
-                      SSN = 1 'set locations for parameters
-                      SST = 3
-                      SNuM = 4
-                      SNmgL = 5
-                      SFR = 281
-                      STL = 270
-                      STS = 269
-                      SLT = 271
-                      SH = 272 'Check this- value is 0.137 and doesnt look right!
-                      SSA = 9
-                      SDA = 10
-                      SVL = 274
-                      SVM = 273
-                      SA254 = 6
-                    EndIf
-                  EndIf
-                  SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
-                  SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
-                  SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
-                  SunaNitratemgL = SunaBurstData(SNmgL)'AF 6..11
-                  SunaFittingResult = SunaBurstData(SFR)
-                  TLamp = SunaBurstData(STL)
-                  TSpec = SunaBurstData(STS)
-                  SunaLampTime = SunaBurstData(SLT)
-                  SunaHumid = SunaBurstData(SH)'AF 3..5 Case Is
-                  SunaSpecAve = SunaBurstData(SSA) 'AI 1..5
-                  SunaDarkAve = SunaBurstData(SDA)'ASCII INTEGER 1.3
-                  SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
-                  SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
-                  A254 = SunaBurstData(SA254)
-                  If mCount >= MaxBurstCnt AND GoodSunaVals < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
-                    RecSunaData = True 'set the table trigger flag to true
-                  Else
-                    RecSunaData = False 'otherwise, we aren't ready to record the table
-                  EndIf
-                  'Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
-                  CallTable RawSecSuna 'store raw 1 second data
-                  'CallTable RawSpectrum 'store raw 1 second Spectrum data
-                  If GoodSunaVals < 10 Then
-                    CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
-                  EndIf
-                Next mCount
-              EndIf
             EndIf
-            CallTable SunaLength
-            SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
-            RawSunaArray() = BadDataIndicator
-            GoodSunaArray() = BadDataIndicator
-            SpectrumData() = BadDataIndicator
-            Call CopySunaStats 'copy the stats from the "SunaStats" table to new variables to be sampled by the AQ table
-            SunaProcessEnd = Timer(DebugTimer,mSec,4) 'store the end time
-            SunaProcessEnd = SunaProcessEnd/1000 'convert from mSec to Sec
-            SunaProcessTotTime = SunaProcessEnd-SunaProcessStart 'calculate total time it took to process data
+            If BadSunaVals >= 2 Then 'if we have more than 2 bad values (missing/Null)
+              For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse all RAW data, mCount loop is for number of values
+                For nCount = 1 To 282 'start loop for number of columns
+                  SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
+                Next nCount
+                If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
+                  If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
+                    SSN = 1 'set locations for parameters
+                    SST = 2
+                    SNuM = 3
+                    SNmgL = 4
+                    SFR = 5
+                    STL = 6
+                    STS = 7
+                    SLT = 8
+                    SH = 9
+                    SSA = 13
+                    SDA = 14
+                    SVL = 10
+                    SVM = 12
+                    SA254 = 90
+                  Else  'otherwise, it's a SUNAV2
+                    SSN = 1 'set locations for parameters
+                    SST = 3
+                    SNuM = 4
+                    SNmgL = 5
+                    SFR = 281
+                    STL = 270
+                    STS = 269
+                    SLT = 271
+                    SH = 272 'Check this- value is 0.137 and doesnt look right!
+                    SSA = 9
+                    SDA = 10
+                    SVL = 274
+                    SVM = 273
+                    SA254 = 6
+                  EndIf
+                EndIf
+                SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
+                SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
+                SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
+                SunaNitratemgL = SunaBurstData(SNmgL)'AF 6..11
+                SunaFittingResult = SunaBurstData(SFR)
+                TLamp = SunaBurstData(STL)
+                TSpec = SunaBurstData(STS)
+                SunaLampTime = SunaBurstData(SLT)
+                SunaHumid = SunaBurstData(SH)'AF 3..5 Case Is
+                SunaSpecAve = SunaBurstData(SSA) 'AI 1..5
+                SunaDarkAve = SunaBurstData(SDA)'ASCII INTEGER 1.3
+                SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
+                SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
+                A254 = SunaBurstData(SA254)
+                If mCount >= MaxBurstCnt AND GoodSunaVals < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
+                  RecSunaData = True 'set the table trigger flag to true
+                Else
+                  RecSunaData = False 'otherwise, we aren't ready to record the table
+                EndIf
+                'Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
+                CallTable RawSecSuna 'store raw 1 second data
+                'CallTable RawSpectrum 'store raw 1 second Spectrum data
+                If GoodSunaVals < 10 Then
+                  CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
+                EndIf
+              Next mCount
+            EndIf
           EndIf
-        #EndIf
-        AQTabStart = Timer(DebugTimer,msec,4) 'read timer for start time of the AQ table
-        AQTabStart = AQTabStart/1000 'convert
-        AvgIndexVel = DataOut.IndexVel_Avg 'copy discharge data to new variables to sample in the AQ table
-        AvgVMTemp = DataOut.VMtempC_Avg
-        AvgVMPitch = DataOut.VMpitch_Avg
-        AvgVMRoll = DataOut.VMroll_Avg
-        AvgPS1Stg = DataOut.PS1Stg_Avg
-        AvgPS2Stg = DataOut.PS2Stg_Avg
-        AvgUpBeamStg = DataOut.UpBeamStg_Avg
-        '      AvgLoggerQcfs = DataOut.Qcfs_Avg
-        '      AvgStagePrime = Dataout.StagePrime_Avg
-        '      AvgStageSec = Dataout.StageSecnd_Avg
-        Delay(1,50,mSec)
-        CallTable Aquarius 'call the table, if Rec15MinFlag is true, record it. Otherwise, store data in background until we are ready to record the data
-        AQcount = AQcount + 1 'debug counter
-        AQTabEnd = Timer (DebugTimer,msec,4) 'end time of AQ table
-        AQTabEnd = AQTabEnd/1000 'convert
-        AQTabTotTime = AQTabEnd - AQTabStart   'total time to write to AQ
-        #If WqSonde = "WQ_SERIAL_BURST" Then
-          If Rec15minFlag = True Then 'if we recorded our 15min mark
-            Call ResetBurstVars 'reset the WQ burst variables
-          EndIf
-        #EndIf
-        #If HasSuna Then
-          If Rec15minFlag = True Then
-            Call ResetSunaStats 'reset the Suna Stats variables
-          EndIf
-        #EndIf
-        Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
-        ScanEnd = Timer(DebugTimer,mSec,4) 'read timer for end of scan
-        ScanEnd = ScanEnd/1000 'convert
-        ProcessTime = ScanEnd - ScanStart 'calculate total time
-        CallTable Debugger 'call/store debugging info
-        CallTable SVMaq 'call SVMaq table
-        #If HasIridium = True Then
-'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio    
-SlowSequence
-Do
-  SDI12SensorSetup (IridiumVars,IridiumCom,0,5)'turns selected port into an SDI12 port. Use setting to adjust port and address. Number of repetions should match IridiumOutArray count. Test on address 1 and had issues. Address 0 seems to work fine.
-  Delay (1,5,sec) 'delay to make sure value are present
-  SDI12SensorResponse(IridiumOutArray)'sensor will respond with entire array when Iridium Radio queries DCP
-Loop
-#EndIf
-      NextScan
-    EndProg
+          CallTable SunaLength
+          SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
+          RawSunaArray() = BadDataIndicator
+          GoodSunaArray() = BadDataIndicator
+          SpectrumData() = BadDataIndicator
+          Call CopySunaStats 'copy the stats from the "SunaStats" table to new variables to be sampled by the AQ table
+          SunaProcessEnd = Timer(DebugTimer,mSec,4) 'store the end time
+          SunaProcessEnd = SunaProcessEnd/1000 'convert from mSec to Sec
+          SunaProcessTotTime = SunaProcessEnd-SunaProcessStart 'calculate total time it took to process data
+        EndIf
+      #EndIf
+      AQTabStart = Timer(DebugTimer,msec,4) 'read timer for start time of the AQ table
+      AQTabStart = AQTabStart/1000 'convert
+      AvgIndexVel = DataOut.IndexVel_Avg 'copy discharge data to new variables to sample in the AQ table
+      AvgVMTemp = DataOut.VMtempC_Avg
+      AvgVMPitch = DataOut.VMpitch_Avg
+      AvgVMRoll = DataOut.VMroll_Avg
+      AvgPS1Stg = DataOut.PS1Stg_Avg
+      AvgPS2Stg = DataOut.PS2Stg_Avg
+      AvgUpBeamStg = DataOut.UpBeamStg_Avg
+      '      AvgLoggerQcfs = DataOut.Qcfs_Avg
+      '      AvgStagePrime = Dataout.StagePrime_Avg
+      '      AvgStageSec = Dataout.StageSecnd_Avg
+      Delay(1,50,mSec)
+      CallTable Aquarius 'call the table, if Rec15MinFlag is true, record it. Otherwise, store data in background until we are ready to record the data
+      #If HasIridium = True Then
+        Call IridiumDataOut 'Call Iridium subroutine after you know Aquarius table has been written/updated
+      #EndIf
+      AQcount = AQcount + 1 'debug counter
+      AQTabEnd = Timer (DebugTimer,msec,4) 'end time of AQ table
+      AQTabEnd = AQTabEnd/1000 'convert
+      AQTabTotTime = AQTabEnd - AQTabStart   'total time to write to AQ
+      #If WqSonde = "WQ_SERIAL_BURST" Then
+        If Rec15minFlag = True Then 'if we recorded our 15min mark
+          Call ResetBurstVars 'reset the WQ burst variables
+        EndIf
+      #EndIf
+      #If HasSuna Then
+        If Rec15minFlag = True Then
+          Call ResetSunaStats 'reset the Suna Stats variables
+        EndIf
+      #EndIf
+      Rec15minFlag = false 'turn off data table trigger flags (until they get triggered in the program above at the next appropriate interval)
+      ScanEnd = Timer(DebugTimer,mSec,4) 'read timer for end of scan
+      ScanEnd = ScanEnd/1000 'convert
+      ProcessTime = ScanEnd - ScanStart 'calculate total time
+      CallTable Debugger 'call/store debugging info
+      CallTable SVMaq 'call SVMaq table
+    NextScan
+    #If HasIridium = True Then
+      'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio
+      SlowSequence
+      Do
+        SDI12SensorSetup (IridiumVars,IridiumCom,0,5)'turns selected port into an SDI12 port. Use setting to adjust port and address. Number of repetions should match IridiumOutArray count. Test on address 1 and had issues. Address 0 seems to work fine.
+        Delay (1,5,sec) 'delay to make sure value are present
+        SDI12SensorResponse(IridiumOutArray)'sensor will respond with entire array when Iridium Radio queries DCP
+      Loop
+    #EndIf
+
+  EndProg
