@@ -15,7 +15,7 @@ Open "RDITemplateMaster.dld" with CRBasic Editor.
 Before Compiling/Sending to Datalogger:
 
 1. Use "Tools" menu to set .dld datalogger type for the target datalogger (CR6 or CR1000). (Tools>Set .DLD Datalogger Type... OR Ctrl+E)
-2. Select proper constants in Customize Constants menu. (Tools>Customize Constants...)
+2. Select proper constants in Customize Constants menu. (Tools>Customize Constants...) This can be done manually if the Customize Constants function isn't working well.
 
    Description of constants:
   
@@ -26,6 +26,8 @@ Before Compiling/Sending to Datalogger:
 
     **TopBottom:** Are there two sondes daisy-chained together? If so this will duplicate all serial communications for water quality (parameter checks, set delimiters, get 	instant data points, wipe, and collect bursts) for the second sonde and assign the values with a BTM prefix.
     
+    **HasIridium:** Is there an Iririum telemetry system as a backup to the modem?
+    
     **HasSuna:** Is there a SUNA in the system? If so, this will perform SUNA operations and create and parse datatables for the SUNA.
     
     **WqBaud:** If sonde is present, select baud rate for SERIAL communications. Most likely, 38400 is correct.
@@ -35,7 +37,7 @@ Before Compiling/Sending to Datalogger:
     **IsWqMax232:** Is there a Max232 chip present in the communication system for the sonde? <ONLY FOR SERIAL COMMUNICATION
       *Max232 board is necessary for sondes on CR1000 C-ports and CR6 U-ports*
     
-    **MaxBurstCnt:** If WqSonde = WQ_Serial_Burst select the number of individual samples taken during each burst up to a maximum of 30. Each sample gives an instantaneous value for all parameters with one second between samples. 30 samples (taking 30 seconds) should be used unless otherwise discussed. 
+    **MaxBurstCnt:** If WqSonde = WQ_SERIAL_BURST select the number of individual samples taken during each burst up to a maximum of 30. Each sample gives an instantaneous value for all parameters with one second between samples. 30 samples (taking 30 seconds) should be used unless otherwise discussed. 
     
     **IsVmMax232:** Is there a Max232 chip present in the communication system for the velocity meter?
       *Not necessary on either set of ports, but should probably be used for CR6 U-ports or long RS232 cable runs.*
@@ -66,6 +68,8 @@ Before Compiling/Sending to Datalogger:
     **SeeRawWQ:** Do we want to see all raw water quality data in the Public Table? (t(), WqData(),WqIn (Raw String), WqDelay, RecBurstFlag)
       *This does not affect collection of any data*
       
+    **ReadExtPwr:** Do we need to read an external power source using a 10:1 converter? (Ex. WorkHorse 12-48V converter)
+      
   **FOR FURTHER CLARIFICATION ON THESE, PLEASE TALK TO TV.**
 
 3. Conditional Compile and Save. (Compile>Conditional Compile and Save) Rename with target station ID and date.
@@ -75,7 +79,7 @@ Before Compiling/Sending to Datalogger:
 
 5. Define station specific parameters. (GoTo>Navigation>Subroutine Section. "GetStartup" is the name of the proper subroutine for these changes). (If sidelooker mounted on right bank, FlowSign = 1. If sidelooker mounted on left bank, FlowSign = -1). Available options for SelStgPrime, SelStgSecond are: UpBeam, VMPress, PSPress, PSPress2, and WqPress.
 
-6. Save and Compile program, look for compilation errors (Hopefully none!). (Comile>Save and Compile)
+6. Save and Compile program, look for compilation errors (Hopefully none!). (Compile>Save and Compile)
 
 7. If none, load file onto datalogger.
 
