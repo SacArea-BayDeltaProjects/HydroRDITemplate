@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20191029
-Const ProgramVersion = "4.40"
-'Last Modified by: Trevor Violette
+Const ProgramVersionDate = 20191101
+Const ProgramVersion = "4.41"
+'Last Modified by: Mark Inc
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -40,6 +40,7 @@ Const ProgramVersion = "4.40"
 '20191022 - TAV 4.25 Altered SerialIn TimeOut for the SUNA to account for longer integration periods and potentially timing out before the next value comes in from the sensor. Also open the SunaPort before the scan so it's immediately dedicated as a ComPort (for emulator purposes).
 '20191025 - MRI 4.30 Added backup iridium radio transmission capability for important sites. Done by turning the DCP into a SDI-12 sensor and taking Aquarius table data
 '20191029 - TAV 4.40 Overhauled SUNA sampling to allow for stats to be calculated with less than 30 values as well as record good and bad data in separate tables.
+'20191101 - MRI 4.41 In the scan moved the decodes section right after we take in the velocity data. After all ADVM routines are finished then continue on. This will allow decodes to occur while we wait for the burst to begin for a CR6. Hopefully this solves the timing issue. For CR1000s made it so there was no delay before doing the burst to help avoid skipped scans. Altered debugger table so all time follow the program order correctly.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -2612,20 +2613,7 @@ DataTable (Debugger,True,-1)
   Sample (1,VMLoopStart,FP2)
   Sample (1,VMLoopEnd,FP2)
   Sample (1,VMLoopTotTime,FP2)
-  Sample (1,BeforeBurst,FP2)
-  Sample (1,AfterBurst,FP2)
-  #If (WqSonde <> "NONE") Then
-    #If (WqSonde = "WQ_SERIAL_BURST") Then
-      Sample (1,BurstDebugCount,FP2)
-      Sample (1,BurstCount,FP2)
-      Sample (1,WipeTime,String)
-      Sample (1,WqDelay,FP2)
-      Sample (1,Wipeflag,Boolean)
-    #EndIf
-    Sample (1,WqErrCount,FP2)
-    Sample (1,WqPwrCycleCnt,Long)
-  #EndIf
-  Sample (1,CDMACheckStart,FP2)
+   Sample (1,CDMACheckStart,FP2)
   Sample (1,CDMACheckEnd,FP2)
   Sample (1,CDMACheckTotTime,FP2)
   Sample (1,ZeroVMTimeStart,FP2)
@@ -2648,41 +2636,44 @@ DataTable (Debugger,True,-1)
   Sample (1,CalcQTotTime,FP2)
   Sample (1,GetVMMemStart,FP2)
   Sample (1,GetVMMemEnd,FP2)
-  Sample (1,GetVMMemTotTime,FP2)
+  Sample (1,GetVMMemTotTime,FP2
+  Sample (1,ChkSpikeStart,FP2)
+  Sample (1,ChkSpikeEnd,FP2)
+  Sample (1,ChkSpikeTotTime,FP2)
+  Sample (1,StoreToCrdStart,FP2)
+  Sample (1,StoreToCrdEnd,FP2)
+  Sample (1,StoreToCrdTotTime,FP2)
+  Sample (1,AddSpikeStart,FP2)
+  Sample (1,AddSpikeEnd,FP2)
+  Sample (1,AddSpikeTotTime,FP2)
   Sample (1,VMTimeStart,FP2)
   Sample (1,VMTimeEnd,FP2)
   Sample (1,VMTotTime,FP2)
-  Sample (1,CallBmChkStart,FP2)
-  Sample (1,CallBmChkEnd,FP2)
-  Sample (1,CallBmChkTotTime,FP2)
+  Sample (1,BeforeBurst,FP2)
+  Sample (1,AfterBurst,FP2)
+  #If (WqSonde <> "NONE") Then
+    #If (WqSonde = "WQ_SERIAL_BURST") Then
+      Sample (1,BurstDebugCount,FP2)
+      Sample (1,BurstCount,FP2)
+      Sample (1,WipeTime,String)
+      Sample (1,WqDelay,FP2)
+      Sample (1,Wipeflag,Boolean)
+    #EndIf
+    Sample (1,WqErrCount,FP2)
+    Sample (1,WqPwrCycleCnt,Long)
+  #EndIf
   Sample (1,DataTabsStart,FP2)
-  Sample (1,DataTabsEnd,FP2)
-  Sample (1,DataTabsTotTime,FP2)
   Sample (1,DataOutStart,FP2)
   Sample (1,DataOutEnd,FP2)
   Sample (1,DataOutTotTime,FP2)
   Sample (1,Data1mStart,FP2)
   Sample (1,Data1mEnd,FP2)
   Sample (1,Data1mTotTime,FP2)
-  Sample (1,AQTabStart,FP2)
-  Sample (1,AQTabEnd,FP2)
-  Sample (1,AQTabTotTime,FP2)
-  Sample (1,StoreToCrdStart,FP2)
-  Sample (1,StoreToCrdEnd,FP2)
-  Sample (1,StoreToCrdTotTime,FP2)
-  Sample (1,ChkSpikeStart,FP2)
-  Sample (1,ChkSpikeEnd,FP2)
-  Sample (1,ChkSpikeTotTime,FP2)
-  Sample (1,AddSpikeStart,FP2)
-  Sample (1,AddSpikeEnd,FP2)
-  Sample (1,AddSpikeTotTime,FP2)
-  Sample (1,ProcessTime,FP2)
-  Sample (1,DataOutCount,FP2)
-  Sample (1,Data1mCount,FP2)
-  Sample (1,AQcount,FP2)
-  Sample (1,CardBadCount,FP2)
-  Sample (1,CardOkCount,FP2)
-  Sample (1,OneMinCount,FP2)
+  Sample (1,DataTabsEnd,FP2)
+  Sample (1,DataTabsTotTime,FP2)
+  Sample (1,CallBmChkStart,FP2)
+  Sample (1,CallBmChkEnd,FP2)
+  Sample (1,CallBmChkTotTime,FP2)
   #If WqSonde <> "WQ_SDI12" AND WqSonde <> "NONE" Then
     Sample (1,BurstComs,String)
   #EndIf
@@ -2696,6 +2687,16 @@ DataTable (Debugger,True,-1)
     Sample (1,SunaProcessEnd,FP2)
     Sample (1,SunaProcessTotTime,FP2)
   #EndIf
+  Sample (1,AQTabStart,FP2)
+  Sample (1,AQTabEnd,FP2)
+  Sample (1,AQTabTotTime,FP2)
+  Sample (1,ProcessTime,FP2)
+  Sample (1,DataOutCount,FP2)
+  Sample (1,Data1mCount,FP2)
+  Sample (1,AQcount,FP2)
+  Sample (1,CardBadCount,FP2)
+  Sample (1,CardOkCount,FP2)
+  Sample (1,OneMinCount,FP2)
 EndTable
 
 #If RadioNetwork = True Then
@@ -3401,8 +3402,6 @@ EndSub
 'So this Sub is called to Sychronize the logger and VM times
 '--------------------------------------------------------------------
 Sub SetVMTime
-  VMTimeStart = Timer(DebugTimer,msec,4)
-  VMTimeStart = VMTimeStart/1000
   Call CycleVmPower
   'The set time command to the VM Requires leading zeros, so the logger timestamp is split out and leading zeros added if needed
   RawSetTime = Status.Timestamp 'get latest time from datalogger
@@ -3478,9 +3477,7 @@ Sub SetVMTime
     SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
   EndIf
   SetVMTimeFlg = false 'set the flag back to false until next time sychro
-  VMTimeEnd = Timer(DebugTimer,msec,4)
-  VMTimeEnd = VMTimeEnd/1000
-  VMTotTime = VMTimeEnd - VMTimeStart
+  
 EndSub
 'Set time on EXO
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -6874,7 +6871,7 @@ EndSub
       If LoggerType = CR6 Then
         BurstDelayCnt = 8 'the CR6's faster processing speed makes it so we can really push the end of the minute without worrying about getting beyond 60seconds and skipping a scan
       Else
-        BurstDelayCnt = 15 'During burst waiting as long as a CR6 resulted in some scans taking 62+ seconds. Giving the CR1000 an extra 7 seconds to process after the burst avoids skipped scans
+        BurstDelayCnt = 30 'During burst waiting as long as a CR6 resulted in some scans taking 62+ seconds. Giving the CR1000 an extra 7 seconds to process after the burst avoids skipped scans. With 15 we normally end a burst scan at 55-57 seconds but sometimes it is closer to 60. Upped it to 30 to basically make it so as soon as it is able to start the burst it does. We would rather not exactly control the start of the burst on a CR1000 then have it start bursting too late and getting a skipped scan.
       EndIf
     #EndIf
     #If HasSuna = True Then 'programatically establish SunaPort as a ComPort before the scan. Otherwise, it waits until the 15th minute to allow a user to open/watch the port for in the emulator.
@@ -7237,7 +7234,99 @@ EndSub
         ChkSumChkEnd = ChkSumChkEnd/1000
         ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
       #EndIf
-      BeforeBurst = Timer(DebugTimer,msec,4)
+     
+      #If HasVM Then
+        If VMdataIn = Yes Then 'only process data if we have it
+          VmDeadCount = 0
+          MainDecodeStart = Timer(DebugTimer,msec,4)
+          MainDecodeStart = MainDecodeStart/1000
+          Call MainDecode
+          MainDecodeEnd = Timer(DebugTimer,msec,4)
+          MainDecodeEnd = MainDecodeEnd/1000
+          MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
+          #If UseAutoRange = true
+            CalcRangeStart = Timer(DebugTimer,msec,4)
+            CalcRangeStart = CalcRangeStart/1000
+            Call CalcRangebin
+            EndBin = RangedBin
+            CalcRangeEnd = Timer(DebugTimer,msec,4)
+            CalcRangeEnd = CalcRangeEnd/1000
+            CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
+          #EndIf
+          '      Call LastGoodBinCheck
+          OneMinCalcStart = Timer(DebugTimer,msec,4)
+          OneMinCalcStart = OneMinCalcStart/1000
+          Call OneMinuteCalcs
+          OneMinCalcEnd = Timer(DebugTimer,msec,4)
+          OneMinCalcEnd = OneMinCalcEnd/1000
+          OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
+          CalcQStart = Timer(DebugTimer,msec,4)
+          CalcQStart = CalcQStart/1000
+          Call SubCalcQ
+          CalcQEnd = Timer(DebugTimer,msec,4)
+          CalcQEnd = CalcQEnd/1000
+          CalcQTotTime = CalcQEnd-CalcQStart
+          GetVMMemStart = Timer(DebugTimer,msec,4)
+          GetVMMemStart = GetVMMemStart/1000
+          Call GetVMFreeMem
+          GetVMMemEnd = Timer(DebugTimer,msec,4)
+          GetVMMemEnd = GetVMMemEnd/1000
+          GetVMMemTotTime = GetVMMemEnd-GetVMMemStart
+
+          'now call the DataOut tables (need to be seen on every scan)
+          'if hasVM = False and we're getting vm data we need to disable these two tables because they are called later
+
+          #If IsSpecStudy = Yes Then 'although the table is called, it will not record anything unless
+            'vm is 3-4 beams and set to beam or earth coords or the RecordAll boolean is toggled
+            CallTable VelData
+          #EndIf
+          RecAllVelFlag = false
+          'Rec15minFlag = false 'turn data table flag back off
+          'make sure spike stuff is not called if hasvm is false
+          If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
+            ChkSpikeStart = Timer(DebugTimer,msec,4)
+            ChkSpikeStart = ChkSpikeStart/1000
+            Call CheckSpikes
+            ChkSpikeEnd = Timer(DebugTimer,msec,4)
+            ChkSpikeEnd = ChkSpikeEnd/1000
+            ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
+            #If StoreAllToCard Then
+              StoreToCrdStart = Timer(DebugTimer,msec,4)
+              StoreToCrdStart = StoreToCrdStart/1000
+              Call StoreAllData
+              StoreToCrdEnd = Timer(DebugTimer,msec,4)
+              StoreToCrdEnd = StoreToCrdEnd/1000
+              StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
+            #EndIf
+          EndIf
+          AddSpikeStart = Timer(DebugTimer,msec,4)
+          AddSpikeStart = AddSpikeStart/1000
+          Call AddSpikes 'make sure buffer is full before checking
+          AddSpikeEnd = Timer(DebugTimer,msec,4)
+          AddSpikeEnd = AddSpikeEnd/1000
+          AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
+
+        Else 'if no vm data in
+          VmDeadCount = VmDeadCount + 1
+        EndIf 'if vm data in
+        If VmDeadCount >= VMDeadCntMax Then
+          WakeUpVM = True
+        EndIf
+        Call StageDiff
+        Call ResetMeasFlags
+        Call GetSN
+        VMTimeStart = Timer(DebugTimer,msec,4)
+        VMTimeStart = VMTimeStart/1000
+        If SetVMTimeFlg Then
+          Call SetVMTime
+        EndIf
+        VMTimeEnd = Timer(DebugTimer,msec,4)
+        VMTimeEnd = VMTimeEnd/1000
+        VMTotTime = VMTimeEnd - VMTimeStart
+      #EndIf
+      
+'Wq section placed here because some water quality info is needed in the 1min data
+ BeforeBurst = Timer(DebugTimer,msec,4)
       BeforeBurst = BeforeBurst/1000
       #If WqSonde = "WQ_SDI12" Then
         Call GetWq_SDI12 'get YSI data
@@ -7499,90 +7588,7 @@ EndSub
           Call CycleWQpower
         EndIf
       #EndIf
-      #If HasVM Then
-        If VMdataIn = Yes Then 'only process data if we have it
-          VmDeadCount = 0
-          MainDecodeStart = Timer(DebugTimer,msec,4)
-          MainDecodeStart = MainDecodeStart/1000
-          Call MainDecode
-          MainDecodeEnd = Timer(DebugTimer,msec,4)
-          MainDecodeEnd = MainDecodeEnd/1000
-          MainDecodeTotTime = MainDecodeEnd-MainDecodeStart
-          #If UseAutoRange = true
-            CalcRangeStart = Timer(DebugTimer,msec,4)
-            CalcRangeStart = CalcRangeStart/1000
-            Call CalcRangebin
-            EndBin = RangedBin
-            CalcRangeEnd = Timer(DebugTimer,msec,4)
-            CalcRangeEnd = CalcRangeEnd/1000
-            CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
-          #EndIf
-          '      Call LastGoodBinCheck
-          OneMinCalcStart = Timer(DebugTimer,msec,4)
-          OneMinCalcStart = OneMinCalcStart/1000
-          Call OneMinuteCalcs
-          OneMinCalcEnd = Timer(DebugTimer,msec,4)
-          OneMinCalcEnd = OneMinCalcEnd/1000
-          OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
-          CalcQStart = Timer(DebugTimer,msec,4)
-          CalcQStart = CalcQStart/1000
-          Call SubCalcQ
-          CalcQEnd = Timer(DebugTimer,msec,4)
-          CalcQEnd = CalcQEnd/1000
-          CalcQTotTime = CalcQEnd-CalcQStart
-          GetVMMemStart = Timer(DebugTimer,msec,4)
-          GetVMMemStart = GetVMMemStart/1000
-          Call GetVMFreeMem
-          GetVMMemEnd = Timer(DebugTimer,msec,4)
-          GetVMMemEnd = GetVMMemEnd/1000
-          GetVMMemTotTime = GetVMMemEnd-GetVMMemStart
 
-          'now call the DataOut tables (need to be seen on every scan)
-          'if hasVM = False and we're getting vm data we need to disable these two tables because they are called later
-
-          #If IsSpecStudy = Yes Then 'although the table is called, it will not record anything unless
-            'vm is 3-4 beams and set to beam or earth coords or the RecordAll boolean is toggled
-            CallTable VelData
-          #EndIf
-          RecAllVelFlag = false
-          'Rec15minFlag = false 'turn data table flag back off
-          'make sure spike stuff is not called if hasvm is false
-          If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
-            ChkSpikeStart = Timer(DebugTimer,msec,4)
-            ChkSpikeStart = ChkSpikeStart/1000
-            Call CheckSpikes
-            ChkSpikeEnd = Timer(DebugTimer,msec,4)
-            ChkSpikeEnd = ChkSpikeEnd/1000
-            ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
-            #If StoreAllToCard Then
-              StoreToCrdStart = Timer(DebugTimer,msec,4)
-              StoreToCrdStart = StoreToCrdStart/1000
-              Call StoreAllData
-              StoreToCrdEnd = Timer(DebugTimer,msec,4)
-              StoreToCrdEnd = StoreToCrdEnd/1000
-              StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
-            #EndIf
-          EndIf
-          AddSpikeStart = Timer(DebugTimer,msec,4)
-          AddSpikeStart = AddSpikeStart/1000
-          Call AddSpikes 'make sure buffer is full before checking
-          AddSpikeEnd = Timer(DebugTimer,msec,4)
-          AddSpikeEnd = AddSpikeEnd/1000
-          AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
-
-        Else 'if no vm data in
-          VmDeadCount = VmDeadCount + 1
-        EndIf 'if vm data in
-        If VmDeadCount >= VMDeadCntMax Then
-          WakeUpVM = True
-        EndIf
-        Call StageDiff
-        Call ResetMeasFlags
-        Call GetSN
-        If SetVMTimeFlg Then
-          Call SetVMTime
-        EndIf
-      #EndIf
       'Call All Data Tables (time them to make sure nothing is being hung up.
       DataTabsStart = Timer(DebugTimer,msec,4)
       DataTabsStart = DataTabsStart/1000
