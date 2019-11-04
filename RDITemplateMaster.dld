@@ -152,7 +152,7 @@ Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF T
 Const IsMaster = False  'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
-Const StoreAllToCard = True
+Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
 Const Debugging = False
@@ -362,7 +362,7 @@ Dim ModDay As Float 'used for computing elapsed time intervals
 #EndIf
 
 'spike filter variables
-#If HasVM Then
+#If (StoreAllToCard = true) AND HasVM Then
   Dim RSSIspike(MaxBins,4,16) As Float 'array to hold RSSI data Queue
   Dim Corrspike(MaxBins,4,16) As Float 'array to hold Correlation data Queue
   Dim Velspike(MaxBins,4,16) As Float 'array to hold Velocity data Queue
@@ -1261,6 +1261,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim AQTabStart
   Dim AQTabEnd
   Dim AQTabTotTime
+  #If StoreAllToCard = True Then
   Dim StoreToCrdStart
   Dim StoreToCrdEnd
   Dim StoreToCrdTotTime
@@ -1270,6 +1271,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim AddSpikeStart
   Dim AddSpikeEnd
   Dim AddSpikeTotTime
+  #EndIf
   Dim ProcessTime
   Dim DataOutCount
   Dim AQcount
@@ -2637,6 +2639,7 @@ DataTable (Debugger,True,-1)
   Sample (1,GetVMMemStart,FP2)
   Sample (1,GetVMMemEnd,FP2)
   Sample (1,GetVMMemTotTime,FP2
+  #If StoreAllToCard = True Then
   Sample (1,ChkSpikeStart,FP2)
   Sample (1,ChkSpikeEnd,FP2)
   Sample (1,ChkSpikeTotTime,FP2)
@@ -2646,6 +2649,7 @@ DataTable (Debugger,True,-1)
   Sample (1,AddSpikeStart,FP2)
   Sample (1,AddSpikeEnd,FP2)
   Sample (1,AddSpikeTotTime,FP2)
+  #EndIf
   Sample (1,VMTimeStart,FP2)
   Sample (1,VMTimeEnd,FP2)
   Sample (1,VMTotTime,FP2)
@@ -5609,7 +5613,7 @@ Function Ftime (TimeIn As String * 25) As String * 25 'converts datalogger time 
   SendYear = Right(FSplitTime(3),4)
   ftime = SendMonth + "/" + SendDay + "/" + SendYear + " " + SendHour + ":" + SendMin + ":" + SendSec
 End Function
-#If HasVM Then
+#If (StoreAllToCard = true) AND HasVM Then
   Sub CheckSpikes 'change name later
     'check the RSSI, Correlation, and velocity queues against incoming data for spikes.  Queues must be full before call
     'Outputs the spike data to a file on the Card.
@@ -5755,7 +5759,7 @@ End Function
 '----------------------------------------------------------------------------
 'add spikes to correlation,RSSI and Velocity fifo Queues and advance to next queue position. Note: call after checkspikes
 '---------------------------------------Sub AddSpikes-------------------------------------------------------------------
-#If HasVM Then
+#If (StoreAllToCard = true) AND HasVM Then
   Sub AddSpikes
     Dim BinCount As Long
     Dim BeamCount As Long
@@ -5892,9 +5896,11 @@ EndSub
     '    AvgRSSI(Bin) = 0
     '  Next Bin
     Erase (AvgRSSI())
+    #If StoreAllToCard = True
     Erase Velspike()
     Erase RSSIspike()
     Erase Corrspike()
+    #EndIf
   EndSub
 #EndIf
 '----------------------------------------------------
@@ -6844,7 +6850,7 @@ EndSub
     'INITIALIZE variables here that will hold their value from scan to scan
     MissedEns = 0
     ScanDiff = 0
-    #If HasVM Then
+    #If (StoreAllToCard = true) AND HasVM Then
       SpikeCounter = 0
       SendHeader = True
     #EndIf
@@ -6967,7 +6973,7 @@ EndSub
       If ModDay = 300 Then 'Reset bad data counter at 5 minutes after Midnight
         'Reset all Daily flags or zero variables here
         Call ZeroErrCounters 'Reset Counters at midnight
-        #If HasVM Then
+        #If (StoreAllToCard = true) AND HasVM Then
           SpikeCounter = 0
         #EndIf
       EndIf
@@ -7282,6 +7288,7 @@ EndSub
           #EndIf
           RecAllVelFlag = false
           'Rec15minFlag = false 'turn data table flag back off
+          #If StoreAllToCard = True Then 'only run spike routines if we want VM spike data
           'make sure spike stuff is not called if hasvm is false
           If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
             ChkSpikeStart = Timer(DebugTimer,msec,4)
@@ -7290,14 +7297,12 @@ EndSub
             ChkSpikeEnd = Timer(DebugTimer,msec,4)
             ChkSpikeEnd = ChkSpikeEnd/1000
             ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
-            #If StoreAllToCard Then
               StoreToCrdStart = Timer(DebugTimer,msec,4)
               StoreToCrdStart = StoreToCrdStart/1000
               Call StoreAllData
               StoreToCrdEnd = Timer(DebugTimer,msec,4)
               StoreToCrdEnd = StoreToCrdEnd/1000
               StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
-            #EndIf
           EndIf
           AddSpikeStart = Timer(DebugTimer,msec,4)
           AddSpikeStart = AddSpikeStart/1000
@@ -7305,6 +7310,7 @@ EndSub
           AddSpikeEnd = Timer(DebugTimer,msec,4)
           AddSpikeEnd = AddSpikeEnd/1000
           AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
+          #EndIf
 
         Else 'if no vm data in
           VmDeadCount = VmDeadCount + 1
