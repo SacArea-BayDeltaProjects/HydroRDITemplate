@@ -717,7 +717,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   Public GetBurst As Boolean
   'as of 4.42 no burst if using RedSonde
   Public StartTopBurstTimer
-  #If TopBottom = False Then
+  #If (WqSonde = "WQ_SERIAL_BURST") AND (TopBottom = False) Then
     Public StartTopBurst As Boolean
     Public TopBurstDelay
   #EndIf
@@ -727,9 +727,11 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public StartBtmBurst As Boolean
     Public BtmBurstDelay
   #EndIf
+  #If (WqSonde = "WQ_SERIAL_BURST") Then
   Public BurstDelayCnt
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
+  #EndIf
   Public BurstComs As String * 10000
   '  Public TestMedBurstTime
   '  Public OldBurstTime
@@ -4876,7 +4878,7 @@ EndSub
 #EndIf
 
 '--------WQ_Mark_Bad-------- If no incoming data mark it bad
-#If (WqSonde <> "NONE") Then
+#If (WqSonde <> "NONE") AND (DWRSonde = False) Then
   Sub WQ_Mark_Bad 'if WQerror then Zero all wqdata
     WqDate = ""
     WqTime =""
@@ -7659,8 +7661,14 @@ EndSub
           Else
             If IsWQNClosed Then
               PortSet(WqSwitchPort,0)
+              #If RedSonde Then
+              PortSet(RedWQSwitchPort,0)
+              #EndIf
             Else
               PortSet(WqSwitchPort,1)
+               #If RedSonde Then
+              PortSet(RedWQSwitchPort,1)
+              #EndIf
             EndIf
           EndIf
         #EndIf
@@ -7911,7 +7919,10 @@ EndSub
       #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
         If WqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True 'checks for top sonde. If no new data redeploy
         #If TopBottom Then
-          If BtmWqParamOrder(1) = BadDataIndicator OR NoSondeTrig <> 0 Then Redeploy = True 'checks for bottom sonde. If no new data redeploy
+          If BtmWqParamOrder(1) = BadDataIndicator OR BtmNoSondeTrig <> 0 Then Redeploy = True 'checks for bottom sonde. If no new data redeploy
+        #EndIf
+        #If RedSonde Then
+          If RedWqParamOrder(1) = BadDataIndicator OR RedNoSondeTrig <> 0 Then Red_Redeploy = True 'checks for RedSonde. If no new data redeploy
         #EndIf
         If Redeploy = True Then 'EXO not setup yet. If TopBottom the subroutines will redeploy both sondes
           Call ParamCheck
@@ -7940,6 +7951,13 @@ EndSub
               Call WipeBtmWQ
               Delay (1,50,mSec)
               BtmWipeTime = Status.TimeStamp(0,1)
+            EndIf
+          #EndIf
+          #If RedSonde Then
+            If RedWipeflag = true Then
+              Call WipeRedWQ
+              Delay (1,50,mSec)
+              RedWipeTime = Status.TimeStamp(0,1)
             EndIf
           #EndIf
           If GetBurst AND NOT Redeploy Then 'ok we need a burst
@@ -8148,6 +8166,23 @@ EndSub
             EndIf
           EndIf 'error
         #EndIf
+        
+      #If RedSonde Then 'need to conditional compile here to determine if the correct chunks are removed if not RedSonde
+          If (RedWqParamOrder(1) = BadDataIndicator) OR (RedWqError = True) Then'unable to initialize or bad data
+            #If DWRSonde = False Then
+              Call Red_WQ_Mark_Bad
+              Erase RedWqData()
+            #EndIf
+            If RedWqDead AND RedWqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the both Sondes if one sonde has a WQdead flag
+              Call CycleRedWQPower
+            EndIf
+            RedWqErrCount = RedWqErrCount + 1'this will continue until there is no error
+            RedWqPwrCycleCnt = RedWqPwrCycleCnt + 1 'this gets reset to zero when there is a power cycle to avoid having non-stop power cycles
+            If RedWqErrCount >= WQDeadCntMax Then 'if the error is above the threshold switch the dead flag to true
+              RedWqDead = True
+            EndIf
+          EndIf 'error
+        #EndIf
         AfterBurst = Timer(DebugTimer,msec,4)
         AfterBurst = AfterBurst/1000
 
@@ -8158,6 +8193,13 @@ EndSub
           Else
             WqBadData = False
           EndIf
+          #If RedSonde Then
+            If RedWqError = true Then
+            RedWqBadData = True
+          Else
+            RedWqBadData = False
+          EndIf
+          #EndIf
         #EndIf
         If SetEXOTimeFlg = True Then
           Call SetEXOTime
@@ -8165,6 +8207,11 @@ EndSub
         If WqManualCycle = true Then
           Call CycleWQpower
         EndIf
+        #If RedSonde Then
+          If RedWqManualCycle = true Then
+          Call CycleRedWQPower
+        EndIf
+        #EndIf
       #EndIf
 
       'Call All Data Tables (time them to make sure nothing is being hung up.
@@ -8528,6 +8575,7 @@ EndSub
       CallTable Debugger 'call/store debugging info
       CallTable SVMaq 'call SVMaq table
     NextScan
+    
     #If HasIridium = True Then
       'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio
       SlowSequence
