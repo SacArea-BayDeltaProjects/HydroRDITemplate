@@ -716,7 +716,6 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
   #EndIf
   Public GetBurst As Boolean
   'as of 4.42 no burst if using RedSonde
-  Public StartTopBurstTimer
   #If (WqSonde = "WQ_SERIAL_BURST") AND (TopBottom = False) Then
     Public StartTopBurst As Boolean
     Public TopBurstDelay
@@ -728,6 +727,7 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BtmBurstDelay
   #EndIf
   #If (WqSonde = "WQ_SERIAL_BURST") Then
+  Public StartTopBurstTimer
   Public BurstDelayCnt
   Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
   Public BurstReachedMod As Float
@@ -1667,7 +1667,9 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
     Public WqTempC_IRD
     Public WqSpCond_IRD
     Public WqTurbFNU_IRD
+    #If RedSonde = False Then
     Public WQBattV_Min_IRD
+    #EndIf
   #EndIf
   
   #If (RedSonde = "True") AND (WqSonde = "WQ_SERIAL")  Then 'non-burst WQ varialbes
@@ -8142,7 +8144,7 @@ EndSub
               Call WQ_Mark_Bad
               Erase WqData()
             #EndIf
-            If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to the both Sondes if one sonde has a WQdead flag
+            If WqDead AND WqPwrCycleCnt >= WQDeadCntMax Then 'cycle power to both TopBottom Sondes if one sonde has a WQdead flag
               Call CycleWQPower
             EndIf
             WqErrCount = WqErrCount + 1'this will continue until there is no error
