@@ -86,13 +86,13 @@ Const WqSonde = "WQ_SERIAL"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
 'Value = "NONE"
-Const DWRSonde = False
+Const DWRSonde = True
 'value = True
 'value = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const RedSonde = False 'Is there a second sonde with its own SOA **THIS WILL ONLY WORK ON A CR6***V4.42 is for DWR only RedSonde WQ_SERIAL and will not incorporate burst at this time. See SetBurst sub for more info.
+Const RedSonde = True 'Is there a second sonde with its own SOA **THIS WILL ONLY WORK ON A CR6***V4.42 is for DWR only RedSonde WQ_SERIAL and will not incorporate burst at this time. See SetBurst sub for more info.
 'value = True
 'Value = False
 Const HasIridium = True
@@ -3990,7 +3990,9 @@ EndSub
       BtmWqLocCL = BTM_t(23)
       BtmWqLocWiperPos = BTM_t(24)
     #EndIf
+    EndSub
     #If RedSonde Then
+      Sub DefineLocsRed
       RedWqLocDate = Red_t(1)
       RedWqLocTime = Red_t(2)
       RedWqLocTempC = Red_t(3)
@@ -4015,8 +4017,8 @@ EndSub
       RedWqLocNO3 = Red_t(22)
       RedWqLocCL = Red_t(23)
       RedWqLocWiperPos = Red_t(24)
-    #EndIf
   EndSub
+  #EndIf
 #EndIf
 '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -4053,7 +4055,9 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
+    EndSub
   #If RedSonde Then
+    Sub ParamCheckRed
     Call OpenRedWQPort 'open the port
     SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10) 'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
     Delay (1,10,mSec)
@@ -4070,8 +4074,8 @@ EndSub
     Delay (1,200,mSec)
     SerialFlush(RedWQSerialPort)
     SerialClose(RedWQSerialPort)
-    #EndIf
   EndSub
+  #EndIf
 #EndIf
 ' SetDilim -----------Sets the serial connected EXO to comma delimited output----
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -4104,7 +4108,9 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
+    EndSub
     #If RedSonde Then
+      Sub SetDelimRed
     Call OpenRedWQPort
     SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
@@ -4119,8 +4125,8 @@ EndSub
     Delay (1,20,mSec)
     SerialFlush(RedWqSerialPort)
     SerialClose(RedWQSerialPort)
-    #EndIf
   EndSub
+  #EndIf
 #EndIf
 '----------GetWQ_Serial------Gets a single set of data from the serial connected EXO
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -4159,7 +4165,9 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
+    EndSub
     #If RedSonde Then
+      Sub GetRedWQ_Serial
     Call OpenRedWQPort
     SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
     Delay (1,10,mSec)
@@ -4177,8 +4185,8 @@ EndSub
     Delay (1,20,mSec)
     SerialFlush(RedWQSerialPort)
     SerialClose(RedWQSerialPort)
-    #EndIf
   EndSub
+  #EndIf
 #EndIf
 '-----------------Parses data from a serial connected EXO ------------------
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -4263,7 +4271,9 @@ EndSub
       If BtmWqLocCL > 0 Then BtmWqCLmgl = BtmWqData(BtmWqLocCL)
       If BtmWqLocWiperPos > 0 Then BtmWqWiperPos = BtmWqData(BtmWqLocWiperPos)
     #EndIf
+    EndSub
     #If RedSonde Then
+      Sub ParseRedData
       If (RedWqData(RedWqLocDate) <> NAN) AND (RedWqData(RedWqLocDate)<> 0) AND (RedWqData(RedWqLocTime)<> RedOldExoTime)  Then
         RedOldExoTime = RedWqData(RedWqLocTime)
         RedWqError = False
@@ -4303,8 +4313,8 @@ EndSub
       If RedWqLocNO3 > 0 Then RedWqNO3mgl = RedWqData(RedWqLocNO3)
       If RedWqLocCL > 0 Then RedWqCLmgl = RedWqData(RedWqLocCL)
       If RedWqLocWiperPos > 0 Then RedWqWiperPos = RedWqData(RedWqLocWiperPos)
-    #EndIf
   EndSub
+  #EndIf
 #EndIf
 '-------------------DefineParamsOrder----Automatically determines the order of the incoming serial connected EXO data ------
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -4359,7 +4369,9 @@ EndSub
       BTM_t(23) = FindSpa (CLCode,CLCode,1,BtmWqParamOrder())
       BTM_t(24) = FindSpa (WiperPos,WiperPos,1,BtmWqParamOrder())
     #EndIf
+    EndSub
     #If RedSonde Then
+      Sub DefineParamsOrderRed
       Red_t(1) = FindSpa (DateCode,DateCode,1,RedWqParamOrder())
       Red_t(2) = FindSpa (TimeCode,TimeCode,1,RedWqParamOrder())
       Red_t(3) = FindSpa (TempCCode,TempCCode,1,RedWqParamOrder())
@@ -4384,8 +4396,8 @@ EndSub
       Red_t(22) = FindSpa (NO3Code,NO3Code,1,RedWqParamOrder())
       Red_t(23) = FindSpa (CLCode,CLCode,1,RedWqParamOrder())
       Red_t(24) = FindSpa (WiperPos,WiperPos,1,RedWqParamOrder())
-    #EndIf
   EndSub
+  #EndIf
 #EndIf
 ' -------------------SetBurst-------if collecting burst then Setup EXO for burst-----
 #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -7956,6 +7968,23 @@ EndSub
           Call GetWQ_Serial 'get a single data point
           Delay (1,30,mSec)
           Call ParseData
+        EndIf '
+        Delay (1,50,mSec)
+        
+        If Red_Redeploy = True Then 'EXO setup for RedSonde
+          Call ParamCheckRed
+          Delay (1,10,mSec)
+          Call DefineParamsOrderRed
+          Delay (1,10,mSec)
+          Call DefineLocsRed
+          Delay (1,10,mSec)
+          Call SetDelimRed
+          Delay (1,10,mSec)
+          Red_Redeploy = False
+        Else 'if not redeploy Get single data point
+          Call GetRedWQ_Serial 'get a single data point
+          Delay (1,30,mSec)
+          Call ParseRedData
         EndIf '
         Delay (1,50,mSec)
         #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then ' Check WQ flags and do things!!
