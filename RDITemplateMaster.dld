@@ -41,7 +41,7 @@ Const ProgramVersion = "4.42"
 '20191025 - MRI 4.30 Added backup iridium radio transmission capability for important sites. Done by turning the DCP into a SDI-12 sensor and taking Aquarius table data
 '20191029 - TAV 4.40 Overhauled SUNA sampling to allow for stats to be calculated with less than 30 values as well as record good and bad data in separate tables.
 '20191101 - MRI 4.41 In the scan moved the decodes section right after we take in the velocity data. After all ADVM routines are finished then continue on. This will allow decodes to occur while we wait for the burst to begin for a CR6. Hopefully this solves the timing issue. For CR1000s made it so there was no delay before doing the burst to help avoid skipped scans. Altered debugger table so all time follow the program order correctly.
-'20191209 - MRI 4.42 Added ability to have a redundant sonde with all the same functions but completely seperate of a single sonde. This version works with Serial only. Serial burst will be supported if and when it is needed.
+'20191209 - MRI 4.42 Added ability to have a redundant sonde with all the same functions but completely seperate of a single sonde. This version works with Serial only. Serial burst will be supported if and when it is needed. Added manual power cycle relay option for iridium radio
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -95,7 +95,7 @@ Const TopBottom = False  'Is there a second EXO daisy-chained in the system
 Const RedSonde = False 'Is there a second sonde with its own SOA **THIS WILL ONLY WORK ON A CR6***V4.42 is for DWR only RedSonde WQ_SERIAL and will not incorporate burst at this time. See SetBurst sub for more info.
 'value = True
 'Value = False
-Const HasIridium = False
+Const HasIridium = True
 'value = True
 'value = False
 Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
@@ -212,6 +212,7 @@ Const ReadExtPwr = False
   #EndIf
   Const UseSW12_2_forWQ = False
   Const VMSwitchPort = U4
+  Const IridiumSwitchPort = U10
   Const IridiumCom = U11
   Const PS1Com3 = U3
   Const PS1Com5 = U5
@@ -1628,7 +1629,11 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SunaProcessEnd 'End time of tables being written
   Dim SunaProcessTotTime 'Total time for tables to be written
 #EndIf
-
+'set up for manual power cycle of iridium radio
+#If HasIridium = True Then
+  Public IridiumManualCycle As Boolean
+ #EndIf
+ 
 'If we are using iridium declare the appropriate variables based on the type of water quality being collected
 #If HasIridium=True Then
   'Iridium Radio Variables
@@ -3226,6 +3231,9 @@ Sub Initialize
       BtmOldEXOTime = 0
     #EndIf
   #EndIf
+  #If HasIridium Then
+    IridiumManualCycle = False
+    #EndIf
 
   'An array of longs is needed to collect the data because the campbell cannot read the
   'binary PD0 ensemble into a string.  When it hits a blank (HEX 00) it terminates the
@@ -7081,6 +7089,14 @@ EndSub
     EndSub
 
   #EndIf
+  
+'----------CycleIridiumPower-----------Switches off the Iridium power------------*Only For cr6 with 6 port relay. Comment out if not used
+#If HasIridium = True Then
+  Sub CycleIridiumPower
+          PortSet(IridiumSwitchPort,1)
+    IridiumManualCycle = False
+  EndSub
+#EndIf
 
   '__________________________________Keypad Menus________________________________________
   Sub KeypadMenu
@@ -8215,6 +8231,14 @@ EndSub
         EndIf
         #EndIf
       #EndIf
+      
+#If HasIridium Then
+  If IridiumManualCycle = False Then
+    PortSet(IridiumSwitchPort,0)'this assume normally closed setting for relay
+    ElseIf IridiumManualCycle = True Then
+    Call CycleIridiumPower
+  EndIf
+ #EndIf
 
       'Call All Data Tables (time them to make sure nothing is being hung up.
       DataTabsStart = Timer(DebugTimer,msec,4)
