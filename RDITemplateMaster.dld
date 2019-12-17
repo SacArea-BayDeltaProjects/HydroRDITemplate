@@ -1638,8 +1638,11 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
 #If HasIridium=True Then
   'Iridium Radio Variables
 
-  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") OR (WqSonde = "WQ_SERIAL_BURST") Then
+  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") OR (WqSonde = "WQ_SERIAL_BURST") AND (RedSonde ="False") Then
     Const IridiumVars = 14'need 14 places in the array for extra water quality parameters
+  #EndIf
+  #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") OR (WqSonde = "WQ_SERIAL_BURST") AND (RedSonde ="True") Then
+    Const IridiumVars = 16 'need 16 places for RedSonde paramaters
   #EndIf
   #If WqSonde = "NONE" Then
     Const IridiumVars = 8'base array only need 8 for stage and ADVM data
