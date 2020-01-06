@@ -21,12 +21,13 @@ Before Compiling/Sending to Datalogger:
   
     **WqSonde:** If sonde is present, select which communication type is being used and whether "Burst" sampling should occur.
 
-    **DWRSonde:** Is the sonde maintained by DWR? If so, this adds Turbidity NTUs to tables and forces the sonde time update to happen to PST rather
-	than to UTC.
+    **DWRSonde:** Is the sonde maintained by DWR? If so, this forces the sonde time update to happen to PST rather than to UTC.
 
     **TopBottom:** Are there two sondes daisy-chained together? If so this will duplicate all serial communications for water quality (parameter checks, set delimiters, get 	instant data points, wipe, and collect bursts) for the second sonde and assign the values with a BTM prefix.
     
-    **HasIridium:** Is there an Iririum telemetry system as a backup to the modem?
+    **RedSonde:** Is there a second sonde running through a second SOA?
+    
+    **HasIridium:** Is there an Iridium telemetry system as a backup to the modem?
     
     **HasSuna:** Is there a SUNA in the system? If so, this will perform SUNA operations and create and parse datatables for the SUNA.
     
