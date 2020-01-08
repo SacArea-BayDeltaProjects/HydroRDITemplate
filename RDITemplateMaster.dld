@@ -347,7 +347,7 @@ Dim RealSeconds As Long 'used for computing elapsed time intervals
 Dim Mod5Minutes As Long 'used for computing elapsed time intervals
 Dim Mod15Minutes As Float 'used for computing elapsed time intervals
 Dim Mod60Minutes As Float 'used for computing elapsed time intervals
-Dim ModDay As Float 'used for computing elapsed time intervals
+Public ModDay As Float 'used for computing elapsed time intervals
 #If Debugging = True Then
   Public VMYear As Long 'Date time from the Velocity meter clock
   Public VMMonth As Long 'Date time from the Velocity meter clock
