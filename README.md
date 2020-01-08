@@ -1,3 +1,5 @@
+This is an "off-network" test!
+
 # RDITemplate
 ## [CR1000 and CR6 Datalogger template for RDI ADCPs]
 
