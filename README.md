@@ -25,7 +25,7 @@ Before Compiling/Sending to Datalogger:
 
     **TopBottom:** Are there two sondes daisy-chained together? If so this will duplicate all serial communications for water quality (parameter checks, set delimiters, get 	instant data points, wipe, and collect bursts) for the second sonde and assign the values with a BTM prefix.
     
-    **RedSonde:** Is there a second sonde running through a second SOA?
+    **RedSonde:** Is there a second sonde running through a second SOA? This will NOT run burst data! Only for single point collection currently.
     
     **HasIridium:** Is there an Iridium telemetry system as a backup to the modem?
     
@@ -44,6 +44,8 @@ Before Compiling/Sending to Datalogger:
       *Not necessary on either set of ports, but should probably be used for CR6 U-ports or long RS232 cable runs.*
     
     **IsSpecStudy:** Do we need the "VelData" table active? (This table contains more velocity data than our normal tables)
+
+    **HasGPS:** Is there a real-time GNSS receiver at the station. (This will only compile on CR6)
     
     **GetNoiseFloor:** Do we need to collect "Noise Floor" data for the station for sediment surrogate models?
     

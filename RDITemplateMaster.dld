@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20191217
-Const ProgramVersion = "4.42"
-'Last Modified by: Mark Inc
+Const ProgramVersionDate = 20200108
+Const ProgramVersion = "4.43"
+'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -42,6 +42,7 @@ Const ProgramVersion = "4.42"
 '20191029 - TAV 4.40 Overhauled SUNA sampling to allow for stats to be calculated with less than 30 values as well as record good and bad data in separate tables.
 '20191101 - MRI 4.41 In the scan moved the decodes section right after we take in the velocity data. After all ADVM routines are finished then continue on. This will allow decodes to occur while we wait for the burst to begin for a CR6. Hopefully this solves the timing issue. For CR1000s made it so there was no delay before doing the burst to help avoid skipped scans. Altered debugger table so all time follow the program order correctly.
 '20191217 - MRI 4.42 Added ability to have a redundant sonde with all the same functions but completely seperate of a single sonde. This version works with Serial only. Serial burst will be supported if and when it is needed. Added manual power cycle relay option for iridium radio
+'20200108 - TAV 4.43 Added code to turn real-time GNSS unit on and off. (Currently turned on from Midnight to Noon on Mondays only).
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -63,12 +64,13 @@ Const No = False
 '"WQBaude" is the Sonde buadrate. 38400 or 9600.  38400 is preferred if Burst data is required
 ' "DWR Sonde" Chose if part of a DWR sonde which will disable time flags and some error checking due to them using sample and hold
 ' "TopBottom" Choose if you are using two sondes daisy chained together
-' "RedSonde" Chose if you are using a redudent separate sonde/SOA
-' "HasIridium" Chose if using an iridium radio as a redudent telemetry system
-' "HasSuna" Chose if station has a SUNA
+' "RedSonde" Choose if you are using a redudent separate sonde/SOA
+' "HasIridium" Choose if using an iridium radio as a redudent telemetry system
+' "HasSuna" Choose if station has a SUNA
 '"IsWQMax232" Choose if there is a MAX232 adapter on the Sonde Com port
 '"IsVMMax232" Choose if there is a MAx232 adapter on the VM com port
 '"IsSpecStudy" Choose if the VM is being used for a special velocity study
+'"HasGPS" Choose if the station is equiped with a real-time GNSS Receiver
 '"GetNoiseFloor" Choose if this is a sediment station and VM noise floor data is required
 '"HasSlave" Choose if there is a slave datalogger attached that needs velocity and stage info
 '"HasVM" Choose if there is a Velocity meter at this station
@@ -129,6 +131,9 @@ Const IsVmMax232 = False
 'value = True
 'value = False
 Const IsSpecStudy = False
+'value = True
+'value = False
+Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
 Const GetNoiseFloor = False
@@ -7113,6 +7118,18 @@ EndSub
   EndSub
 #EndIf
 
+'--------------Cycle GPS Unit Power----------------------------
+' ----------Turns power on once a week for 12 hours----------------
+#If HasGPS = True Then
+  Sub CycleGPSPower
+    If IfTime (0,7,Day) AND ModDay >= 0 AND ModDay <= 43200 Then
+      SW12(SW12_2,1)
+      Else
+      SW12(SW12_2,0)
+    EndIf
+  EndSub
+#EndIf
+      
   '__________________________________Keypad Menus________________________________________
   Sub KeypadMenu
     DisplayMenu ("Main Menu",-4)
@@ -7511,6 +7528,9 @@ EndSub
       Mod15Minutes = RealSeconds MOD 900
       Mod60Minutes = RealSeconds MOD 3600
       ModDay = RealSeconds MOD 86400
+      #If HasGPS Then
+        Call CycleGPSPower
+      #EndIf
       '------------------------------------------------------SUNA TIMING-------------------------------------
       '----------------Leave here to ensure it gets powered ASAP at beginning of scan------------------------
       #If HasSuna Then 'set all suna variables to false
