@@ -8433,7 +8433,7 @@ EndSub
                     LFrame = False 'otherwise it's something other than a LightFrame (NANs or DarkFrame)
                     DFrame = True
                   EndIf
-                Else 'if no bytes came through
+                Else 'if less than 1000 bytes came through
                   SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
                   If SunaMissedCnt >= 3 Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut)
                     SunaMissed = True 'set a flag
