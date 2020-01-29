@@ -100,12 +100,12 @@ Const RedSonde = False 'Is there a second sonde with its own SOA **THIS WILL ONL
 Const HasIridium = False
 'value = True
 'value = False
-Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
-Const MaxSunaBurst = 30
+Const MaxSunaBurst = 35
 'Min = 10
-'Max = 30
+'Max = 35
 'Inc = 1
 Const WqBaud = 38400
 'value = 9600
@@ -734,10 +734,10 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public BtmBurstDelay
   #EndIf
   #If (WqSonde = "WQ_SERIAL_BURST") Then
-  Public StartTopBurstTimer
-  Public BurstDelayCnt
-  Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
-  Public BurstReachedMod As Float
+    Public StartTopBurstTimer
+    Public BurstDelayCnt
+    Public BurstTimeReached As Float 'holder to see when we're reaching the burst time
+    Public BurstReachedMod As Float
   #EndIf
   Public BurstComs As String * 10000
   '  Public TestMedBurstTime
@@ -1372,15 +1372,15 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim AQTabEnd
   Dim AQTabTotTime
   #If StoreAllToCard = True Then
-  Dim StoreToCrdStart
-  Dim StoreToCrdEnd
-  Dim StoreToCrdTotTime
-  Dim ChkSpikeStart
-  Dim ChkSpikeEnd
-  Dim ChkSpikeTotTime
-  Dim AddSpikeStart
-  Dim AddSpikeEnd
-  Dim AddSpikeTotTime
+    Dim StoreToCrdStart
+    Dim StoreToCrdEnd
+    Dim StoreToCrdTotTime
+    Dim ChkSpikeStart
+    Dim ChkSpikeEnd
+    Dim ChkSpikeTotTime
+    Dim AddSpikeStart
+    Dim AddSpikeEnd
+    Dim AddSpikeTotTime
   #EndIf
   Dim ProcessTime
   Dim DataOutCount
@@ -1561,6 +1561,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public SunaReady As Boolean 'Trigger to say when the SUNA is warmed up
   Public SunaMissedCnt 'Counter for when the SUNA missed (Either DarkFrame, or no data)
   Public LFrameCnt
+  Public DFrameCnt
   Public BadSunaVals
   Public SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
   Public SunaOnTime 'How long was the SUNA powered
@@ -1568,7 +1569,9 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public SunaStringLen(MaxSunaBurst) 'Length of the String read in
   Public LocLF 'Variable to store where the L occurs in the string
   Public LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
-  Public Lcount As Long 'Counter for the ForNext loop to read in the SUNA data
+  Public LocDF 'Variable to Store where D occurs in the string
+  Public DFrame As Boolean 'Used to exit DoLoop if Dark Frame was present
+  Public LFrameThreshold As Long = 30'Number of Light Frames wanted for Calculations
   Public SunaHeader As String * 7
   Public SunaSN 'Suna Parameters
   Public SunaSampleTime
@@ -1638,8 +1641,8 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
 'set up for manual power cycle of iridium radio
 #If HasIridium = True Then
   Public IridiumManualCycle As Boolean
- #EndIf
- 
+#EndIf
+
 'If we are using iridium declare the appropriate variables based on the type of water quality being collected
 #If HasIridium=True Then
   'Iridium Radio Variables
@@ -1682,12 +1685,12 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
     Public WqSpCond_IRD
     Public WqTurbFNU_IRD
     #If RedSonde = False Then
-    Public WQBattV_Min_IRD
+      Public WQBattV_Min_IRD
     #EndIf
   #EndIf
-  
+
   #If (RedSonde = "True") AND (WqSonde = "WQ_SERIAL")  Then 'non-burst WQ varialbes
-   ' Public RedWqDate_IRD
+    ' Public RedWqDate_IRD
     'Public RedWqTime_IRD
     Public RedWqTempC_IRD
     Public RedWqSpCond_IRD
@@ -2579,7 +2582,7 @@ DataTable(SiteVisit,True,-1)
       Sample (1,BtmWqCLmgl,FP2)
       Sample (1,BtmWqErrCount,Long)
     #EndIf
-     #If RedSonde Then
+    #If RedSonde Then
       Sample (1,RedWqBattV,FP2)
       Sample (1,RedWqTempC,FP2)
       Sample (1,RedWqSpCond,IEEE4)
@@ -2660,7 +2663,7 @@ DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the
       Sample (1,BtmWqCLmgl,FP2)
       Sample (1,BtmWqWiperPos,FP2)
     #EndIf
-     #If RedSonde Then
+    #If RedSonde Then
       Sample (1,RedWqBattV,FP2)
       Sample (1,RedWqTempC,FP2)
       Sample (1,RedWqSpCond,IEEE4)
@@ -2792,7 +2795,7 @@ DataTable (SVMaq,True,1)
       Sample (1,BtmWqCLmgl,FP2)
       Sample (1,BtmWqWiperPos,FP2)
     #EndIf
-     #If RedSonde Then
+    #If RedSonde Then
       Sample (1,RedWqBattV,FP2)
       Sample (1,RedWqTempC,FP2)
       Sample (1,RedWqSpCond,IEEE4)
@@ -2851,7 +2854,7 @@ DataTable (Debugger,True,-1)
   Sample (1,VMLoopStart,FP2)
   Sample (1,VMLoopEnd,FP2)
   Sample (1,VMLoopTotTime,FP2)
-   Sample (1,CDMACheckStart,FP2)
+  Sample (1,CDMACheckStart,FP2)
   Sample (1,CDMACheckEnd,FP2)
   Sample (1,CDMACheckTotTime,FP2)
   Sample (1,ZeroVMTimeStart,FP2)
@@ -2876,15 +2879,15 @@ DataTable (Debugger,True,-1)
   Sample (1,GetVMMemEnd,FP2)
   Sample (1,GetVMMemTotTime,FP2
   #If StoreAllToCard = True Then
-  Sample (1,ChkSpikeStart,FP2)
-  Sample (1,ChkSpikeEnd,FP2)
-  Sample (1,ChkSpikeTotTime,FP2)
-  Sample (1,StoreToCrdStart,FP2)
-  Sample (1,StoreToCrdEnd,FP2)
-  Sample (1,StoreToCrdTotTime,FP2)
-  Sample (1,AddSpikeStart,FP2)
-  Sample (1,AddSpikeEnd,FP2)
-  Sample (1,AddSpikeTotTime,FP2)
+    Sample (1,ChkSpikeStart,FP2)
+    Sample (1,ChkSpikeEnd,FP2)
+    Sample (1,ChkSpikeTotTime,FP2)
+    Sample (1,StoreToCrdStart,FP2)
+    Sample (1,StoreToCrdEnd,FP2)
+    Sample (1,StoreToCrdTotTime,FP2)
+    Sample (1,AddSpikeStart,FP2)
+    Sample (1,AddSpikeEnd,FP2)
+    Sample (1,AddSpikeTotTime,FP2)
   #EndIf
   Sample (1,VMTimeStart,FP2)
   Sample (1,VMTimeEnd,FP2)
@@ -3095,8 +3098,8 @@ Sub GetStartup
     'WqDeadCnt = 0
     WqErrCount = 0
     #If RedSonde Then
-     RedWqDead = No
-     RedWqErrCount = 0
+      RedWqDead = No
+      RedWqErrCount = 0
     #EndIf
     IsWQNClosed = Yes 'Default setting is for the existance of a normally closed Sonde power relay
     #If WqSonde = "WQ_SERIAL" Then
@@ -3104,7 +3107,7 @@ Sub GetStartup
       RecBurstFlag = False
       #If RedSonde Then
         Red_Redeploy = True
-        #EndIf
+      #EndIf
     #EndIf
   #EndIf
   'IF this is an uplooker calculating range based on water depth
@@ -3230,11 +3233,11 @@ Sub Initialize
     WqManualCycle = False
     OldEXOTime = 0
     #If RedSonde Then
-    Red_Redeploy = True
-    RedWqParamOrder = BadDataIndicator
-    RedWipeflag = False
-    RedWqManualCycle = False
-    RedOldExoTime = 0
+      Red_Redeploy = True
+      RedWqParamOrder = BadDataIndicator
+      RedWipeflag = False
+      RedWqManualCycle = False
+      RedOldExoTime = 0
     #EndIf
     #If TopBottom Then
       BtmOldEXOTime = 0
@@ -3242,7 +3245,7 @@ Sub Initialize
   #EndIf
   #If HasIridium Then
     IridiumManualCycle = False
-    #EndIf
+  #EndIf
 
   'An array of longs is needed to collect the data because the campbell cannot read the
   'binary PD0 ensemble into a string.  When it hits a blank (HEX 00) it terminates the
@@ -3586,13 +3589,13 @@ EndSub
 
 #If WqSonde <> "NONE" AND RedSonde = True Then
   Sub OpenRedWQPort 'only for cr6 so no CR1000 option
-      If UseCommsOneForSonde = True Then
-        SerialOpen (RedWQSerialPort,WqBaud,19,0,2000,1)'Max232 requires us to use TTL language, use comms mode one.The Max232 also converts to a binary like signal and requires serial open format of 19 to function. Standard code zero results in a communication error.
-      ElseIf UseCommsZeroForSonde = True Then
-        SerialOpen (RedWQSerialPort,WqBaud,0,0,2000,0)'No Max232 is present so we uses standard RS232 language
-      Else
-        SerialOpen (RedWQSerialPort,WqBaud,0,0,2000)'In case we use a non-stanadard port configuration this is the generic code
-      EndIf
+    If UseCommsOneForSonde = True Then
+      SerialOpen (RedWQSerialPort,WqBaud,19,0,2000,1)'Max232 requires us to use TTL language, use comms mode one.The Max232 also converts to a binary like signal and requires serial open format of 19 to function. Standard code zero results in a communication error.
+    ElseIf UseCommsZeroForSonde = True Then
+      SerialOpen (RedWQSerialPort,WqBaud,0,0,2000,0)'No Max232 is present so we uses standard RS232 language
+    Else
+      SerialOpen (RedWQSerialPort,WqBaud,0,0,2000)'In case we use a non-stanadard port configuration this is the generic code
+    EndIf
   EndSub
 #EndIf
 '_________________________Erase WH Recorder___________________________________
@@ -3777,7 +3780,7 @@ Sub SetVMTime
     SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
   EndIf
   SetVMTimeFlg = false 'set the flag back to false until next time sychro
-  
+
 EndSub
 'Set time on EXO
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
@@ -3831,7 +3834,7 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
-     #If RedSonde Then
+    #If RedSonde Then
       Call OpenRedWqPort
       SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
       Delay (1,10,mSec)
@@ -3999,9 +4002,9 @@ EndSub
       BtmWqLocCL = BTM_t(23)
       BtmWqLocWiperPos = BTM_t(24)
     #EndIf
-    EndSub
-    #If RedSonde Then
-      Sub DefineLocsRed
+  EndSub
+  #If RedSonde Then
+    Sub DefineLocsRed
       RedWqLocDate = Red_t(1)
       RedWqLocTime = Red_t(2)
       RedWqLocTempC = Red_t(3)
@@ -4026,7 +4029,7 @@ EndSub
       RedWqLocNO3 = Red_t(22)
       RedWqLocCL = Red_t(23)
       RedWqLocWiperPos = Red_t(24)
-  EndSub
+    EndSub
   #EndIf
 #EndIf
 '-----------------------------Parameter check-----Gets the parameter order from serial connected EXO sondes-----
@@ -4064,26 +4067,26 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
-    EndSub
+  EndSub
   #If RedSonde Then
     Sub ParamCheckRed
-    Call OpenRedWQPort 'open the port
-    SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10) 'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'configure logger/SOA to talk to the sonde
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10) 'after chosing what sonde to talk to, another zero must be sent to wake it up again.
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"para" + CHR(13) + CHR(10),"",1,0)'gives the parameter order
-    Delay (1,300,mSec)
-    SerialIn (RedWqIn,RedWQSerialPort,100,&H0D0A,200)
-    RedWqIn = Trim(RedWqIn)
-    SplitStr (RedWqParamOrder,RedWqIn,CHR(32),RedWqNparams,0)
-    RedNoSondeTrig = InStr(1,RedWqIn,"Sonde",2)
-    Delay (1,200,mSec)
-    SerialFlush(RedWQSerialPort)
-    SerialClose(RedWQSerialPort)
-  EndSub
+      Call OpenRedWQPort 'open the port
+      SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10) 'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'configure logger/SOA to talk to the sonde
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10) 'after chosing what sonde to talk to, another zero must be sent to wake it up again.
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"para" + CHR(13) + CHR(10),"",1,0)'gives the parameter order
+      Delay (1,300,mSec)
+      SerialIn (RedWqIn,RedWQSerialPort,100,&H0D0A,200)
+      RedWqIn = Trim(RedWqIn)
+      SplitStr (RedWqParamOrder,RedWqIn,CHR(32),RedWqNparams,0)
+      RedNoSondeTrig = InStr(1,RedWqIn,"Sonde",2)
+      Delay (1,200,mSec)
+      SerialFlush(RedWQSerialPort)
+      SerialClose(RedWQSerialPort)
+    EndSub
   #EndIf
 #EndIf
 ' SetDilim -----------Sets the serial connected EXO to comma delimited output----
@@ -4117,24 +4120,24 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
-    EndSub
-    #If RedSonde Then
-      Sub SetDelimRed
-    Call OpenRedWQPort
-    SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'set to communicate to top sonde
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50) 'set to comma delimited
-    Delay (1,300,mSec)
-    SerialIn (RedWqIn,RedWQSerialPort,100,&H0D0A,200)
-    RedNoSondeTrig = InStr(1,RedWqIn,"Sonde",2)
-    Delay (1,20,mSec)
-    SerialFlush(RedWqSerialPort)
-    SerialClose(RedWQSerialPort)
   EndSub
+  #If RedSonde Then
+    Sub SetDelimRed
+      Call OpenRedWQPort
+      SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'set to communicate to top sonde
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50) 'set to comma delimited
+      Delay (1,300,mSec)
+      SerialIn (RedWqIn,RedWQSerialPort,100,&H0D0A,200)
+      RedNoSondeTrig = InStr(1,RedWqIn,"Sonde",2)
+      Delay (1,20,mSec)
+      SerialFlush(RedWQSerialPort)
+      SerialClose(RedWQSerialPort)
+    EndSub
   #EndIf
 #EndIf
 '----------GetWQ_Serial------Gets a single set of data from the serial connected EXO
@@ -4174,27 +4177,27 @@ EndSub
       SerialFlush(WqSerialPort)
     #EndIf
     SerialClose(WqSerialPort)
-    EndSub
-    #If RedSonde Then
-      Sub GetRedWQ_Serial
-    Call OpenRedWQPort
-    SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'communicate to top sonde
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
-    Delay (1,10,mSec)
-    SerialOut (RedWQSerialPort,"data" + CHR(13) + CHR(10),"",1,0)'retrieve instant YSI filtered data point
-    Delay (1,200,mSec)
-    SerialIn (RedWqIn,RedWQSerialPort,100,&H0D0A,200)
-    Erase RedWqData()
-    RedWqIn = Trim(RedWqIn)
-    SplitStr (RedWqData,RedWqIn,",",RedWqNparams,0)
-    RedNoSondeTrig = InStr(1,RedWqIn,"Sonde",2)
-    Delay (1,20,mSec)
-    SerialFlush(RedWQSerialPort)
-    SerialClose(RedWQSerialPort)
   EndSub
+  #If RedSonde Then
+    Sub GetRedWQ_Serial
+      Call OpenRedWQPort
+      SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"setsonde 0"+CHR(13)+CHR(10),"OK",3,50)'communicate to top sonde
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"0" + CHR(13),"?Command",3,10)
+      Delay (1,10,mSec)
+      SerialOut (RedWQSerialPort,"data" + CHR(13) + CHR(10),"",1,0)'retrieve instant YSI filtered data point
+      Delay (1,200,mSec)
+      SerialIn (RedWqIn,RedWQSerialPort,100,&H0D0A,200)
+      Erase RedWqData()
+      RedWqIn = Trim(RedWqIn)
+      SplitStr (RedWqData,RedWqIn,",",RedWqNparams,0)
+      RedNoSondeTrig = InStr(1,RedWqIn,"Sonde",2)
+      Delay (1,20,mSec)
+      SerialFlush(RedWQSerialPort)
+      SerialClose(RedWQSerialPort)
+    EndSub
   #EndIf
 #EndIf
 '-----------------Parses data from a serial connected EXO ------------------
@@ -4280,9 +4283,9 @@ EndSub
       If BtmWqLocCL > 0 Then BtmWqCLmgl = BtmWqData(BtmWqLocCL)
       If BtmWqLocWiperPos > 0 Then BtmWqWiperPos = BtmWqData(BtmWqLocWiperPos)
     #EndIf
-    EndSub
-    #If RedSonde Then
-      Sub ParseRedData
+  EndSub
+  #If RedSonde Then
+    Sub ParseRedData
       If (RedWqData(RedWqLocDate) <> NAN) AND (RedWqData(RedWqLocDate)<> 0) AND (RedWqData(RedWqLocTime)<> RedOldExoTime)  Then
         RedOldExoTime = RedWqData(RedWqLocTime)
         RedWqError = False
@@ -4322,7 +4325,7 @@ EndSub
       If RedWqLocNO3 > 0 Then RedWqNO3mgl = RedWqData(RedWqLocNO3)
       If RedWqLocCL > 0 Then RedWqCLmgl = RedWqData(RedWqLocCL)
       If RedWqLocWiperPos > 0 Then RedWqWiperPos = RedWqData(RedWqLocWiperPos)
-  EndSub
+    EndSub
   #EndIf
 #EndIf
 '-------------------DefineParamsOrder----Automatically determines the order of the incoming serial connected EXO data ------
@@ -4378,9 +4381,9 @@ EndSub
       BTM_t(23) = FindSpa (CLCode,CLCode,1,BtmWqParamOrder())
       BTM_t(24) = FindSpa (WiperPos,WiperPos,1,BtmWqParamOrder())
     #EndIf
-    EndSub
-    #If RedSonde Then
-      Sub DefineParamsOrderRed
+  EndSub
+  #If RedSonde Then
+    Sub DefineParamsOrderRed
       Red_t(1) = FindSpa (DateCode,DateCode,1,RedWqParamOrder())
       Red_t(2) = FindSpa (TimeCode,TimeCode,1,RedWqParamOrder())
       Red_t(3) = FindSpa (TempCCode,TempCCode,1,RedWqParamOrder())
@@ -4405,12 +4408,12 @@ EndSub
       Red_t(22) = FindSpa (NO3Code,NO3Code,1,RedWqParamOrder())
       Red_t(23) = FindSpa (CLCode,CLCode,1,RedWqParamOrder())
       Red_t(24) = FindSpa (WiperPos,WiperPos,1,RedWqParamOrder())
-  EndSub
+    EndSub
   #EndIf
 #EndIf
 ' -------------------SetBurst-------if collecting burst then Setup EXO for burst-----
 #If WqSonde = "WQ_SERIAL_BURST" Then
-  Sub SetBurst 'sets to run and receives string. 
+  Sub SetBurst 'sets to run and receives string.
     'Version 4.42 includes redundent sonde to be used with DWR, not collecting burst. This version will not allow redudent sonde to collect burst at this time. In the future copy BTM burst code for redsonde and decide what minute to sample bottom sonde in.
     Call OpenWQPort
     SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10)'wake up SOA
@@ -4734,7 +4737,7 @@ EndSub
       SerialClose(WqSerialPort)
     EndSub
   #EndIf
-  
+
   #If RedSonde Then
     Sub WipeRedWQ 'leaving as seperate routine for eventual use with burst sampling. Will call them back to back in the scan for now
       Call OpenRedWQPort
@@ -4789,15 +4792,15 @@ EndSub
 '----------RedCycleWQPower-----------Switches off the RedWQ power until the next Scan ------------
 #If (WqSonde <> "NONE") AND (RedSonde = "True") Then
   Sub CycleRedWQPower
-      If  UseSW12_2_forWQ Then 'using SW12 port 2
-        SW12(2,0)
+    If  UseSW12_2_forWQ Then 'using SW12 port 2
+      SW12(2,0)
+    Else
+      If IsWQNClosed Then
+        PortSet(RedWQSwitchPort,1)
       Else
-        If IsWQNClosed Then
-          PortSet(RedWQSwitchPort,1)
-        Else
-          PortSet(RedWQSwitchPort,0)
-        EndIf
+        PortSet(RedWQSwitchPort,0)
       EndIf
+    EndIf
     RedWqPwrCycleCnt = 0
     RedWqManualCycle = False
     ErrorEvent = "Cycle RedSonde Power"
@@ -4966,7 +4969,7 @@ EndSub
       BtmWqWiperPos = BadDataIndicator
     EndSub
   #EndIf
-    #If RedSonde Then
+  #If RedSonde Then
     Sub Red_WQ_Mark_Bad
       RedWqDate = ""
       RedWqTime =""
@@ -6432,9 +6435,9 @@ EndSub
     '  Next Bin
     Erase (AvgRSSI())
     #If StoreAllToCard = True
-    Erase Velspike()
-    Erase RSSIspike()
-    Erase Corrspike()
+      Erase Velspike()
+      Erase RSSIspike()
+      Erase Corrspike()
     #EndIf
   EndSub
 #EndIf
@@ -6593,7 +6596,7 @@ Sub ZeroErrCounters
   #If WqSonde <> "NONE" Then
     WqPwrCycleCnt = 0 'set counter to zero at midnight
     #If RedSonde Then
-    RedWqPwrCycleCnt = 0 'set counter to zero at midnight
+      RedWqPwrCycleCnt = 0 'set counter to zero at midnight
     #EndIf
   #EndIf
   BadQCount = 0
@@ -6983,6 +6986,18 @@ EndSub
       AvgSunaLampTime = BadDataIndicator
       AvgSunaVoltMain = BadDataIndicator
       AvgSunaVoltLamp = BadDataIndicator
+      SunaNitrateuM = BadDataIndicator
+      SunaNitratemgL = BadDataIndicator
+      SunaFittingResult = BadDataIndicator
+      A254 = BadDataIndicator
+      SunaDarkAve = BadDataIndicator
+      SunaSpecAve = BadDataIndicator
+      TSpec = BadDataIndicator
+      TLamp = BadDataIndicator
+      SunaHumid = BadDataIndicator
+      SunaLampTime = BadDataIndicator
+      SunaVoltMain = BadDataIndicator
+      SunaVoltLamp = BadDataIndicator
     EndSub
 
     '___________________________________________Reset Timers for Suna____________________
@@ -7062,8 +7077,8 @@ EndSub
     EndSub
 
   #EndIf
-  
- #If HasIridium = True AND RedSonde = True Then
+
+  #If HasIridium = True AND RedSonde = True Then
     '___________________________________________Iridium SDI12 Output for RedSonde___________________
     Sub IridiumDataOut
       '  Create new variables to capture important data from the Aquarius field
@@ -7078,15 +7093,15 @@ EndSub
       AvgVMTemp_IRD = Aquarius.AvgVMTemp
       AvgVMPitch_IRD = Aquarius.AvgVMPitch
       AvgVMRoll_IRD = Aquarius.AvgVMRoll
-        WqDate_IRD = Aquarius.WqDate
-        WqTime_IRD = Aquarius.WqTime
-        WqTempC_IRD = Aquarius.WqTempC
-        WqSpCond_IRD = Aquarius.WqSpCond
-        WqTurbFNU_IRD = Aquarius.WqTurbFNU
-        RedWqTempC_IRD = Aquarius.RedWqTempC
-        RedWqSpCond_IRD = Aquarius.RedWqSpCond
-        RedWqTurbFNU_IRD = Aquarius.RedWqTurbFNU
-       
+      WqDate_IRD = Aquarius.WqDate
+      WqTime_IRD = Aquarius.WqTime
+      WqTempC_IRD = Aquarius.WqTempC
+      WqSpCond_IRD = Aquarius.WqSpCond
+      WqTurbFNU_IRD = Aquarius.WqTurbFNU
+      RedWqTempC_IRD = Aquarius.RedWqTempC
+      RedWqSpCond_IRD = Aquarius.RedWqSpCond
+      RedWqTurbFNU_IRD = Aquarius.RedWqTurbFNU
+
       '
       'Build the array
       'with the data that will always be there
@@ -7098,39 +7113,39 @@ EndSub
       IridiumOutArray(6) = AvgVMTemp_IRD
       IridiumOutArray(7) = AvgVMPitch_IRD
       IridiumOutArray(8) = AvgVMRoll_IRD
-        IridiumOutArray(9) = WqDate_IRD 'only enough room for one WQ date and time, this may cause a problem
-        IridiumOutArray(10) = WqTime_IRD
-        IridiumOutArray(11) = WqTempC_IRD
-        IridiumOutArray(12) = WqSpCond_IRD
-        IridiumOutArray(13) = WqTurbFNU_IRD
-        IridiumOutArray(14) = RedWqTempC_IRD
-        IridiumOutArray(15) = RedWqSpCond_IRD
-        IridiumOutArray(16) = RedWqTurbFNU_IRD
+      IridiumOutArray(9) = WqDate_IRD 'only enough room for one WQ date and time, this may cause a problem
+      IridiumOutArray(10) = WqTime_IRD
+      IridiumOutArray(11) = WqTempC_IRD
+      IridiumOutArray(12) = WqSpCond_IRD
+      IridiumOutArray(13) = WqTurbFNU_IRD
+      IridiumOutArray(14) = RedWqTempC_IRD
+      IridiumOutArray(15) = RedWqSpCond_IRD
+      IridiumOutArray(16) = RedWqTurbFNU_IRD
 
     EndSub
 
   #EndIf
-  
-'----------CycleIridiumPower-----------Switches off the Iridium power------------*Only For cr6 with 6 port relay. Comment out if not used
-#If HasIridium = True Then
-  Sub CycleIridiumPower
-          PortSet(IridiumSwitchPort,1)
-    IridiumManualCycle = False
-  EndSub
-#EndIf
 
-'--------------Cycle GPS Unit Power----------------------------
-' ----------Turns power on once a week for 12 hours----------------
-#If HasGPS = True Then
-  Sub CycleGPSPower
-    If DOW = 2 AND ModDay >= 0 AND ModDay < 43200 Then 'if Day of Week is Monday and time of day is between 00:00a and 12:00p
-      SW12(SW12_2,1) 'Power the GNSS receiver
+  '----------CycleIridiumPower-----------Switches off the Iridium power------------*Only For cr6 with 6 port relay. Comment out if not used
+  #If HasIridium = True Then
+    Sub CycleIridiumPower
+      PortSet(IridiumSwitchPort,1)
+      IridiumManualCycle = False
+    EndSub
+  #EndIf
+
+  '--------------Cycle GPS Unit Power----------------------------
+  ' ----------Turns power on once a week for 12 hours----------------
+  #If HasGPS = True Then
+    Sub CycleGPSPower
+      If DOW = 2 AND ModDay >= 0 AND ModDay < 43200 Then 'if Day of Week is Monday and time of day is between 00:00a and 12:00p
+        SW12(SW12_2,1) 'Power the GNSS receiver
       Else
-      SW12(SW12_2,0) 'Otherwise keep it off
-    EndIf
-  EndSub
-#EndIf
-      
+        SW12(SW12_2,0) 'Otherwise keep it off
+      EndIf
+    EndSub
+  #EndIf
+
   '__________________________________Keypad Menus________________________________________
   Sub KeypadMenu
     DisplayMenu ("Main Menu",-4)
@@ -7634,18 +7649,18 @@ EndSub
         If Mod15Minutes = 780 Then 'if the 13th minute
           Wipeflag = True 'wipe the top sonde
           #If RedSonde Then
-          RedWipeflag = True 'wipe RedSonde
+            RedWipeflag = True 'wipe RedSonde
           #EndIf
           #If TopBottom Then
-          BtmWipeflag = True 'Wipe BtmSonde
+            BtmWipeflag = True 'Wipe BtmSonde
           #EndIf
         Else
           Wipeflag = False
           #If RedSonde Then
-          RedWipeflag = False
+            RedWipeflag = False
           #EndIf
           #If TopBottom Then
-          BtmWipeflag = False
+            BtmWipeflag = False
           #EndIf
         EndIf
       #EndIf
@@ -7705,12 +7720,12 @@ EndSub
             If IsWQNClosed Then
               PortSet(WqSwitchPort,0)
               #If RedSonde Then
-              PortSet(RedWQSwitchPort,0)
+                PortSet(RedWQSwitchPort,0)
               #EndIf
             Else
               PortSet(WqSwitchPort,1)
-               #If RedSonde Then
-              PortSet(RedWQSwitchPort,1)
+              #If RedSonde Then
+                PortSet(RedWQSwitchPort,1)
               #EndIf
             EndIf
           EndIf
@@ -7863,7 +7878,7 @@ EndSub
         ChkSumChkEnd = ChkSumChkEnd/1000
         ChkSumChkTotTime = ChkSumChkEnd - ChkSumChkStart
       #EndIf
-     
+
       #If HasVM Then
         If VMdataIn = Yes Then 'only process data if we have it
           VmDeadCount = 0
@@ -7912,27 +7927,27 @@ EndSub
           RecAllVelFlag = false
           'Rec15minFlag = false 'turn data table flag back off
           #If StoreAllToCard = True Then 'only run spike routines if we want VM spike data
-          'make sure spike stuff is not called if hasvm is false
-          If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
-            ChkSpikeStart = Timer(DebugTimer,msec,4)
-            ChkSpikeStart = ChkSpikeStart/1000
-            Call CheckSpikes
-            ChkSpikeEnd = Timer(DebugTimer,msec,4)
-            ChkSpikeEnd = ChkSpikeEnd/1000
-            ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
+            'make sure spike stuff is not called if hasvm is false
+            If ScanNo >= 20 Then 'fill fif0 buffer before checking but do check first incase we have to set disable variables
+              ChkSpikeStart = Timer(DebugTimer,msec,4)
+              ChkSpikeStart = ChkSpikeStart/1000
+              Call CheckSpikes
+              ChkSpikeEnd = Timer(DebugTimer,msec,4)
+              ChkSpikeEnd = ChkSpikeEnd/1000
+              ChkSpikeTotTime = ChkSpikeEnd - ChkSpikeStart
               StoreToCrdStart = Timer(DebugTimer,msec,4)
               StoreToCrdStart = StoreToCrdStart/1000
               Call StoreAllData
               StoreToCrdEnd = Timer(DebugTimer,msec,4)
               StoreToCrdEnd = StoreToCrdEnd/1000
               StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
-          EndIf
-          AddSpikeStart = Timer(DebugTimer,msec,4)
-          AddSpikeStart = AddSpikeStart/1000
-          Call AddSpikes 'make sure buffer is full before checking
-          AddSpikeEnd = Timer(DebugTimer,msec,4)
-          AddSpikeEnd = AddSpikeEnd/1000
-          AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
+            EndIf
+            AddSpikeStart = Timer(DebugTimer,msec,4)
+            AddSpikeStart = AddSpikeStart/1000
+            Call AddSpikes 'make sure buffer is full before checking
+            AddSpikeEnd = Timer(DebugTimer,msec,4)
+            AddSpikeEnd = AddSpikeEnd/1000
+            AddSpikeTotTime = AddSpikeEnd-AddSpikeStart
           #EndIf
 
         Else 'if no vm data in
@@ -7953,9 +7968,9 @@ EndSub
         VMTimeEnd = VMTimeEnd/1000
         VMTotTime = VMTimeEnd - VMTimeStart
       #EndIf
-      
-'Wq section placed here because some water quality info is needed in the 1min data
- BeforeBurst = Timer(DebugTimer,msec,4)
+
+      'Wq section placed here because some water quality info is needed in the 1min data
+      BeforeBurst = Timer(DebugTimer,msec,4)
       BeforeBurst = BeforeBurst/1000
       #If WqSonde = "WQ_SDI12" Then
         Call GetWq_SDI12 'get YSI data
@@ -7983,22 +7998,22 @@ EndSub
           Call ParseData
         EndIf '
         Delay (1,50,mSec)
-        
+
         #If RedSonde =True Then
-        If Red_Redeploy = True Then 'EXO setup for RedSonde
-          Call ParamCheckRed
-          Delay (1,10,mSec)
-          Call DefineParamsOrderRed
-          Delay (1,10,mSec)
-          Call DefineLocsRed
-          Delay (1,10,mSec)
-          Call SetDelimRed
-          Delay (1,10,mSec)
-          Red_Redeploy = False
-        Else 'if not redeploy Get single data point
-          Call GetRedWQ_Serial 'get a single data point
-          Delay (1,30,mSec)
-          Call ParseRedData
+          If Red_Redeploy = True Then 'EXO setup for RedSonde
+            Call ParamCheckRed
+            Delay (1,10,mSec)
+            Call DefineParamsOrderRed
+            Delay (1,10,mSec)
+            Call DefineLocsRed
+            Delay (1,10,mSec)
+            Call SetDelimRed
+            Delay (1,10,mSec)
+            Red_Redeploy = False
+          Else 'if not redeploy Get single data point
+            Call GetRedWQ_Serial 'get a single data point
+            Delay (1,30,mSec)
+            Call ParseRedData
           EndIf
         #EndIf '
         Delay (1,50,mSec)
@@ -8228,8 +8243,8 @@ EndSub
             EndIf
           EndIf 'error
         #EndIf
-        
-      #If RedSonde Then 'need to conditional compile here to determine if the correct chunks are removed if not RedSonde
+
+        #If RedSonde Then 'need to conditional compile here to determine if the correct chunks are removed if not RedSonde
           If (RedWqParamOrder(1) = BadDataIndicator) OR (RedWqError = True) Then'unable to initialize or bad data
             #If DWRSonde = False Then
               Call Red_WQ_Mark_Bad
@@ -8257,10 +8272,10 @@ EndSub
           EndIf
           #If RedSonde Then
             If RedWqError = true Then
-            RedWqBadData = True
-          Else
-            RedWqBadData = False
-          EndIf
+              RedWqBadData = True
+            Else
+              RedWqBadData = False
+            EndIf
           #EndIf
         #EndIf
         If SetEXOTimeFlg = True Then
@@ -8271,18 +8286,18 @@ EndSub
         EndIf
         #If RedSonde Then
           If RedWqManualCycle = true Then
-          Call CycleRedWQPower
-        EndIf
+            Call CycleRedWQPower
+          EndIf
         #EndIf
       #EndIf
-      
-#If HasIridium Then
-  If IridiumManualCycle = False Then
-    PortSet(IridiumSwitchPort,0)'this assume normally closed setting for relay
-    ElseIf IridiumManualCycle = True Then
-    Call CycleIridiumPower
-  EndIf
- #EndIf
+
+      #If HasIridium Then
+        If IridiumManualCycle = False Then
+          PortSet(IridiumSwitchPort,0)'this assume normally closed setting for relay
+        ElseIf IridiumManualCycle = True Then
+          Call CycleIridiumPower
+        EndIf
+      #EndIf
 
       'Call All Data Tables (time them to make sure nothing is being hung up.
       DataTabsStart = Timer(DebugTimer,msec,4)
@@ -8413,13 +8428,17 @@ EndSub
             SunaSampleStart = SunaSampleStart/1000
             LFrameCnt = 0 'Reset good values counter to 0
             BadSunaVals = 0 'Reset bad values counter to 0
-            For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
+            'For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
+            Do 'Start loop to collect Suna Data. Loop until LFrameThreshold is met OR timer >= 55sec
               SunaMissedCnt = 0 'set the missed count to 0
-              SunaTimer = Timer(DebugTimer,Sec,4)
-              If SunaTimer >= 55 Then 'if we didn't complete all samples by 55 seconds, exit the loop to avoid skipping scans. May want to adjust?
-                ExitFor
-              EndIf
+              SunaTimer = Timer(DebugTimer,Sec,4) 'read the timer started at the beginning of the scan
+              If SunaTimer >= 53 Then 'if we didn't complete all samples by 53 seconds, exit the loop to avoid skipping scans. SerialIn below has a timeout of 2s per attempt, totalling 6s until flagged as bad
+                ExitDo
+              EndIf 'Check Timer
               Do 'start Do/Loop
+                LFrame = False 'Force all trigger flags to false to make sure we stay in the loop appropriately
+                DFrame = False
+                SunaMissed = False
                 SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
                 SunaStringLen(oCount) = Len(SunaBurstIn) 'get the length of the string
                 If SunaStringLen(oCount) > 1000 Then 'if the string is longer than 1000 bytes, DarkFrames are around 1100, Light frames around 1600+
@@ -8429,40 +8448,53 @@ EndSub
                   If LocLF = 5 Then 'if the L is found at byte 5
                     LFrame = True 'we know it's a LightFrame
                     DFrame = False
-                  ElseIf LocDF = 5 Then
-                    LFrame = False 'otherwise it's something other than a LightFrame (NANs or DarkFrame)
-                    DFrame = True
-                  EndIf
+                  ElseIf LocDF = 5 Then 'if D is found at byte 5
+                    LFrame = False 'not a light frame
+                    DFrame = True 'it is a dark frame
+                  ElseIf LocLF <> 5 AND LocDF <> 5 Then 'other wise, if D or L is not found at byte 5 but we have >1000 bytes
+                    LFrame = False 'not light or dark frame
+                    DFrame = False
+                    SunaMissedCnt = SunaMissedCnt + 1 'something went wrong, data didn't populate appropriately
+                  EndIf 'if > 1000 bytes checks
                 Else 'if less than 1000 bytes came through
                   SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
-                  If SunaMissedCnt >= 3 Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut)
-                    SunaMissed = True 'set a flag
-                  Else
-                    SunaMissed = False 'otherwise, don't set flag
-                  EndIf
-                EndIf
+                EndIf 'if < 1000 bytes came through
+                If SunaMissedCnt >= 3 Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut)
+                  SunaMissed = True 'set a flag
+                Else
+                  SunaMissed = False 'otherwise, don't set flag
+                EndIf 'if suna missed = true
               Loop Until LFrame = True OR DFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
               Delay (1,200,mSec) 'delay 0.2 sec
-              If SunaBurstIn = "" Then
+              If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 of the string
                 RawSunaArray(oCount,-1)() = BadDataIndicator
                 BadSunaVals = BadSunaVals + 1
-              ElseIf LocLF = 5 Then
+              ElseIf LFrame = True Then 'if its a light frame
                 LFrameCnt = LFrameCnt + 1
                 SplitStr(GoodSunaArray(LFrameCnt,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the good data multi-dimensioned array based on the counter
                 'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
                 SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'parse the good data into the raw array
                 SplitStr(SunaHeader,SunaBurstIn,"",1,1)
-                If GoodSunaArray(LFrameCnt,1) < 1000 Then
+                If GoodSunaArray(LFrameCnt,1) < 1000 Then 'if serial number is <1000
+                  SunaHeader = SunaHeader + "0" 'add leading 0
+                Else
+                  SunaHeader = SunaHeader
+                EndIf 'serial number check
+              ElseIf DFrame = True 'if it's a dark frame
+                DFrameCnt = DFrameCnt + 1
+                SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0)
+                SplitStr(SunaHeader,SunaBurstIn,"",1,1)
+                If RawSunaArray(oCount,1) < 1000 Then
                   SunaHeader = SunaHeader + "0"
                 Else
                   SunaHeader = SunaHeader
-                EndIf
-              EndIf
+                EndIf 'serial number check
+              EndIf 'if suna wasn't missed, parse Light or Dark Frames
               Erase(SunaBurstIn) 'erase the string
               SerialFlush(SunaPort) 'flush the port
               oCount=oCount+1 'increase the counter by 1
               Delay (1,200,mSec) 'delay another 0.2sec
-            Next Lcount 'go back to the to top of the For Loop
+            Loop Until LFrameCnt >= LFrameThreshold
             Delay (1,100,mSec) 'delay 0.1sec
             SerialClose(SunaPort) 'close the port
             PortSet (SunaSwitch,0) 'turn off the Suna
@@ -8506,8 +8538,8 @@ EndSub
                     SVL = 274
                     SVM = 273
                     SA254 = 6
-                  EndIf
-                EndIf
+                  EndIf 'parse based on Suna Serial Number
+                EndIf 'if first value isn't NAN
                 SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
                 SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
                 SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
@@ -8522,83 +8554,35 @@ EndSub
                 SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
                 SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
                 A254 = SunaBurstData(SA254)
-                If mCount >= LFrameCnt Then 'if we've reached our sampling total time
+                If mCount >= LFrameCnt Then 'if we've reached our total number of Light Frames
                   RecSunaData = True 'set the table trigger flag to true
                 Else
                   RecSunaData = False 'otherwise, we aren't ready to record the table
-                EndIf
+                EndIf 'check to see if we're ready to calculate stats
                 Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
-                CallTable GoodSecSuna 'store raw 1 second data
+                CallTable GoodSecSuna 'store raw Light Frame Data
                 CallTable GoodSpectrum 'store raw 1 second Spectrum data
                 CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
               Next mCount
-            EndIf
-            If BadSunaVals >= 2 Then 'if we have more than 2 bad values (missing/Null)
-              For mCount = 1 To MaxSunaBurst 'start For/Next loop to parse all RAW data, mCount loop is for number of values
-                For nCount = 1 To 282 'start loop for number of columns
-                  SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
-                Next nCount
-                If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
-                  If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
-                    SSN = 1 'set locations for parameters
-                    SST = 2
-                    SNuM = 3
-                    SNmgL = 4
-                    SFR = 5
-                    STL = 6
-                    STS = 7
-                    SLT = 8
-                    SH = 9
-                    SSA = 13
-                    SDA = 14
-                    SVL = 10
-                    SVM = 12
-                    SA254 = 90
-                  Else  'otherwise, it's a SUNAV2
-                    SSN = 1 'set locations for parameters
-                    SST = 3
-                    SNuM = 4
-                    SNmgL = 5
-                    SFR = 281
-                    STL = 270
-                    STS = 269
-                    SLT = 271
-                    SH = 272 'Check this- value is 0.137 and doesnt look right!
-                    SSA = 9
-                    SDA = 10
-                    SVL = 274
-                    SVM = 273
-                    SA254 = 6
-                  EndIf
-                EndIf
-                SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
-                SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
-                SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
-                SunaNitratemgL = SunaBurstData(SNmgL)'AF 6..11
-                SunaFittingResult = SunaBurstData(SFR)
-                TLamp = SunaBurstData(STL)
-                TSpec = SunaBurstData(STS)
-                SunaLampTime = SunaBurstData(SLT)
-                SunaHumid = SunaBurstData(SH)'AF 3..5 Case Is
-                SunaSpecAve = SunaBurstData(SSA) 'AI 1..5
-                SunaDarkAve = SunaBurstData(SDA)'ASCII INTEGER 1.3
-                SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
-                SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
-                A254 = SunaBurstData(SA254)
-                If mCount >= MaxBurstCnt AND LFrameCnt < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
-                  RecSunaData = True 'set the table trigger flag to true
-                Else
-                  RecSunaData = False 'otherwise, we aren't ready to record the table
-                EndIf
-                'Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
-                CallTable RawSecSuna 'store raw 1 second data
-                'CallTable RawSpectrum 'store raw 1 second Spectrum data
-                If LFrameCnt < 10 Then
-                  CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
-                EndIf
-              Next mCount
-            EndIf
-          EndIf
+            EndIf 'if we have at least 10 light frames
+            For mCount = 1 To oCount 'start For/Next loop to parse all RAW data, oCount is total number of times the Do...Loop occured
+              For nCount = 1 To 282 'start loop for number of columns
+                SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
+              Next nCount
+              If mCount >= oCount AND LFrameCnt < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
+                RecSunaData = True 'set the table trigger flag to true
+              Else
+                RecSunaData = False 'otherwise, we aren't ready to record the table
+              EndIf 'check whether we completed the total number of samples, and if light count was less than 10
+              'Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
+              CallTable RawSecSuna 'store raw 1 second data
+              'CallTable RawSpectrum 'store raw 1 second Spectrum data
+              If LFrameCnt < 10 Then 'we want to store something in the stats table so we don't skip a record
+                Call ResetSunaStats 'If LightFrame threshold wasn't met, Force all values to NANs
+                CallTable SunaStats 'store NAN values into stats table, then record them when we've reached our count threshold so we don't skip records if LightFrame threshold isn't met
+              EndIf 'store in stats table if Lframecnt < 10
+            Next mCount
+          EndIf 'if Suna is ready based on warmup timer
           CallTable SunaLength
           SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
           RawSunaArray() = BadDataIndicator
@@ -8648,7 +8632,7 @@ EndSub
       CallTable Debugger 'call/store debugging info
       CallTable SVMaq 'call SVMaq table
     NextScan
-    
+
     #If HasIridium = True Then
       'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio
       SlowSequence
