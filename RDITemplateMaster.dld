@@ -1572,7 +1572,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public LocDF 'Variable to Store where D occurs in the string
   Public DFrame As Boolean 'Used to exit DoLoop if Dark Frame was present
   Public LFrameThreshold As Long = 30'Number of Light Frames wanted for Calculations
-  'Public SunaHeader As String * 7
+  Public SunaHeader As String * 7
   Public SunaSN 'Suna Parameters
   Public SunaSampleTime
   Public SunaNitrateuM
@@ -1606,6 +1606,8 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public  AvgSunaLampTime
   Public  AvgSunaVoltMain
   Public  AvgSunaVoltLamp
+  Public LFHeader(35) As String
+  Public RawHeader(35) As String
   Dim SSN 'Location definitions used to parse data to correct locations
   Dim SST
   Dim SNuM
@@ -1621,12 +1623,9 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SVM
   Dim SA254
   Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
-  Dim RawSunaArray(MaxSunaBurst,283) 'Multi-dimension array to store the MaxSunaBurst number of values
-  Alias RawSunaArray(MaxSunaBurst,1) = RawSunaHeader As String * 7
-  Dim GoodSunaArray(MaxSunaBurst,283)
-  Alias GoodSunaArray(MaxSunaBurst,1) = LFSunaHeader As String * 7
-  Dim SunaBurstData(283) 'Parsed data per single sample
-  Alias SunaBurstData(1) = SunaHeader As String * 7
+  Dim RawSunaArray(MaxSunaBurst,282) As String'Multi-dimension array to store the MaxSunaBurst number of values
+  Dim GoodSunaArray(MaxSunaBurst,282) As String
+  Dim SunaBurstData(282) As String 'Parsed data per single sample
   Dim SpectrumData(256) 'Raw Spectrum data parsed from full array
   Dim mCount 'counters for loops
   Dim nCount
@@ -2179,6 +2178,8 @@ SetStatus ("USRDriveSize",16384)
     Sample (1,MedChlRFU,IEEE4)
     Sample (1,MedFdomRFU,IEEE4)
     Sample (1,MedFDomQSU,IEEE4)
+    Sample (1,MedBGApcRFU,IEEE4)
+    Sample (1,MedBGApcugL,IEEE4)
     #If TopBottom Then
       Sample (1,BtmMedBurstDate,IEEE4)
       Sample (1,BtmMedBurstTime,IEEE4)
@@ -2196,6 +2197,8 @@ SetStatus ("USRDriveSize",16384)
       Sample (1,BtmMedChlRFU,IEEE4)
       Sample (1,BtmMedFdomRFU,IEEE4)
       Sample (1,BtmMedFDomQSU,IEEE4)
+      Sample (1,BtmMedBGApcRFU,IEEE4)
+      Sample (1,BtmMedBGApcugL,IEEE4)
     #EndIf
     #If HasSuna Then
       Sample (1,AvgSunaNitrateuM,IEEE4)
@@ -2352,25 +2355,20 @@ SetStatus ("USRDriveSize",16384)
     Average (1,SunaVoltMain,IEEE4,False)
     Average (1,SunaVoltLamp,IEEE4,False)
     Sample (1,LFrameCnt,FP2,False)
+    Sample (1,DFrameCnt,FP2,False
     Sample (1,BadSunaVals,FP2,False)
   EndTable
 
-  DataTable (GoodSecSuna,1,-1)
+  DataTable (SunaLFData,1,-1)
     CardOut(0,350000)
-    'Sample(1,SunaHeader,String)
-    Sample(283,SunaBurstData(),IEEE4)
+    Sample(1,SunaHeader,String)
+    Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
-  DataTable (GoodSpectrum,1,-1)
-    CardOut(0,350000)
-    Sample (1,SunaSN,FP2)
-    Sample (256,SpectrumData(),IEEE4)
-  EndTable
-
-  DataTable (RawSecSuna,1,-1)
+  DataTable (RawSunaData,1,-1)
     CardOut (0,350000)
-    'Sample(1,SunaHeader,String)
-    Sample(283,SunaBurstData(),IEEE4)
+    Sample(1,SunaHeader,String)
+    Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (SunaLength,1,-1)
@@ -8430,6 +8428,7 @@ EndSub
             SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
             SunaSampleStart = SunaSampleStart/1000
             LFrameCnt = 0 'Reset good values counter to 0
+            DFrameCnt = 0
             BadSunaVals = 0 'Reset bad values counter to 0
             'For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
             Do 'Start loop to collect Suna Data. Loop until LFrameThreshold is met OR timer >= 55sec
@@ -8446,7 +8445,7 @@ EndSub
                 SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
                 SunaStringLen(oCount) = Len(SunaBurstIn) 'get the length of the string
                 If SunaStringLen(oCount) > 1000 Then 'if the string is longer than 1000 bytes, DarkFrames are around 1100, Light frames around 1600+
-                  LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (only want to store LightFrames)
+                  LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (to store LightFrames and do calculations)
                   LocDF = InStr (1,SunaBurstIn,"D",2) 'search the string for a D (to store raw dark frames)
                   Delay (1,50,mSec) 'delay 50 millisec
                   If LocLF = 5 Then 'if the L is found at byte 5
@@ -8472,28 +8471,30 @@ EndSub
               Delay (1,200,mSec) 'delay 0.2 sec
               If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 of the string
                 RawSunaArray(oCount,-1)() = BadDataIndicator
+                RawHeader(oCount) = BadDataIndicator
                 BadSunaVals = BadSunaVals + 1
               ElseIf LFrame = True Then 'if its a light frame
                 LFrameCnt = LFrameCnt + 1
-                SplitStr(GoodSunaArray(LFrameCnt,2),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the good data multi-dimensioned array based on the counter
+                SplitStr(GoodSunaArray(LFrameCnt,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the good data multi-dimensioned array based on the counter
                 'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
-                SplitStr(RawSunaArray(oCount,2),SunaBurstIn,&H0D0A,282,0) 'parse the good data into the raw array
-                SplitStr(LFSunaHeader,SunaBurstIn,"",1,1)
-                If LFSunaHeader < 1000 Then 'if serial number is <1000
-                  LFSunaHeader = LFSunaHeader + "0" 'add leading 0
-                  RawSunaHeader = RawSunaHeader + "0"
+                SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'parse the good data into the raw array
+                SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1)
+                SplitStr(LFHeader(LFrameCnt),SunaBurstIn,"",1,1)
+                If GoodSunaArray(LFrameCnt,1) < 1000 Then 'if serial number is <1000
+                  LFHeader(LFrameCnt) = LFHeader(LFrameCnt) + "0" 'add leading 0
+                  RawHeader(oCount) = RawHeader(oCount) + "0"
                 Else
-                  LFSunaHeader = LFSunaHeader
-                  RawSunaHeader = RawSunaHeader
-                EndIf 'serial number check
+                  LFHeader(oCount) = LFHeader(oCount)
+                  RawHeader(oCount) = RawHeader(oCount)
+                  EndIf 'serial number check
               ElseIf DFrame = True 'if it's a dark frame
                 DFrameCnt = DFrameCnt + 1
-                SplitStr(RawSunaArray(oCount,2),SunaBurstIn,&H0D0A,282,0)
-                SplitStr(RawSunaHeader,SunaBurstIn,"",1,1)
-                If RawSunaHeader < 1000 Then
-                  RawSunaHeader = RawSunaHeader + "0"
+                SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0)
+                SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1)
+                If RawSunaArray(oCount,1) < 1000 Then
+                  RawHeader(oCount) = RawHeader(oCount) + "0"
                 Else
-                  RawSunaHeader = RawSunaHeader
+                  RawHeader(oCount) = RawHeader(oCount)
                 EndIf 'serial number check
               EndIf 'if suna wasn't missed
               Erase(SunaBurstIn) 'erase the string
@@ -8509,7 +8510,7 @@ EndSub
             SunaProcessStart = SunaProcessStart/1000 'convert from mSec to Sec
             If LFrameCnt >= 10 Then 'if we have at least 10 good values
               For mCount = 1 To LFrameCnt 'start For/Next loop to parse data, mCount loop is for number of values
-                For nCount = 1 To 283 'start loop for number of columns
+                For nCount = 1 To 282 'start loop for number of columns
                   SunaBurstData(nCount) = GoodSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
                 Next nCount
                 If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
@@ -8564,14 +8565,14 @@ EndSub
                 Else
                   RecSunaData = False 'otherwise, we aren't ready to record the table
                 EndIf 'check to see if we're ready to calculate stats
+                SunaHeader = LFHeader(mCount)
                 Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
-                CallTable GoodSecSuna 'store raw Light Frame Data
-                CallTable GoodSpectrum 'store raw 1 second Spectrum data
+                CallTable SunaLFData 'store raw Light Frame Data
                 CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
               Next mCount
             EndIf 'if we had at least 10 light frames
             For mCount = 1 To oCount  'start For/Next loop to parse all RAW data, oCount is total number of times the Do...Loop occured
-              For nCount = 1 To 283 'start loop for number of columns
+              For nCount = 1 To 282 'start loop for number of columns
                 SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
               Next nCount
               If mCount >= oCount AND LFrameCnt < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
@@ -8579,9 +8580,8 @@ EndSub
               Else
                 RecSunaData = False 'otherwise, we aren't ready to record the table
               EndIf 'check whether we completed the total number of samples, and if light count was less than 10
-              'Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
-              CallTable RawSecSuna 'store raw 1 second data
-              'CallTable RawSpectrum 'store raw 1 second Spectrum data
+              SunaHeader = RawHeader(mCount)
+              CallTable RawSunaData 'store raw 1 second data
               If LFrameCnt < 10 Then 'we want to store something in the stats table so we don't skip a record
                 Call ResetSunaStats 'If LightFrame threshold wasn't met, Force all values to NANs
                 CallTable SunaStats 'store NAN values into stats table, then record them when we've reached our count threshold so we don't skip records if LightFrame threshold isn't met
