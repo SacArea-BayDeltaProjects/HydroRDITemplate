@@ -170,9 +170,6 @@ Const IsMaster = False  'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
-Const Debugging = False
-'Value = True
-'Value = False
 Const SeeAllVel = False
 'Value = True
 'Value = False
@@ -325,17 +322,12 @@ Dim HighCount As Long 'Counter for number of times velocity is above the upper l
 Public VMPower As Boolean 'flag to turn VM on and Off manually
 Public isVMNClosed As Boolean 'is the VM powered using a Normally clo9sed relay
 Public VmDeadCount As Long 'number of times VM has bad data
-#If Debugging = True Then
-  Public UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
-  Public UseCommsOneForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
-  Public UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
-  Public WqUseCPort As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde. Future version may allow U ports too.
-#Else
+
   Dim UseCommsZeroForADCP As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the ADCP
   Dim UseCommsOneForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
   Dim UseCommsZeroForSonde As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde
   Dim WqUseCPort As Boolean 'Used to set comms mode when C1,C3 com ports are used on the CR6 for the Sonde. Future version may allow U ports too.
-#EndIf
+
 'Declare variables to hold time values
 Dim rTime(9) As Float 'this array holds time values returned from the realtime statement
 Alias rTime(3) = DOM 'FOR BEAM CHECK
@@ -349,21 +341,7 @@ Dim RealSeconds As Long 'used for computing elapsed time intervals
 Dim Mod5Minutes As Long 'used for computing elapsed time intervals
 Dim Mod15Minutes As Float 'used for computing elapsed time intervals
 Dim Mod60Minutes As Float 'used for computing elapsed time intervals
-Public ModDay As Float 'used for computing elapsed time intervals
-#If Debugging = True Then
-  Public VMYear As Long 'Date time from the Velocity meter clock
-  Public VMMonth As Long 'Date time from the Velocity meter clock
-  Public VMDay As Long 'Date time from the Velocity meter clock
-  Public VMHour As Long 'Date time from the Velocity meter clock
-  Public VMMinute As Long 'Date time from the Velocity meter clock
-  Public VMSecond As Long 'Date time from the Velocity meter clock
-  Public VMTime As String * 25 'Date time from the Velocity meter clock
-  Public SetVMTimeFlg As Boolean 'used it setting VM Time
-  Public VMTimeString As String * 25 'used it setting VM Time
-  Public SplitTime(6) As Float 'used it setting VM Time
-  Public RawSetTime As String * 25 'used it setting VM Time and EXO time
-  Public FSplitTime(6) As Float 'used it setting VM Time
-#Else
+Dim ModDay As Float 'used for computing elapsed time intervals
   Dim VMYear As Long 'Date time from the Velocity meter clock
   Dim VMMonth As Long 'Date time from the Velocity meter clock
   Dim VMDay As Long 'Date time from the Velocity meter clock
@@ -376,7 +354,7 @@ Public ModDay As Float 'used for computing elapsed time intervals
   Dim SplitTime(6) As Float 'used it setting VM Time
   Dim RawSetTime As String * 25 'used it setting VM Time and EXO time
   Dim FSplitTime(6) As Float 'used it setting VM Time
-#EndIf
+
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
   Public EXOTimeString As String * 25
   Public SetEXOTimeFlg As Boolean
@@ -597,19 +575,11 @@ Public VMStageDatOffset As Long
 Dim L1SB As Long
 Dim M1SB As Long
 Dim TempM As Float
-#If Debugging = True Then
-  Public VMTemp As Long 'temporary debugging variable
-  Public VMPSTemp As Long 'temporary debugging variable
-  Public WHPSTemp As Float 'for workhorse pressure
-  Public WHTempM As Float
-  Public WHTempK As Float
-#Else
   Dim VMTemp As Long 'temporary debugging variable
   Dim VMPSTemp As Long 'temporary debugging variable
   Dim WHPSTemp As Float 'for workhorse pressure
   Dim WHTempM As Float
   Dim WHTempK As Float
-#EndIf
 
 'System Identification
 Public IsCM As Boolean
@@ -905,25 +875,6 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Public BtmMedWiperPos
     #EndIf
   #EndIf 'EXO data that's been parsed
-  #If SeeRawWQ = True OR Debugging = True Then
-    Public t(24)
-    Public WqData(24)
-    Public WqIn As String * 256 'Raw EXO data string
-    Public WqDelay As Long 'Used as place holder for timer to know how long the wiper is wiping
-    Public RecBurstFlag As Boolean
-    #If TopBottom Then
-      Public BTM_t(24)
-      Public BtmWqData(24)
-      Public BtmWqIn As String * 256
-      Public BtmWqDelay
-    #EndIf
-    #If RedSonde Then
-      Public Red_t(24)
-      Public RedWqData(24)
-      Public RedWqIn As String *256
-      Public RedWqDelay
-    #EndIf
-  #Else
     Dim t(24)
     Dim WqData(24)
     Dim WqIn As String * 256 'Raw EXO data string
@@ -941,131 +892,124 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
       Dim RedWqIn As String *256
       Dim RedWqDelay
     #EndIf
-    'Public RecAquariusFlag As Boolean
-    'Dim ExoBaud 'Variable to use in the "SerialOpen" instruction for the EXO
-  #EndIf
-  'Dim TempLong As Long 'Placerholder for timer
-  Public WipeTime As String * 25 'Time/Date that the wiper finishes its wipe
-  Public WqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
-  Public WqLocDate
-  Public WqLocTime
-  Public WqLocTempC
-  Public WqLocTempF
-  Public WqLocCond
-  Public WqLocTurbFNU
-  Public WqLocDoSat
-  Public WqLocDOmgL
-  Public WqLocORP
-  Public WqLocDepthFt
-  Public WqLocDepthMeters
-  Public WqLocBatt
-  Public WqLocpH
-  Public WqLocpHmV
-  Public WqLocChlugL
-  Public WqLocChlRFU
-  Public WqLocBGApcRFU
-  Public WqLocBGApcugL
-  Public WqLocFDomRFU
-  Public WqLocFDomQSU
-  Public WqLocNH4
-  Public WqLocNO3
-  Public WqLocCL
-  Public WqLocWiperPos
-  Public Wipeflag As Boolean
-  'Exo Error variables
-  '  Public ExoError As Boolean
-  '  Public ExoDead As Boolean
-  '  Public ExoErrorCnt
+  Dim WipeTime As String * 25 'Time/Date that the wiper finishes its wipe
+  Dim WqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+  Dim WqLocDate
+  Dim WqLocTime
+  Dim WqLocTempC
+  Dim WqLocTempF
+  Dim WqLocCond
+  Dim WqLocTurbFNU
+  Dim WqLocDoSat
+  Dim WqLocDOmgL
+  Dim WqLocORP
+  Dim WqLocDepthFt
+  Dim WqLocDepthMeters
+  Dim WqLocBatt
+  Dim WqLocpH
+  Dim WqLocpHmV
+  Dim WqLocChlugL
+  Dim WqLocChlRFU
+  Dim WqLocBGApcRFU
+  Dim WqLocBGApcugL
+  Dim WqLocFDomRFU
+  Dim WqLocFDomQSU
+  Dim WqLocNH4
+  Dim WqLocNO3
+  Dim WqLocCL
+  Dim WqLocWiperPos
+  Dim Wipeflag As Boolean
+
   #If TopBottom Then
-    Public BtmWipeTime As String * 25 'Time/Date that the wiper finishes its wipe
-    Public BtmWqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
-    Public BtmWqLocDate
-    Public BtmWqLocTime
-    Public BtmWqLocTempC
-    Public BtmWqLocTempF
+    Dim BtmWipeTime As String * 25 'Time/Date that the wiper finishes its wipe
+    Dim BtmWqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+    Dim BtmWqLocDate
+    Dim BtmWqLocTime
+    Dim BtmWqLocTempC
+    Dim BtmWqLocTempF
     Public BtmWqLocCond
-    Public BtmWqLocTurbFNU
-    Public BtmWqLocDoSat
-    Public BtmWqLocDOmgL
-    Public BtmWqLocORP
-    Public BtmWqLocDepthFt
-    Public BtmWqLocDepthMeters
-    Public BtmWqLocBatt
-    Public BtmWqLocpH
-    Public BtmWqLocpHmV
-    Public BtmWqLocChlugL
-    Public BtmWqLocChlRFU
-    Public BtmWqLocBGApcRFU
-    Public BtmWqLocBGApcugL
-    Public BtmWqLocFDomRFU
-    Public BtmWqLocFDomQSU
-    Public BtmWqLocNH4
-    Public BtmWqLocNO3
-    Public BtmWqLocCL
-    Public BtmWqLocWiperPos
-    Public BtmWipeflag As Boolean
+    Dim BtmWqLocTurbFNU
+    Dim BtmWqLocDoSat
+    Dim BtmWqLocDOmgL
+    Dim BtmWqLocORP
+    Dim BtmWqLocDepthFt
+    Dim BtmWqLocDepthMeters
+    Dim BtmWqLocBatt
+    Dim BtmWqLocpH
+    Dim BtmWqLocpHmV
+    Dim BtmWqLocChlugL
+    Dim BtmWqLocChlRFU
+    Dim BtmWqLocBGApcRFU
+    Dim BtmWqLocBGApcugL
+    Dim BtmWqLocFDomRFU
+    Dim BtmWqLocFDomQSU
+    Dim BtmWqLocNH4
+    Dim BtmWqLocNO3
+    Dim BtmWqLocCL
+    Dim BtmWqLocWiperPos
+    Dim BtmWipeflag As Boolean
   #EndIf
   #If RedSonde Then
-    Public RedWipeTime As String * 25 'Time/Date that the wiper finishes its wipe
-    Public RedWqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
-    Public RedWqLocDate
-    Public RedWqLocTime
-    Public RedWqLocTempC
-    Public RedWqLocTempF
-    Public RedWqLocCond
-    Public RedWqLocTurbFNU
-    Public RedWqLocDoSat
-    Public RedWqLocDOmgL
-    Public RedWqLocORP
-    Public RedWqLocDepthFt
-    Public RedWqLocDepthMeters
-    Public RedWqLocBatt
-    Public RedWqLocpH
-    Public RedWqLocpHmV
-    Public RedWqLocChlugL
-    Public RedWqLocChlRFU
-    Public RedWqLocBGApcRFU
-    Public RedWqLocBGApcugL
-    Public RedWqLocFDomRFU
-    Public RedWqLocFDomQSU
-    Public RedWqLocNH4
-    Public RedWqLocNO3
-    Public RedWqLocCL
-    Public RedWqLocWiperPos
-    Public RedWipeflag As Boolean
+    Dim RedWipeTime As String * 25 'Time/Date that the wiper finishes its wipe
+    Dim RedWqParamOrder(24) 'Array that holds the Wq Codes to help determine what order the data are coming in.
+    Dim RedWqLocDate
+    Dim RedWqLocTime
+    Dim RedWqLocTempC
+    Dim RedWqLocTempF
+    Dim RedWqLocCond
+    Dim RedWqLocTurbFNU
+    Dim RedWqLocDoSat
+    Dim RedWqLocDOmgL
+    Dim RedWqLocORP
+    Dim RedWqLocDepthFt
+    Dim RedWqLocDepthMeters
+    Dim RedWqLocBatt
+    Dim RedWqLocpH
+    Dim RedWqLocpHmV
+    Dim RedWqLocChlugL
+    Dim RedWqLocChlRFU
+    Dim RedWqLocBGApcRFU
+    Dim RedWqLocBGApcugL
+    Dim RedWqLocFDomRFU
+    Dim RedWqLocFDomQSU
+    Dim RedWqLocNH4
+    Dim RedWqLocNO3
+    Dim RedWqLocCL
+    Dim RedWqLocWiperPos
+    Dim RedWipeflag As Boolean
   #EndIf
   'Declare Variables for SDI12 Sonde
   'Data from YSIsond comes into the wqSDI12Sensor array (in a certain order, based on YSI settings),
   'user selects which order they come in using these variables. Datalogger puts values in correct location
   #If WqSonde = "WQ_SDI12" Then
-    Public WqSDI12Sensor(23)
-    Public Wiper1Min As Float
-    Public WiperTestCount As Float
-    Public WiperInCount As Float
-    'Public LocDate As Long 'may be used in the future
-    'Public LocTime As Long 'may be used in the future
-    Public LocTempC As Long
-    Public LocSpCond As Long
-    Public LocTurbFNU As Long
-    Public LocVolts As Long
-    Public LocDOmgL As Long
-    Public LocDOSat As Long
-    Public LocPH As Long
-    Public LocORP As Float
-    Public LocDepth As Long
-    Public LocChlorMGL As Long
-    Public LocChlorRFU As Long
-    Public LocBGA As Float
-    Public LocFdomRFU As Float
-    Public LocFdomQSU As Float
-    Public LocAmmonium As Float
-    Public LocNitrate As Float
-    Public LocChloride As Float
-    Public LocWiperPos As Float
+    Dim WqSDI12Sensor(23)
+    Dim Wiper1Min As Float
+    Dim WiperTestCount As Float
+    Dim WiperInCount As Float
+    'Dim LocDate As Long 'may be used in the future
+    'Dim LocTime As Long 'may be used in the future
+    Dim LocTempC As Long
+    Dim LocSpCond As Long
+    Dim LocTurbFNU As Long
+    Dim LocVolts As Long
+    Dim LocDOmgL As Long
+    Dim LocDOSat As Long
+    Dim LocPH As Long
+    Dim LocORP As Float
+    Dim LocDepth As Long
+    Dim LocChlorMGL As Long
+    Dim LocChlorRFU As Long
+    Dim LocBGA As Float
+    Dim LocFdomRFU As Float
+    Dim LocFdomQSU As Float
+    Dim LocAmmonium As Float
+    Dim LocNitrate As Float
+    Dim LocChloride As Float
+    Dim LocWiperPos As Float
     Public WqAddr As Long 'SDI12 address of the YSI
     Public WqSDIPort As Long 'Port YSI is plugged into (C3 or 5 for CR1000, U3 or 5 for CR6)
-    Public WiperErrCount As Float
-    Public WiperOut As Boolean
+    Dim WiperErrCount As Float
+    Dim WiperOut As Boolean
     'Dim WqSdiErr As Boolean 'indicator for data not coming in
     Public MilliToMicro As Boolean 'does the Specific Conductance need a multiplier to make the value millisiemens to microsiemens?
   #EndIf
@@ -1079,98 +1023,93 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
     Public WqDead As Boolean
     'Public WqDeadCnt As Long
     Public WqBadData As Boolean
-    Public WqDate As String
-    Public WqTime As String
-    'Public WqNparams As Long
-    Public WqTempC As Float
-    Public WqTempF As Float
-    Public WqSpCond As Float
-    Public WqTurbFNU As Float
-    Public WqChlugL As Float
-    Public WqChlRFU As Float
-    Public WqDOMgl As Float
-    Public WqDOSat As Float
-    Public WqPH As Float
-    Public WqPHmv As Float
-    Public WqORP As Float
-    Public WqDepthFt As Float
-    Public WqDepthMeters As Float
-    Public WqBattV As Float
-    Public WqBGAugl As Float
-    Public WqBGArfu As Float
-    Public WqFDOMrfu As Float
-    Public WqFDOMqsu As Float
-    Public WqNH4mgl As Float
-    Public WqNO3mgl As Float
-    Public WqCLmgl As Float
-    Public WqWiperPos As Float
+    Dim WqDate As String
+    Dim WqTime As String
+    'Dim WqNparams As Long
+    Dim WqTempC As Float
+    Dim WqTempF As Float
+    Dim WqSpCond As Float
+    Dim WqTurbFNU As Float
+    Dim WqChlugL As Float
+    Dim WqChlRFU As Float
+    Dim WqDOMgl As Float
+    Dim WqDOSat As Float
+    Dim WqPH As Float
+    Dim WqPHmv As Float
+    Dim WqORP As Float
+    Dim WqDepthFt As Float
+    Dim WqDepthMeters As Float
+    Dim WqBattV As Float
+    Dim WqBGAugl As Float
+    Dim WqBGArfu As Float
+    Dim WqFDOMrfu As Float
+    Dim WqFDOMqsu As Float
+    Dim WqNH4mgl As Float
+    Dim WqNO3mgl As Float
+    Dim WqCLmgl As Float
+    Dim WqWiperPos As Float
     Public WqErrCount As Long
     Public WqPwrCycleCnt As Long
     Public WqManualCycle As Boolean
     #If TopBottom Then
       Public BtmWqError As Boolean
       Public BtmWqDead As Boolean
-      'Public WqDeadCnt As Long
       Public BtmWqBadData As Boolean
-      Public BtmWqDate As String
-      Public BtmWqTime As String
-      'Public WqNparams As Long
-      Public BtmWqTempC As Float
-      Public BtmWqTempF As Float
-      Public BtmWqSpCond As Float
-      Public BtmWqTurbFNU As Float
-      Public BtmWqChlugL As Float
-      Public BtmWqChlRFU As Float
-      Public BtmWqDOMgl As Float
-      Public BtmWqDOSat As Float
-      Public BtmWqPH As Float
-      Public BtmWqPHmv As Float
-      Public BtmWqORP As Float
-      Public BtmWqDepthFt As Float
-      Public BtmWqDepthMeters As Float
-      Public BtmWqBattV As Float
-      Public BtmWqBGAugl As Float
-      Public BtmWqBGArfu As Float
-      Public BtmWqFDOMrfu As Float
-      Public BtmWqFDOMqsu As Float
-      Public BtmWqNH4mgl As Float
-      Public BtmWqNO3mgl As Float
-      Public BtmWqCLmgl As Float
-      Public BtmWqWiperPos As Float
+      Dim BtmWqDate As String
+      Dim BtmWqTime As String
+      Dim BtmWqTempC As Float
+      Dim BtmWqTempF As Float
+      Dim BtmWqSpCond As Float
+      Dim BtmWqTurbFNU As Float
+      Dim BtmWqChlugL As Float
+      Dim BtmWqChlRFU As Float
+      Dim BtmWqDOMgl As Float
+      Dim BtmWqDOSat As Float
+      Dim BtmWqPH As Float
+      Dim BtmWqPHmv As Float
+      Dim BtmWqORP As Float
+      Dim BtmWqDepthFt As Float
+      Dim BtmWqDepthMeters As Float
+      Dim BtmWqBattV As Float
+      Dim BtmWqBGAugl As Float
+      Dim BtmWqBGArfu As Float
+      Dim BtmWqFDOMrfu As Float
+      Dim BtmWqFDOMqsu As Float
+      Dim BtmWqNH4mgl As Float
+      Dim BtmWqNO3mgl As Float
+      Dim BtmWqCLmgl As Float
+      Dim BtmWqWiperPos As Float
       Public BtmWqErrCount As Long
       Public BtmWqPwrCycleCnt As Long
-      '  Public BtmWqManualCycle As Boolean
     #EndIf
     #If RedSonde Then
       Public RedWqError As Boolean
       Public RedWqDead As Boolean
-      'Public WqDeadCnt As Long
       Public RedWqBadData As Boolean
-      Public RedWqDate As String
-      Public RedWqTime As String
-      'Public WqNparams As Long
-      Public RedWqTempC As Float
-      Public RedWqTempF As Float
-      Public RedWqSpCond As Float
-      Public RedWqTurbFNU As Float
-      Public RedWqChlugL As Float
-      Public RedWqChlRFU As Float
-      Public RedWqDOMgl As Float
-      Public RedWqDOSat As Float
-      Public RedWqPH As Float
-      Public RedWqPHmv As Float
-      Public RedWqORP As Float
-      Public RedWqDepthFt As Float
-      Public RedWqDepthMeters As Float
-      Public RedWqBattV As Float
-      Public RedWqBGAugl As Float
-      Public RedWqBGArfu As Float
-      Public RedWqFDOMrfu As Float
-      Public RedWqFDOMqsu As Float
-      Public RedWqNH4mgl As Float
-      Public RedWqNO3mgl As Float
-      Public RedWqCLmgl As Float
-      Public RedWqWiperPos As Float
+      Dim RedWqDate As String
+      Dim RedWqTime As String
+      Dim RedWqTempC As Float
+      Dim RedWqTempF As Float
+      Dim RedWqSpCond As Float
+      Dim RedWqTurbFNU As Float
+      Dim RedWqChlugL As Float
+      Dim RedWqChlRFU As Float
+      Dim RedWqDOMgl As Float
+      Dim RedWqDOSat As Float
+      Dim RedWqPH As Float
+      Dim RedWqPHmv As Float
+      Dim RedWqORP As Float
+      Dim RedWqDepthFt As Float
+      Dim RedWqDepthMeters As Float
+      Dim RedWqBattV As Float
+      Dim RedWqBGAugl As Float
+      Dim RedWqBGArfu As Float
+      Dim RedWqFDOMrfu As Float
+      Dim RedWqFDOMqsu As Float
+      Dim RedWqNH4mgl As Float
+      Dim RedWqNO3mgl As Float
+      Dim RedWqCLmgl As Float
+      Dim RedWqWiperPos As Float
       Public RedWqErrCount As Long
       Public RedWqPwrCycleCnt As Long
       Public RedWqManualCycle As Boolean
@@ -1179,129 +1118,31 @@ Public Trans As String * 4 'Transition point in velocity where iVel calulation d
 #EndIf
 Public IsWQNClosed As Boolean 'Keep this outside conditional compile until we take time to actually fix it. Works like this though.
 'variables for aquarius table
-Public AvgIndexVel As Float
-Public AvgVMTemp As Float
-Public AvgVMPitch As Float
-Public AvgVMRoll As Float
-Public AvgPS1Stg As Float
-Public AvgPS2Stg As Float
-Public AvgUpBeamStg As Float
-'Public AvgLoggerQcfs As Float
-'Public AvgLoggerMeanVel As Float  Maybe bring this into Aquarius for internal use if we deem it necessary?
-'Public AvgStagePrime As Float
-'Public AvgStageSec As Float
-
-'Public WqSondeDead As Boolean 'indicator that the YSI is flatlined or out
-'Public WqSondeDeadCnt As Long 'how long has it been flatlined or out?
-'Public WqErrCount As Long
-'Public WqError As Boolean
-
+Dim AvgIndexVel As Float
+Dim AvgVMTemp As Float
+Dim AvgVMPitch As Float
+Dim AvgVMRoll As Float
+Dim AvgPS1Stg As Float
+Dim AvgPS2Stg As Float
+Dim AvgUpBeamStg As Float
 
 'Declare variables for velocity meter data
-Public VMtempF As Float
-Public VMupBeam As Float
-Public VMpressure As Float
-Public WHpressure As Float
-Public VMHeading As Float
-Public VMpitch As Float
-Public VMroll As Float
-Public VMVolts As Float
-Public VMtempC As Float
-Public VMdataIn As Boolean
+Dim VMtempF As Float
+Dim VMupBeam As Float
+Dim VMpressure As Float
+Dim WHpressure As Float
+Dim VMHeading As Float
+Dim VMpitch As Float
+Dim VMroll As Float
+Dim VMVolts As Float
+Dim VMtempC As Float
+Dim VMdataIn As Boolean
 '------------------------String used to send specific data through serial communications to another logger-------------------
 'Public OutString As String * 1000 'string of variables/values to be sent out to another datalogger
 Public SendFlowData As Boolean 'user selectable flag to send only flow data
 
 
-'-------------------------------------------------------DEBUGGIMG!!!!!-------------------------------------------------
-#If Debugging = True Then
-  Public DepthMSB As Long 'debugging variables
-  Public DepthMSB1 As Long'debugging variables
-  Public DepthLSB As Long'debugging variables
-  Public DepthLSB1 As Long'debugging variables
-  Public IDwords(14) As Long
-  Public LSBTemp As Long
-  Public LSB1Temp As Long
-  Public MSBTemp As Long
-  Public MSB1Temp As Long
-  Public Subscans As Long
-  Public EnsBytes As Long
-  Public MissedEns As Long
-  Public ADCPLoop As Long
-  Public ADCPDone As Boolean
-  Public ScanDiff As Long
-  Public ScanStart
-  Public ScanEnd
-  Public WakeVMStart
-  Public WakeVMEnd
-  Public WakeVMTotTime
-  Public VMInfoStart
-  Public VMInfoEnd
-  Public VMInfoTotTime
-  Public VMLoopStart
-  Public VMLoopEnd
-  Public VMLoopTotTime
-  Public BeforeBurst
-  Public AfterBurst
-  Public CDMACheckStart
-  Public CDMACheckEnd
-  Public CDMACheckTotTime
-  Public ZeroVMTimeStart
-  Public ZeroVMTimeEnd
-  Public ZeroVMTotTime
-  Public ChkSumChkStart
-  Public ChkSumChkEnd
-  Public ChkSumChkTotTime
-  Public MainDecodeStart
-  Public MainDecodeEnd
-  Public MainDecodeTotTime
-  Public CalcRangeStart
-  Public CalcRangeEnd
-  Public CalcRangeTotTime
-  Public OneMinCalcStart
-  Public OneMinCalcEnd
-  Public OneMinCalcTotTime
-  Public CalcQStart
-  Public CalcQEnd
-  Public CalcQTotTime
-  Public GetVMMemStart
-  Public GetVMMemEnd
-  Public GetVMMemTotTime
-  Public VMTimeStart
-  Public VMTimeEnd
-  Public VMTotTime
-  Public CallBmChkStart
-  Public CallBmChkEnd
-  Public CallBmChkTotTime
-  Public DataTabsStart
-  Public DataTabsEnd
-  Public DataTabsTotTime
-  Public DataOutStart
-  Public DataOutEnd
-  Public DataOutTotTime
-  Public Data1mStart
-  Public Data1mEnd
-  Public Data1mTotTime
-  Public AQTabStart
-  Public AQTabEnd
-  Public AQTabTotTime
-  Public StoreToCrdStart
-  Public StoreToCrdEnd
-  Public StoreToCrdTotTime
-  Public ChkSpikeStart
-  Public ChkSpikeEnd
-  Public ChkSpikeTotTime
-  Public AddSpikeStart
-  Public AddSpikeEnd
-  Public AddSpikeTotTime
-  Public ProcessTime
-  Public DataOutCount
-  Public AQcount
-  Public Data1mCount
-  Public CardBadCount
-  Public CardOkCount
-  Dim DebugTimer
-#Else
+'-------------------------------------------------------DEBUGGING!!!!!-------------------------------------------------
   Dim DepthMSB As Long 'debugging variables
   Dim DepthMSB1 As Long'debugging variables
   Dim DepthLSB As Long'debugging variables
@@ -1390,27 +1231,24 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim CardBadCount
   Dim CardOkCount
   Dim DebugTimer
-#EndIf
 '---------------------------------------------------------DEBUGGING!---------------------------------------------------------
 
 #If HasVM Then
   #If GetNoiseFloor = Yes Then
-    Public NoiseFlrParsed As String * 105 '"RSSI Noise Floor" pasrsed from PT3 Command
-    Public FilterString As String * 5 'Holds string that the "InStr" instruction searches for
-    Public StartString 'Holds value for where "RSSI" begins in the PT3 command string
-    Public NoiseHGainW(4) 'array to hold values for each beam's "High Gain, WideBandwidth" Noise Floor
-    Public NoiseLGainW(4) 'Array to hold values for each beam's "Low Gain, WideBandwidth" Noise Floor
-    Public NoiseHGainN(4) 'Array to hold values for each beam's "High Gain, Narrow Bandwidth" noise floor
-    Public NoiseLGainN(4) 'Array to hold calues for each beam's "Low Gain, Narrow Bandwidth" noise floor
+    Dim NoiseFlrParsed As String * 105 '"RSSI Noise Floor" pasrsed from PT3 Command
+    Dim FilterString As String * 5 'Holds string that the "InStr" instruction searches for
+    Dim StartString 'Holds value for where "RSSI" begins in the PT3 command string
+    Dim NoiseHGainW(4) 'array to hold values for each beam's "High Gain, WideBandwidth" Noise Floor
+    Dim NoiseLGainW(4) 'Array to hold values for each beam's "Low Gain, WideBandwidth" Noise Floor
+    Dim NoiseHGainN(4) 'Array to hold values for each beam's "High Gain, Narrow Bandwidth" noise floor
+    Dim NoiseLGainN(4) 'Array to hold calues for each beam's "Low Gain, Narrow Bandwidth" noise floor
     Public SendPT3 As Boolean
-    Public PT3Time As Long
+    Public PT3Time As Long 'Number of minutes after midnight to send auto PT3 command
   #EndIf
   '---------VM Diagnostic Variables
-  'Public PowerSwitch As Boolean 'does user want to allow power to be cycled on ADCP
   Public Banner As String * 200 'ADCP response from sending a break
   Public Warning As String * 2000 'echo of ADCP response for anything other than a break
   Public VMMemString As String * 200 'response for "get free memory" command
-  'Public PT3Full As String * 2000 'Response from PT3 command
   Public CMD As String 'user entered command for the ADCP, ex: make bin size 250cm = "ws250"
   Public CSCmd As String * 10 'echo of CS (deploy command) to ensure ADCP deployed properly
   Public SendCMD As Boolean 'after command is input in "CMD" user must turn this to "true" to actually send the command to ADCP
@@ -1660,45 +1498,47 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
     Const IridiumVars = 8'base array only need 8 for stage and ADVM data
   #EndIf
 
-  Public IridiumOutArray(IridiumVars)
+  Dim IridiumOutArray(IridiumVars)
 
   'always will be used
-  Public CR1Volts_IRD
-  Public AvgPS1Stg_IRD
-  Public AvgPS2Stg_IRD
-  Public AvgUpBeamStg_IRD
-  Public AvgIndexVel_IRD
-  Public AvgVMTemp_IRD
-  Public AvgVMPitch_IRD
-  Public AvgVMRoll_IRD
-
+  Dim CR1Volts_IRD
+  Dim AvgPS1Stg_IRD
+  Dim AvgPS2Stg_IRD
+  #If HasVM = True Then
+  Dim AvgUpBeamStg_IRD
+  Dim AvgIndexVel_IRD
+  Dim AvgVMTemp_IRD
+  Dim AvgVMPitch_IRD
+  Dim AvgVMRoll_IRD
+  #EndIf
+  
   #If WqSonde = "WQ_SERIAL_BURST" Then 'burst WQ variables
-    Public MedBurstDate_IRD
-    Public MedBurstTime_IRD
-    Public WQBattV_Min_IRD
-    Public MedTempC_IRD
-    Public MedSpCond_IRD
-    Public MedTurbFNU_IRD
+    Dim MedBurstDate_IRD
+    Dim MedBurstTime_IRD
+    Dim WQBattV_Min_IRD
+    Dim MedTempC_IRD
+    Dim MedSpCond_IRD
+    Dim MedTurbFNU_IRD
   #EndIf
 
   #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then 'non-burst WQ varialbes
-    Public WqDate_IRD
-    Public WqTime_IRD
-    Public WqTempC_IRD
-    Public WqSpCond_IRD
-    Public WqTurbFNU_IRD
+    Dim WqDate_IRD
+    Dim WqTime_IRD
+    Dim WqTempC_IRD
+    Dim WqSpCond_IRD
+    Dim WqTurbFNU_IRD
     #If RedSonde = False Then
-      Public WQBattV_Min_IRD
+      Dim WQBattV_Min_IRD
     #EndIf
   #EndIf
 
   #If (RedSonde = "True") AND (WqSonde = "WQ_SERIAL")  Then 'non-burst WQ varialbes
-    ' Public RedWqDate_IRD
-    'Public RedWqTime_IRD
-    Public RedWqTempC_IRD
-    Public RedWqSpCond_IRD
-    Public RedWqTurbFNU_IRD
-    'Public RedWQBattV_Min_IRD
+    ' Dim RedWqDate_IRD
+    'Dim RedWqTime_IRD
+    Dim RedWqTempC_IRD
+    Dim RedWqSpCond_IRD
+    Dim RedWqTurbFNU_IRD
+    'Dim RedWQBattV_Min_IRD
   #EndIf
 
 #EndIf
@@ -3711,21 +3551,12 @@ Sub SetVMTime
   'The set time command to the VM Requires leading zeros, so the logger timestamp is split out and leading zeros added if needed
   RawSetTime = Status.Timestamp 'get latest time from datalogger
   SplitStr (SplitTime(),RawSetTime," ",6,0) 'take apart the time string
-  #If Debugging = True Then
-    Public SendVMMonth As String
-    Public SendVMDay As String
-    Public SendVmHour As String
-    Public SendVmMin As String
-    Public SendVmSec As String
-    Public SendVmYear As String
-  #Else
     Dim SendVMMonth As String
     Dim SendVMDay As String
     Dim SendVmHour As String
     Dim SendVmMin As String
     Dim SendVmSec As String
     Dim SendVmYear As String
-  #EndIf
   If SplitTime(1) < 10 Then  'add leading zeros if needed
     SendVMMonth = "0" + SplitTime(1)
   Else
