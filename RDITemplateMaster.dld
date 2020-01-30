@@ -7000,6 +7000,7 @@ EndSub
       SunaLampTime = BadDataIndicator
       SunaVoltMain = BadDataIndicator
       SunaVoltLamp = BadDataIndicator
+      SunaStringLen() = BadDataIndicator
     EndSub
 
     '___________________________________________Reset Timers for Suna____________________
