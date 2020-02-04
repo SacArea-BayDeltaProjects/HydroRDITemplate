@@ -7145,7 +7145,7 @@ EndSub
   #EndIf
 
   '--------------Cycle GPS Unit Power----------------------------
-  ' ----------Turns power on once a week for 12 hours----------------
+  ' ----------Turns power on once a week for 13 hours----------------
   #If HasGPS = True Then
     Sub CycleGPSPower
       If DOW = 2 AND ModDay >= 0 AND ModDay < 46800 Then 'if Day of Week is Monday and time of day is between 00:00 and 13:00
