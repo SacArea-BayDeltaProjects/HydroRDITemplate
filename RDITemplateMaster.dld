@@ -7566,6 +7566,7 @@ EndSub
         EndIf
         If Mod15Minutes = 840 Then 'if minute 14
           WipeSuna = True 'set the wiper flag to true
+          ManSunaWiper = False
           Timer (SunaWipeTimer,mSec,2) 'start a timer so we can wipe late in the scan
           SerialFlush(SunaPort)
           SerialClose(SunaPort)
@@ -8405,7 +8406,6 @@ EndSub
           PortSet (SunaWipeSwitch,0)
         EndIf
         If WipeSuna = True Then 'if wipe flag was set to true based on the Mod15Min
-          ManSunaWiper = False
           Do 'Start a Do/Loop
             WipeStart = Timer(SunaWipeTimer,mSec,4) 'read the timer in
             WipeStart = WipeStart/1000 'convert mSec to Seconds
