@@ -7576,6 +7576,7 @@ EndSub
           WipeSuna = False 'otherwise, don't wipe
         EndIf
         If Mod15Minutes = 0 Then 'If 15th minute
+          ManSunaWiper = False
           PortSet (SunaSwitch,1) 'turn the Suna power ON
           Timer (SunaSampleTimer,mSec,2) 'start a timer to sample in 15sec
           SampleSuna = True 'set flag to trigger sampling routine
@@ -8398,9 +8399,9 @@ EndSub
         ResetTried = False 'set flag to false to start counter (if necessary)
         CallTable RadioStatus
       #EndIf
-      If StoreVariablesFlg = true Then Call StoreVariables
+      If StoreVariablesFlg = True Then Call StoreVariables
       #If HasSuna Then 'if there's a suna
-        If ManSunaWiper = True AND WipeSuna <> True Then
+        If ManSunaWiper = True AND WipeSuna <> True AND SampleSuna <> True Then 'Only turn wiper on if we aren't in 14th or 15th minutes
           PortSet (SunaWipeSwitch,1)
         Else
           PortSet (SunaWipeSwitch,0)
