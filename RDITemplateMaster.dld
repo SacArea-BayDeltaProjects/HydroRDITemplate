@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20200512
-Const ProgramVersion = "4.52"
+Const ProgramVersionDate = 20200513
+Const ProgramVersion = "4.53"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -46,6 +46,7 @@ Const ProgramVersion = "4.52"
 '20200130 - TAV 4.50 Reworked Suna code a bit to store both dark and light frames or NANs if there was an issue during the sampling period.
 '20200204 - TAV 4.51 Increased time GNSS unit is on from 12hr to 13hr to guarantee full 12 hours of collection before pushing to FTP.
 '20200512 - TAV 4.52 Added manual switch to turn on SUNA wiper controller for calibration purposes. Reverts to program control when ready for sampling.
+'20200513 - TAV 4.53 Tweaked manual switch for Suna wiper to prevent it from being on during sample window and added a redundancy to set to false in case user set to true after initial logic was passed.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -8407,6 +8408,7 @@ EndSub
           PortSet (SunaWipeSwitch,0)
         EndIf
         If WipeSuna = True Then 'if wipe flag was set to true based on the Mod15Min
+          ManSunaWiper = False 'In case user flipped switch after first logic flipped to false in 14th minute, change back to false
           Do 'Start a Do/Loop
             WipeStart = Timer(SunaWipeTimer,mSec,4) 'read the timer in
             WipeStart = WipeStart/1000 'convert mSec to Seconds
@@ -8429,6 +8431,7 @@ EndSub
           EndIf
         EndIf
         If SampleSuna = True Then 'if it's time to sample the Suna based on the Mod15Min
+          ManSunaWiper = False 'In case user flipped switch after first logic flipped to false in 14th minute, change back to false
           Do 'start Do/Loop
             SunaTimer = Timer(SunaSampleTimer,mSec,4) 'read sampling timer
             SunaTimer = SunaTimer/1000 'convert from mSec to Sec
