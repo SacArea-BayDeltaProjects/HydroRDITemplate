@@ -104,7 +104,7 @@ Const RedSonde = False 'Is there a second sonde with its own SOA **THIS WILL ONL
 Const HasIridium = False
 'value = True
 'value = False
-Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 40 'Increased to account for bad data and DarkFrames so we don't get variables out of bounds.
@@ -1576,6 +1576,9 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
   Dim LocDF 'Variable to Store where D occurs in the string
   Dim DFrame As Boolean 'Used to exit DoLoop if Dark Frame was present
+  Public LocLampFail
+  Public SunaWarning As String * 100
+  Public LampFail As Boolean
   Dim LFrameThreshold As Long = 30 'Number of Light Frames wanted for Calculations
   Dim SunaHeader As String * 7
   Dim SunaSN 'Suna Parameters
@@ -2341,6 +2344,7 @@ SetStatus ("USRDriveSize",16384)
 #If HasSuna = True Then
   DataTable (SunaStats,RecSunaData,-1)
     CardOut(0,17280)
+    Sample (1,SunaWarning,String)
     Sample (1,SunaSN,FP2)
     Average (1,SunaNitrateuM,IEEE4,False)
     Median (1,SunaNitrateuM,30,IEEE4,False)
@@ -2372,6 +2376,7 @@ SetStatus ("USRDriveSize",16384)
 
   DataTable (RawSunaData,1,-1)
     CardOut (0,350000)
+    Sample (1,SunaWarning,String)
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
@@ -8462,6 +8467,8 @@ EndSub
               Do 'start Do/Loop
                 LFrame = False 'Force all trigger flags to false to make sure we stay in the loop appropriately
                 DFrame = False
+                LampFail = False
+                SunaWarning = ""
                 SunaMissed = False
                 SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
                 SunaStringLen(oCount) = Len(SunaBurstIn) 'get the length of the string
@@ -8481,16 +8488,24 @@ EndSub
                     SunaMissedCnt = SunaMissedCnt + 1 'something went wrong, data didn't populate appropriately
                   EndIf 'if > 1000 bytes checks
                 Else 'if less than 1000 bytes came through
+                  LocLampFail = InStr (1,SunaBurstIn,"W",2) 'Search for a W ("WARNING" gets output)
+                  If LocLampFail <> 0 Then 'A W was found
+                    LampFail = True 'Set a flag
+                    SunaWarning = SunaBurstIn 'Record the String's Text in a warning variable
+                  Else
+                    LampFail = False 'No Lamp failure warning
+                    SunaWarning = "" 'Leave "SunaWarning" blank
+                  EndIf
                   SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
                 EndIf 'if < 1000 bytes came through
-                If SunaMissedCnt >= 3 Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut)
+                If SunaMissedCnt >= 3 OR LampFail = True Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut) or lamp failure
                   SunaMissed = True 'set a flag
                 Else
                   SunaMissed = False 'otherwise, don't set flag
                 EndIf 'if suna missed = true
               Loop Until LFrame = True OR DFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
               Delay (1,200,mSec) 'delay 0.2 sec
-              If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 of the string
+              If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 or a W is found
                 RawSunaArray(oCount,-1)() = BadDataIndicator
                 RawHeader(oCount) = BadDataIndicator
                 BadSunaVals = BadSunaVals + 1
@@ -8521,7 +8536,7 @@ EndSub
               Erase(SunaBurstIn) 'erase the string
               SerialFlush(SunaPort) 'flush the port
               Delay (1,200,mSec) 'delay another 0.2sec
-            Loop Until LFrameCnt >= LFrameThreshold
+            Loop Until LFrameCnt >= LFrameThreshold OR LampFail = True
             Delay (1,100,mSec) 'delay 0.1sec
             SerialClose(SunaPort) 'close the port
             PortSet (SunaSwitch,0) 'turn off the Suna
