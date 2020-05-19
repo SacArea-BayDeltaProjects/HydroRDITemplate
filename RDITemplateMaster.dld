@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20200513
-Const ProgramVersion = "4.53"
+Const ProgramVersionDate = 20200518
+Const ProgramVersion = "4.60"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -47,6 +47,7 @@ Const ProgramVersion = "4.53"
 '20200204 - TAV 4.51 Increased time GNSS unit is on from 12hr to 13hr to guarantee full 12 hours of collection before pushing to FTP.
 '20200512 - TAV 4.52 Added manual switch to turn on SUNA wiper controller for calibration purposes. Reverts to program control when ready for sampling.
 '20200513 - TAV 4.53 Tweaked manual switch for Suna wiper to prevent it from being on during sample window and added a redundancy to set to false in case user set to true after initial logic was passed.
+'20200518 - TAV 4.60 Added logic to Suna code to exit loop and provide warning if symptoms of lamp failure occur: "Warning" found in string or "-1" found < 40 bytes into LightFrame string.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -2363,9 +2364,9 @@ SetStatus ("USRDriveSize",16384)
     Average (1,SunaLampTime,IEEE4,False)
     Average (1,SunaVoltMain,IEEE4,False)
     Average (1,SunaVoltLamp,IEEE4,False)
-    Sample (1,LFrameCnt,FP2,False)
-    Sample (1,DFrameCnt,FP2,False
-    Sample (1,BadSunaVals,FP2,False)
+    Sample (1,LFrameCnt,FP2)
+    Sample (1,DFrameCnt,FP2)
+    Sample (1,BadSunaVals,FP2)
   EndTable
 
   DataTable (SunaLFData,1,-1)
@@ -8477,23 +8478,40 @@ EndSub
                   LocDF = InStr (1,SunaBurstIn,"D",2) 'search the string for a D (to store raw dark frames)
                   Delay (1,50,mSec) 'delay 50 millisec
                   If LocLF = 5 Then 'if the L is found at byte 5
-                    LFrame = True 'we know it's a LightFrame
+                    If InStr(1,SunaBurstIn,"-1",2) <> 0 AND InStr(1,SunaBurstIn,"-1",2) < 40 Then 'if a -1 occurs early in the light frame, it's bad
+                      LampFail = True 'Lamp failure occured
+                      LFrame = True 'but it's still a "light frame". this will be used to parse differently
+                      DFrame = False
+                      SunaWarning = "-1 found at byte " + InStr(1,SunaBurstIn,"-1",2) + ". Assume lamp failure."
+                    Else
+                    LampFail = False
+                    LFrame = True 'we know it's a good LightFrame
                     DFrame = False
+                    SunaWarning = ""
+                    EndIf
                   ElseIf LocDF = 5 Then 'if D is found at byte 5
+                    LampFail = False
                     LFrame = False 'not a light frame
                     DFrame = True 'it is a dark frame
+                    SunaWarning = ""
                   ElseIf LocLF <> 5 AND LocDF <> 5 Then 'other wise, if D or L is not found at byte 5 but we have >1000 bytes
+                    LampFail = False
                     LFrame = False 'not light or dark frame
                     DFrame = False
+                    SunaWarning = ""
                     SunaMissedCnt = SunaMissedCnt + 1 'something went wrong, data didn't populate appropriately
                   EndIf 'if > 1000 bytes checks
                 Else 'if less than 1000 bytes came through
                   LocLampFail = InStr (1,SunaBurstIn,"W",2) 'Search for a W ("WARNING" gets output)
-                  If LocLampFail <> 0 Then 'A W was found
-                    LampFail = True 'Set a flag
+                  If LocLampFail <> 0 Then 'A W was found, indicating a "Warning String"
+                    LampFail = True 'Set a flag                    
+                    LFrame = False
+                    DFrame = False
                     SunaWarning = SunaBurstIn 'Record the String's Text in a warning variable
                   Else
                     LampFail = False 'No Lamp failure warning
+                    LFrame = False
+                    DFrame = False
                     SunaWarning = "" 'Leave "SunaWarning" blank
                   EndIf
                   SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
@@ -8506,10 +8524,21 @@ EndSub
               Loop Until LFrame = True OR DFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
               Delay (1,200,mSec) 'delay 0.2 sec
               If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 or a W is found
-                RawSunaArray(oCount,-1)() = BadDataIndicator
-                RawHeader(oCount) = BadDataIndicator
-                BadSunaVals = BadSunaVals + 1
-              ElseIf LFrame = True Then 'if its a light frame
+                If LFrame = True AND LampFail = True Then 'if it's a "light frame" but had a -1 appear, the lamp is bad
+                  SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'split raw data into raw array
+                  SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1) 'record header
+                  If RawSunaArray(oCount,1) < 1000 Then 
+                    RawHeader(oCount) = RawHeader(oCount) + "0" 'add leading 0 to serial numbers  less than 1000
+                  Else
+                    RawHeader(oCount) = RawHeader(oCount)
+                  EndIf
+                  BadSunaVals = BadSunaVals + 1 'increase bad value counter
+                Else
+                RawSunaArray(oCount,-1)() = BadDataIndicator 'if it wasn't a "light frame", for all values to NANs
+                RawHeader(oCount) = BadDataIndicator 'force header to NAN
+                BadSunaVals = BadSunaVals + 1 'increase bad value counter
+                EndIf
+              ElseIf LFrame = True AND LampFail = False Then 'if its a good light frame and we didn't find a -1
                 LFrameCnt = LFrameCnt + 1
                 SplitStr(GoodSunaArray(LFrameCnt,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the good data multi-dimensioned array based on the counter
                 'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
