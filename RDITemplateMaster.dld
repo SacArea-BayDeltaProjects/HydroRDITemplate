@@ -1588,6 +1588,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SunaNitratemgL
   Dim SunaFittingResult
   Dim A254
+  Dim A350
   Dim TLamp
   Dim TSpec
   Dim SunaLampTime
@@ -1606,7 +1607,8 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim  MedSunaNitratemgL
   Dim  AvgSunaFittingResult
   Dim  StdSunaFittingResult
-  Dim  AvgA254
+  Dim  MedA254
+  Dim  MedA350
   Dim  AvgSunaDarkAve
   Dim  AvgSunaSpecAve
   Dim  AvgTSpec
@@ -1631,6 +1633,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SVL
   Dim SVM
   Dim SA254
+  Dim SA350
   Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
   Dim RawSunaArray(MaxSunaBurst,282) As String'Multi-dimension array to store the MaxSunaBurst number of values
   Dim GoodSunaArray(MaxSunaBurst,282) As String
@@ -2217,7 +2220,8 @@ SetStatus ("USRDriveSize",16384)
       Sample (1,MedSunaNitratemgL,IEEE4)
       Sample (1,AvgSunaFittingResult,IEEE4)
       Sample (1,StdSunaFittingResult,IEEE4)
-      Sample (1,AvgA254,IEEE4)
+      Sample (1,MedA254,IEEE4)
+      Sample (1,MedA350,IEEE4)
       Sample (1,AvgSunaDarkAve,IEEE4)
       Sample (1,AvgSunaSpecAve,IEEE4)
       Sample (1,AvgTSpec,FP2)
@@ -2355,7 +2359,8 @@ SetStatus ("USRDriveSize",16384)
     Average (1,SunaFittingResult,IEEE4,False)
     Median (1,SunaFittingResult,30,IEEE4,False)
     StdDev (1,SunaFittingResult,IEEE4,False)
-    Average (1,A254,IEEE4,False)
+    Median (1,A254,30,IEEE4,False)
+    Median (1,A350,30,IEEE4,False)
     Average (1,SunaDarkAve,IEEE4,False)
     Average (1,SunaSpecAve,IEEE4,False)
     Average (1,TSpec,FP2,False)
@@ -6975,7 +6980,8 @@ EndSub
       MedSunaNitratemgL = SunaStats.SunaNitratemgL_Med
       AvgSunaFittingResult = SunaStats.SunaFittingResult_Avg
       StdSunaFittingResult = SunaStats.SunaFittingResult_Std
-      AvgA254 = SunaStats.A254_Avg
+      MedA254 = SunaStats.A254_Med
+      MedA350 = SunaStats.A350_Med
       AvgSunaDarkAve = SunaStats.SunaDarkAve_Avg
       AvgSunaSpecAve = SunaStats.SunaSpecAve_Avg
       AvgTSpec = SunaStats.TSpec_Avg
@@ -6995,7 +7001,8 @@ EndSub
       MedSunaNitratemgL = BadDataIndicator
       AvgSunaFittingResult = BadDataIndicator
       StdSunaFittingResult = BadDataIndicator
-      AvgA254 = BadDataIndicator
+      MedA254 = BadDataIndicator
+      MedA254 = BadDataIndicator
       AvgSunaDarkAve = BadDataIndicator
       AvgSunaSpecAve = BadDataIndicator
       AvgTSpec = BadDataIndicator
@@ -8502,12 +8509,22 @@ EndSub
                     SunaMissedCnt = SunaMissedCnt + 1 'something went wrong, data didn't populate appropriately
                   EndIf 'if > 1000 bytes checks
                 Else 'if less than 1000 bytes came through
-                  LocLampFail = InStr (1,SunaBurstIn,"W",2) 'Search for a W ("WARNING" gets output)
-                  If LocLampFail <> 0 Then 'A W was found, indicating a "Warning String"
+                  LocSunaProb = InStr (1,SunaBurstIn,CHR(91),2) 'Search for a "[" (ASCII Decimal Code 91), All errors contain bracketed timestamp at beginning of string
+                  If LocSunaProb <> 0 Then 'A "[" was found, indicating SUNA issue
+                    LocSunaProb = InStr(1,SunaBurstIn,"Cannot process to few",2)
+                    If LocSunaProb <> 0 Then
                     LampFail = True 'Set a flag                    
                     LFrame = False
                     DFrame = False
+                    MemProb = False
                     SunaWarning = SunaBurstIn 'Record the String's Text in a warning variable
+                    EndIf
+                    LocSunaProb = InStr (1,SunaBurstIn,"Frame not written to file",2)
+                    LampFail = False
+                    LFrame = False
+                    DFrame = False
+                    MemProb = True
+                    SunaWarning = SunaBurstIn 'Record string's text into warning variable
                   Else
                     LampFail = False 'No Lamp failure warning
                     LFrame = False
@@ -8594,6 +8611,7 @@ EndSub
                     SVL = 10
                     SVM = 12
                     SA254 = 90
+                    SA350 = 123 'FIX THIS VALUE!!! PLACEHOLDER UNTIL I GET THE RIGHT COLUMN FROM SATLANTIC
                   Else  'otherwise, it's a SUNAV2
                     SSN = 1 'set locations for parameters
                     SST = 3
@@ -8609,6 +8627,7 @@ EndSub
                     SVL = 274
                     SVM = 273
                     SA254 = 6
+                    SA350 = 7
                   EndIf 'parse based on Suna Serial Number
                 EndIf 'if first value isn't NAN
                 SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
@@ -8625,6 +8644,7 @@ EndSub
                 SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
                 SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
                 A254 = SunaBurstData(SA254)
+                A350 = SunaBurstData(SA350)
                 If mCount >= LFrameCnt Then 'if we've reached our total number of Light Frames
                   RecSunaData = True 'set the table trigger flag to true
                 Else
