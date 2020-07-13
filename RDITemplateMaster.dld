@@ -4,8 +4,8 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20200518
-Const ProgramVersion = "4.60"
+Const ProgramVersionDate = 20200713
+Const ProgramVersion = "4.61"
 'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -48,6 +48,7 @@ Const ProgramVersion = "4.60"
 '20200512 - TAV 4.52 Added manual switch to turn on SUNA wiper controller for calibration purposes. Reverts to program control when ready for sampling.
 '20200513 - TAV 4.53 Tweaked manual switch for Suna wiper to prevent it from being on during sample window and added a redundancy to set to false in case user set to true after initial logic was passed.
 '20200518 - TAV 4.60 Added logic to Suna code to exit loop and provide warning if symptoms of lamp failure occur: "Warning" found in string or "-1" found < 40 bytes into LightFrame string.
+'20200713 - TAV 4.61 Added parsing of A350 for SUNA data and code for another error message. Changed from "Average" to "Median" stat for A254 and A350 per Alex Etheridge's request.
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
@@ -96,10 +97,10 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = False  'Is there a second EXO daisy-chained in the system
+Const TopBottom = True  'Is there a second EXO daisy-chained in the system
 'value = True
 'value = False
-Const RedSonde = False 'Is there a second sonde with its own SOA **THIS WILL ONLY WORK ON A CR6***V4.42 is for DWR only RedSonde WQ_SERIAL and will not incorporate burst at this time. See SetBurst sub for more info.
+Const RedSonde = True 'Is there a second sonde with its own SOA **THIS WILL ONLY WORK ON A CR6***V4.42 is for DWR only RedSonde WQ_SERIAL and will not incorporate burst at this time. See SetBurst sub for more info.
 'value = True
 'Value = False
 Const HasIridium = False
@@ -135,13 +136,13 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = False
+Const IsSpecStudy = True
 'value = True
 'value = False
 Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
-Const GetNoiseFloor = False
+Const GetNoiseFloor = True
 'value = True
 'value = False
 Const HasSlave = False
@@ -150,7 +151,7 @@ Const HasSlave = False
 Const HasVM = True
 'value = True
 'value = False
-Const MaxBins = 27
+Const MaxBins = 50
 'Min = 1
 'Max = 100
 'Inc = 1
@@ -165,10 +166,10 @@ Const VMDeadCntMax = 20
 'Min = 5
 'Max = 120
 'Inc = 5
-Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF TRUE THIS WILL ONLY COMPILE ON CR6-RF451!!
+Const RadioNetwork = True 'Is the datalogger part of a radio network NOTE: IF TRUE THIS WILL ONLY COMPILE ON CR6-RF451!!
 'value = True
 'value = False
-Const IsMaster = False  'Is the datalogger the Master in a radio network?
+Const IsMaster = True  'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
 Const StoreAllToCard = False 'set to true if you want VM spike data
@@ -1577,7 +1578,8 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
   Dim LocDF 'Variable to Store where D occurs in the string
   Dim DFrame As Boolean 'Used to exit DoLoop if Dark Frame was present
-  Public LocLampFail
+  Dim MemProb As Boolean
+  Public LocSunaProb
   Public SunaWarning As String * 100
   Public LampFail As Boolean
   Dim LFrameThreshold As Long = 30 'Number of Light Frames wanted for Calculations
@@ -1729,7 +1731,7 @@ SetStatus ("USRDriveSize",16384)
 #If (WqSonde <> "NONE") Then
   DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
     OpenInterval 'tells table to process from last execution of table
-    CardOut (0,17280) 'sends copy of data to CF card
+    CardOut (0,35040) 'sends copy of data to CF card
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample (1,IndexVel,IEEE4)
@@ -1842,7 +1844,7 @@ SetStatus ("USRDriveSize",16384)
 #If (WqSonde = "NONE") Then 'Don't store non-existent WQ data in the DataOutTable
   DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
     OpenInterval 'tells table to process from last execution of table
-    CardOut (0,17280) 'sends copy of data to CF card
+    CardOut (0,35040) 'sends copy of data to CF card
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample (1,IndexVel,IEEE4)
@@ -1886,7 +1888,7 @@ SetStatus ("USRDriveSize",16384)
 #If WqSonde = "WQ_SERIAL_BURST" Then
   DataTable(Burst,RecBurstFlag,-1)
     'DataInterval(0,1,Min,-1)
-    CardOut (0,17280)
+    CardOut (0,35040)
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
@@ -1991,7 +1993,7 @@ SetStatus ("USRDriveSize",16384)
   '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
   DataTable(SecBurst,True,-1)
     'DataInterval(0,1,Min,-1)
-    CardOut (0,350000)
+    CardOut (0,1226400)
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
@@ -2029,7 +2031,7 @@ SetStatus ("USRDriveSize",16384)
   #If TopBottom Then  'remove these tables if there is no bottom sonde
     DataTable(BtmBurst,RecBurstFlag,-1)
       'DataInterval(0,1,Min,-1)
-      CardOut (0,17280)
+      CardOut (0,35040)
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -2134,7 +2136,7 @@ SetStatus ("USRDriveSize",16384)
     '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
     DataTable(BtmSecBurst,True,-1)
       'DataInterval(0,1,Min,-1)
-      CardOut (0,350000)
+      CardOut (0,1226400)
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -2171,7 +2173,7 @@ SetStatus ("USRDriveSize",16384)
 #EndIf 'endif for burst
 #If WqSonde = "WQ_SERIAL_BURST" Then
   DataTable (Aquarius,Rec15minFlag,-1) 'guaruntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
-    CardOut (0,17280)
+    CardOut (0,35040)
     OpenInterval
     ' aquarius table for burst
     Minimum (1,CR1Volts,FP2,False,False)
@@ -2258,7 +2260,7 @@ SetStatus ("USRDriveSize",16384)
 #ElseIf (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SDI12") Then
   'regular aquarius table with instantaneous values
   DataTable (Aquarius,Rec15minFlag,-1)
-    CardOut (0,17280)
+    CardOut (0,35040)
     OpenInterval
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,WqDate,IEEE4)
@@ -2329,7 +2331,7 @@ SetStatus ("USRDriveSize",16384)
 
 #If (WqSonde = "NONE") Then 'Don't write non-existent WQ data to the AQ table
   DataTable (Aquarius,Rec15minFlag,-1)
-    CardOut (0,17280)
+    CardOut (0,35040)
     OpenInterval
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,AvgPS1Stg,IEEE4)
@@ -2348,7 +2350,7 @@ SetStatus ("USRDriveSize",16384)
 
 #If HasSuna = True Then
   DataTable (SunaStats,RecSunaData,-1)
-    CardOut(0,17280)
+    CardOut(0,35040)
     Sample (1,SunaWarning,String)
     Sample (1,SunaSN,FP2)
     Average (1,SunaNitrateuM,IEEE4,False)
@@ -2375,13 +2377,13 @@ SetStatus ("USRDriveSize",16384)
   EndTable
 
   DataTable (SunaLFData,1,-1)
-    CardOut(0,350000)
+    CardOut(0,1226400)
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (RawSunaData,1,-1)
-    CardOut (0,350000)
+    CardOut (0,1226400)
     Sample (1,SunaWarning,String)
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
@@ -2397,7 +2399,7 @@ SetStatus ("USRDriveSize",16384)
 #If IsSpecStudy = Yes Then
   DataTable (VelData,RecAllVelFlag,-1)
     OpenInterval 'tells table to process from last execution of table
-    CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+    CardOut (0,35040) 'sends copy of data to CF card, maybe output this table...
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample(1,Coord,String)
@@ -2420,7 +2422,7 @@ SetStatus ("USRDriveSize",16384)
 'And it is called at Midnight
 'QAQC table that is called at midnight and gets pertainent information
 DataTable  (QAQCInfo,Rec24HrFlag,-1)
-  CardOut (0,180) 'sends copy of data to CF card (Will store a lot of data on card)
+  CardOut (0,365) 'sends copy of data to CF card (Will store a lot of data on card)
   'TableFile("USR:Test",8,2,0,24,Hr,Outstat,LastFileName) 'when OutStat = True, then data goes to FTP site
   'Store system info here
   Sample (1,SiteID,String)
@@ -2530,7 +2532,7 @@ EndTable
 
 'This data table is called when there is a station visit
 DataTable(SiteVisit,True,-1)
-  CardOut (0,50)
+  CardOut (0,100)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,IndexVel,IEEE4)
@@ -2631,7 +2633,7 @@ EndTable
 '1 MINUTE DATA OUTPUT TABLE
 DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the one min data table will be written
   OpenInterval
-  CardOut (0,169600)'trippled allocation from 43,200 to allow for continous 1min data collection
+  CardOut (0,525600)'trippled allocation from 43,200 to allow for continous 1min data collection
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,StagePrime,IEEE4)
@@ -2719,7 +2721,7 @@ EndTable
 'BEAMCHECK DATA OUTPUT TABLE
 DataTable (BeamCheck,RecBeamCheckFlag,-1)
   OpenInterval
-  CardOut (0,17280)
+  CardOut (0,35040)
   Sample (1,SiteID,String)
   Sample (1,StagePrime,IEEE4)
   Sample (1,NumBeams,Long)
@@ -2840,7 +2842,7 @@ EndTable
 #If GetNoiseFloor = Yes Then
   DataTable (NoiseFloor,True,-1)
     OpenInterval
-    CardOut (0,180)
+    CardOut (0,365)
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample (4,NoiseHGainW(),FP2)
@@ -2859,7 +2861,7 @@ EndTable
 
 DataTable (Debugger,True,-1)
   OpenInterval
-  CardOut (0,1440)
+  CardOut (0,262800)
   Sample (1,ScanStart,FP2)
   Sample (1,ScanEnd,FP2)
   Sample (1,WakeVMStart,FP2)
@@ -7002,7 +7004,7 @@ EndSub
       AvgSunaFittingResult = BadDataIndicator
       StdSunaFittingResult = BadDataIndicator
       MedA254 = BadDataIndicator
-      MedA254 = BadDataIndicator
+      MedA350 = BadDataIndicator
       AvgSunaDarkAve = BadDataIndicator
       AvgSunaSpecAve = BadDataIndicator
       AvgTSpec = BadDataIndicator
@@ -7015,6 +7017,7 @@ EndSub
       SunaNitratemgL = BadDataIndicator
       SunaFittingResult = BadDataIndicator
       A254 = BadDataIndicator
+      A350 = BadDataIndicator
       SunaDarkAve = BadDataIndicator
       SunaSpecAve = BadDataIndicator
       TSpec = BadDataIndicator
@@ -8529,6 +8532,7 @@ EndSub
                     LampFail = False 'No Lamp failure warning
                     LFrame = False
                     DFrame = False
+                    MemProb = False
                     SunaWarning = "" 'Leave "SunaWarning" blank
                   EndIf
                   SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
