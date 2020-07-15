@@ -8537,7 +8537,7 @@ EndSub
                   EndIf
                   SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
                 EndIf 'if < 1000 bytes came through
-                If SunaMissedCnt >= 3 OR LampFail = True Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut) or lamp failure
+                If SunaMissedCnt >= 3 OR LampFail = True OR MemProb = True Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut) or lamp failure
                   SunaMissed = True 'set a flag
                 Else
                   SunaMissed = False 'otherwise, don't set flag
@@ -8555,7 +8555,7 @@ EndSub
                   EndIf
                   BadSunaVals = BadSunaVals + 1 'increase bad value counter
                 Else
-                RawSunaArray(oCount,-1)() = BadDataIndicator 'if it wasn't a "light frame", for all values to NANs
+                RawSunaArray(oCount,-1)() = BadDataIndicator 'if it wasn't a "light frame", force all values to NANs
                 RawHeader(oCount) = BadDataIndicator 'force header to NAN
                 BadSunaVals = BadSunaVals + 1 'increase bad value counter
                 EndIf
