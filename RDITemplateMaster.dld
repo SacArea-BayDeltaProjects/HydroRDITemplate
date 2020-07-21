@@ -1573,7 +1573,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SunaMissed As Boolean 'Trigger to Exit DoLoop if the we missed SUNA data
   Dim SunaOnTime 'How long was the SUNA powered
   Dim SunaSampleStart 'How long into the scan did the Suna Sampling Start
-  Dim SunaStringLen(MaxSunaBurst) 'Length of the String read in
+  Public SunaStringLen(MaxSunaBurst) 'Length of the String read in
   Dim LocLF 'Variable to store where the L occurs in the string
   Dim LFrame As Boolean 'Used to trigger the Exit out of the DoLoop so we only get Light Frames
   Dim LocDF 'Variable to Store where D occurs in the string
@@ -1636,7 +1636,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Dim SVM
   Dim SA254
   Dim SA350
-  Dim SunaBurstIn As String * 2000 'String to read the data in from the Suna
+  Public SunaBurstIn As String * 2000 'String to read the data in from the Suna
   Dim RawSunaArray(MaxSunaBurst,282) As String'Multi-dimension array to store the MaxSunaBurst number of values
   Dim GoodSunaArray(MaxSunaBurst,282) As String
   Dim SunaBurstData(282) As String 'Parsed data per single sample
