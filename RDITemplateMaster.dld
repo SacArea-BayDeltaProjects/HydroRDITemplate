@@ -382,7 +382,7 @@ Alias rTime(6) = Second
 Alias rTime(7) = MicroSecond
 Alias rTime(8) = DOW
 Public LastScan As String * 6 'when did the datalogger most recently scan?
-Public Timestamp15min As String * 18 'Create timestamp to be used for data reporting
+Public Timestamp15min As String * 20 'Create timestamp to be used for data reporting
 Dim RealSeconds As Long 'used for computing elapsed time intervals
 Dim Mod5Minutes As Long 'used for computing elapsed time intervals
 Dim Mod15Minutes As Float 'used for computing elapsed time intervals
