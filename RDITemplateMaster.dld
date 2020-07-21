@@ -7911,6 +7911,9 @@ EndSub
       Mod60Minutes = RealSeconds MOD 3600
       ModDay = RealSeconds MOD 86400
       If Mod15Minutes = 0 Then 'if at minute 0, 15, 30, or 45
+        If Minute = 0 Then
+          Minute = "0"+Minute 'force "Minute" variable to be 00
+        EndIf
         Timestamp15min = Month+"/"+DOM+"/"+Year+" "+Hour+":"+Minute 'Create a Timestamp to be placed in column 1 of 15min data tables
       EndIf
       #If HasGPS Then
