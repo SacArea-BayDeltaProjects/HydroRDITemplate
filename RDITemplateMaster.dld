@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20200519
-Const ProgramVersion = "4.54"
-'Last Modified by: Trevor Violette
+Const ProgramVersionDate = 20200713
+Const ProgramVersion = "5.00"
+'Last Modified by: Michael Simpson
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -48,7 +48,7 @@ Const ProgramVersion = "4.54"
 '20200512 - TAV 4.52 Added manual switch to turn on SUNA wiper controller for calibration purposes. Reverts to program control when ready for sampling.
 '20200513 - TAV 4.53 Tweaked manual switch for Suna wiper to prevent it from being on during sample window and added a redundancy to set to false in case user set to true after initial logic was passed.
 '20200514 - TAV 4.54 Added "SetSondeTime" constant to activate or deactive the clock set subroutine, most specifically for gages we don't solely operate in case of clock issues with other users' software.
-
+'20200713 - MRS 5.00 Corrected Numbins bug. Added code for Sentinel V vertical leader,velocities,RSSI and correlation, bottom track range,vel,RssI and Correlation
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
 'IMPORTANT - For EXO2 serial operation, A MAX232 adapter must be used on CR6 "U" ports or CR1000 Com1.Com2,Com3 or Com4. An ADCP can run on all ports, but
@@ -83,12 +83,14 @@ Const No = False
 '"WQDeadCntMax" number of scans (1 min) of no WQ data before cycling power to the WQ sonde (5 to 120)
 'VMDeadCntMax"  number of scans (1 min) of no VM data before cycling power To the VM (5 To 120)
 '"StoreAllToCard"  Store all beam data (RSSI, Corr, Velocity) to Micro SD card (CR6) or CF card (CR1000)
+'"VMHasVertical" Store vertical velocity, Vertical RSSI, and Vertical Correlation data From a Sentinel V or RiverPro
+'"VMHasBottomTrack" Store Bottom track range,velocity,correlation and RSSI from a Sentinel V or RiverPro
 
 'Change these values in the Tools/Customize Constants dropdown dialog
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "WQ_SERIAL_BURST"
+Const WqSonde = "NONE"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
@@ -135,7 +137,7 @@ Const MinBurstVals = 4
 'Min = 1
 'Max = 30
 'Inc = 1
-Const IsVmMax232 = False
+Const IsVmMax232 = True
 'value = True
 'value = False
 Const IsSpecStudy = False
@@ -177,10 +179,16 @@ Const IsMaster = False  'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
+Const VMHasVertical = True
+'value = True
+'value = False
+Const VMHasBottomTrack = True
+'value = True
+'value = False
 Const Debugging = False
 'Value = True
 'Value = False
-Const SeeAllVel = False
+Const SeeAllVel = True
 'Value = True
 'Value = False
 Const SeeRawWQ = False
@@ -287,6 +295,21 @@ Const PGoodProfileID = 1024
 Const VelocityProfileID = 256
 Const VMStageID = 16384
 Const BottomID = 1536
+'=================================================
+'vertical profile IDs
+#If VMHasVertical Then
+  Const VertLeaderID = 3841
+  Const VertVelocityID = 2560
+  Const VertRSSIID = 3072
+  Const VertCorrID = 2816 
+#EndIf
+'=================================================
+'=================================================
+'Bottom Track ID
+#If VMHasBottomTrack Then
+  Const BottomTrackID = 1536
+#EndIf
+'=================================================
 'Const MaxBins = 27 'Changed back to 27 per JBD
 Const MaxBeams = 4
 Const BadVel = -32768 'bad velocity indicator from adcp
@@ -295,6 +318,10 @@ Const Meters_to_Feet = 3.280839895
 Const DegToRad = (3.14159265358979323846/180) 'degrees to radians
 
 'Declare Misc Veriables
+'----------------------------------------------
+'Simpson debugging variables
+
+'----------------------------------------------
 Public SiteID As String * 6 '3 character station identification
 Public SiteNum As String * 16 'station number
 Public CR1Volts As Float 'power supply voltage to cr10000
@@ -469,7 +496,7 @@ Dim Longarray(2000) As Long 'Array for the Raw Ensemble
 Dim Nums(2) As Long
 Public EnsembleLen As Long
 Dim Datatypes As Long
-Dim Offsets(25) As Long 'offsets to the start of the datatype locations
+Dim Offsets(40) As Long 'offsets to the start of the datatype locations
 Public BinSize As Long 'ADCP bin size in centimeters
 Public NumADCPBins As Long 'ADCP number of bins
 Public Numbins As Long 'number of adcp bins used
@@ -1713,6 +1740,38 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
 
 #EndIf
 
+'==============================================================================================
+'Vertical profiling variables if using a Sentinel V or RiverPro
+#If VMHasVertical Then
+  Public VerticalLeadOffset As Long 
+  Public VerticalVelocityOffset As Long
+  Public VerticalRSSIOffset As Long 
+  Public VerticalCorrOffset As Long
+  Public VerticalBinSize As Long
+  Public VerticalBinNum As Long
+  Public VerticalPings As Long
+  Public VerticalBin1Center As Float 
+  Public VerticalVelocity(MaxBins) As Float
+  Public VerticalRSSI(MaxBins) As Long
+  Public VerticalCorr(MaxBins) As Long
+  Public VerticalBinDisable(MaxBins) As Boolean  
+#EndIf
+'===============================================================================================
+
+'===============================================================================================
+'Bottom Track variables if using a Sentinel V or RiverPro
+#If VMHasBottomTrack Then
+  Public BtmTrackOffset As Long
+  Public BtmTrackPings As Long 
+  Public BtmTrackMode As Long
+  Public BtmTrackRange(MaxBeams) As Float
+  Public BtmTrackVelocity(MaxBeams) As Float
+  Public BtmTrackRSSI(MaxBeams) As Long
+  Public BtmTrackCorr(MaxBeams) As Long
+  Public BtmRangeBeamDisable(MaxBeams) As Boolean
+  Public BtmVelBeamDisable(MaxBeams) As Boolean
+#EndIf
+'===============================================================================================
 
 PreserveVariables 'preserve values in case of power outages
 SetStatus ("USRDriveSize",16384)
@@ -2410,6 +2469,71 @@ SetStatus ("USRDriveSize",16384)
     'store other... x, y, think about this... what do we really want in here
   EndTable
 #EndIf
+
+'=======================================================================================
+'trial data table for Vertical Velocity profile output
+#If VMHasVertical Then
+  DataTable (VerticalVelocities,Rec15minFlag,-1)
+  OpenInterval 'tells table to process from last execution of table
+   CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+   Sample (1,VerticalBinSize,UINT2)
+   Sample (1,VerticalBinNum,UINT2)
+   Sample (1,VerticalBin1Center,FP2)
+   Sample (1,VerticalPings,Uint2)
+   Average(MaxBins,VerticalVelocity(),IEEE4,VerticalBinDisable())
+   Average(MaxBins,VerticalRSSI(),Uint2,False)
+   Average(MaxBins,VerticalCorr(),Uint2,False)
+ EndTable
+#EndIf
+
+#If VMHasVertical Then
+  DataTable (Vertical1MinVel,Rec1MinFlag OR OneMinConsistent,-1)
+  OpenInterval 'tells table to process from last execution of table
+   CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+   Sample (1,VerticalBinSize,UINT2)
+   Sample (1,VerticalBinNum,UINT2)
+   Sample (1,VerticalBin1Center,FP2)
+   Sample (1,VerticalPings,Uint2)
+   Sample(MaxBins,VerticalVelocity(),IEEE4)
+   Sample(MaxBins,VerticalRSSI(),Uint2)
+   Sample(MaxBins,VerticalCorr(),Uint2)
+ EndTable
+#EndIf
+'========================================================================================
+'========================================================================================
+'Trial data table for Bottom Track data output
+#If VMHasBottomTrack Then
+  DataTable (BottomTrack,Rec15minFlag,-1)
+  OpenInterval 'tells table to process from last execution of table
+   CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+   Sample (1,BtmTrackPings,UINT2)
+   Sample (1,BtmTrackMode,UINT2)
+   Average(MaxBeams,BtmTrackRange(),IEEE4,BtmRangeBeamDisable())
+   Average(MaxBeams,BtmTrackVelocity(),IEEE4,BtmVelBeamDisable())
+   Average(MaxBeams,BtmTrackRSSI(),Uint2,False)
+   Average(MaxBeams,BtmTrackCorr(),Uint2,False)
+   #If VMHasVertical Then
+       Average(MaxBins,VerticalVelocity(),IEEE4,VerticalBinDisable())
+   #EndIf    
+ EndTable
+#EndIf
+
+#If VMHasBottomTrack Then
+  DataTable (BtmTrack1Min,Rec1MinFlag OR OneMinConsistent,-1)
+  OpenInterval 'tells table to process from last execution of table
+   CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+   Sample (1,BtmTrackPings,UINT2)
+   Sample (1,BtmTrackMode,UINT2)
+   Sample(MaxBeams,BtmTrackRange(),IEEE4)
+   Sample(MaxBeams,BtmTrackVelocity(),IEEE4)
+   Sample(MaxBeams,BtmTrackRSSI(),Uint2)
+   Sample(MaxBeams,BtmTrackCorr(),Uint2)
+   #If VMHasVertical Then
+       Sample(MaxBins,VerticalVelocity(),IEEE4)
+   #EndIf    
+ EndTable
+#EndIf
+'======================================================================================
 
 'BadQCount or YsiErrCount = 200 (problem for more than 3 hours)
 'And it is called at Midnight
@@ -5287,6 +5411,38 @@ EndSub
 'This decoder parses out the various data types and the varibles that are contained in the fixed header data type.
 'The variable data types are decoded in separate subroutines and those subroutines are called from this subroutine.
 Sub MainDecode
+ '-------------initialize vertical info 
+ #If VMHasVertical Then
+  VerticalLeadOffset = NaN
+  VerticalVelocityOffset = NaN
+  VerticalRSSIOffset = NaN
+  VerticalCorrOffset = NaN
+  Dim Vertcount As Long
+   For Vertcount = 1 To MaxBins
+     VerticalVelocity(Vertcount) = BadVel
+     VerticalRSSI(Vertcount) = BadVel
+     VerticalCorr(Vertcount) = BadVel
+     VerticalBinDisable(Vertcount) = True 
+   Next Vertcount
+ #EndIf
+ 'end vertical initialize
+ '-------------initialize Bottom Track info
+ #If VMHasBottomTrack Then
+  BtmTrackOffset = NaN
+  BtmTrackPings = NaN
+  BtmTrackMode = NaN
+  Dim BotCount As Long
+  For BotCount = 1 To MaxBeams
+   BtmTrackRange(BotCount) = BadVel
+   BtmTrackVelocity(BotCount) = BadVel
+   BtmTrackRSSI(BotCount) = BadVel
+   BtmTrackCorr(BotCount) = BadVel
+   BtmRangeBeamDisable(BotCount) = True
+   BtmVelBeamDisable(BotCount) = True
+  Next BotCount
+#EndIf
+'---------------end bottom initialize
+
   Dim OffsetCounter As Long
   Dim TypeCounter As Long
   Dim IdCounter As Long
@@ -5310,8 +5466,11 @@ Sub MainDecode
   NumBeams = Longarray(FixedLeadOffset + 8)
   'Get number of Bins
   NumADCPBins = Longarray(FixedLeadOffset + 9)
-  If NumADCPBins >= MaxBins Then
+  If NumADCPBins >= MaxBins Then    
     Numbins = MaxBins
+    'fix for numadcp bins < maxbins
+  Else
+    Numbins = NumADCPBins  
   EndIf
   'Get Pings per Ensemble
   LSB = Longarray(FixedLeadOffset + 10)
@@ -5425,6 +5584,27 @@ Sub MainDecode
       'OK it matches Velocity ID
       VelDatOffset = Offsets(IdCounter)
       Call VelDecode
+      
+#If VMHasVertical Then
+    Case VertLeaderID
+         VerticalLeadOffset = Offsets(IdCounter)
+         
+    Case VertVelocityID
+         VerticalVelocityOffset = Offsets(IdCounter)
+          
+    Case VertRSSIID
+          VerticalRSSIOffset = Offsets(IdCounter)
+          
+    Case VertCorrID
+          VerticalCorrOffset = Offsets(IdCounter)
+          
+ #EndIf
+ 
+ #If VMHasBottomTrack Then
+    Case BottomTrackID
+        BtmTrackOffset = Offsets(IdCounter) 
+        Call BtmTrackDecode
+ #EndIf     
     Case VMStageID
       'Ok it matches Surface track (vertical beam) Status ID
       VMStageDatOffset = Offsets(IdCounter)
@@ -5434,13 +5614,29 @@ Sub MainDecode
         IsVADCP = Yes
         Call VADCPTransform
       EndIf
-      Call VMStageDecode
+      If (IsCM = No) AND (IsVADCP = No)
+         If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkhorse = Yes 'It's a 4 beamworkhorse or 3 beam Hadcp)
+      EndIf
+      Call VMStageDecode    
+ 
+ '=======================================================================   
     EndSelect
   Next IdCounter
-  If (IsCM = No) AND (IsVADCP = No)
-    If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkhorse = Yes 'It's a 4 beamworkhorse or 3 beam Hadcp)
-  EndIf
-  'After calling all the decoders, Zero out the LongArray
+  
+  
+  
+'=================================================================================
+'after all IDs have been checked then we can decode vertical info if it is present
+#If VMHasVertical Then
+  'initialize Profile arrays  
+  'Check and call Vertical decode subs
+  If VerticalLeadOffset <> NaN Then Call VertLeaderDecode
+  If VerticalVelocityOffset <> Nan Then Call VertVelocityDecode
+  If VerticalRSSIOffset <> NaN Then Call VertRSSIDecode
+  If VerticalCorrOffset <> NaN Then Call VertCorrDecode
+#EndIf  
+'====================================================================================
+'After calling all the decoders, Zero out the LongArray
   Erase (Longarray())
 EndSub
 '__________________________Variable Leader Decoder______________________________________
@@ -5774,6 +5970,152 @@ EndSub
     RangedBin = (FIX((DucerDepthCM - BlankDist)/BinSize))-CutOffBins 'remove user selected number of bins (based on beamchecks)
   End Sub
 #EndIf
+
+'======================================================================================================================================
+'---------------------------------------------------------Vertical decode section------------------------------------------------------
+'======================================================================================================================================
+
+#If VMHasVertical Then   
+  Sub VertLeaderDecode
+    'decode selected vertical leader data
+    Dim tempLeadOffset As Long
+    tempLeadOffset = VerticalLeadOffset - 1 
+  LSB = Longarray(tempLeadOffset + 3)
+  MSB = Longarray(tempLeadOffset + 4)
+    VerticalBinNum = (MSB * 256) + LSB 
+  LSB = Longarray(tempLeadOffset + 5)
+  MSB = Longarray(tempLeadOffset + 6)
+    VerticalPings = (MSB * 256) + LSB   
+  LSB = Longarray(tempLeadOffset + 7)
+  MSB = Longarray(tempLeadOffset + 6)
+    VerticalBinSize = (MSB * 256) + LSB      
+  LSB = Longarray(tempLeadOffset + 9)
+  MSB = Longarray(tempLeadOffset + 10)
+    VerticalBin1Center = (MSB * 256) + LSB  
+  EndSub
+
+Sub VertVelocityDecode
+  'decode vertical velocity profile  
+ If VerticalBinNum <> NaN Then 'ok we have vertical velocity bins
+   Dim Vertbin As Long
+   Dim tempVelOffset As Long
+   Dim tempVertVel As Float
+   tempVelOffset = VerticalVelocityOffset - 1   
+   Dim vertbinstep As Long = 2
+   Dim Counter As Long = 1
+   tempVelOffset = tempVelOffset + 2
+   For Vertbin = 1 To (VerticalBinNum * 2) Step vertbinstep
+     tempVertVel = 0
+     LSB = Longarray(tempVelOffset + Vertbin)
+     MSB = Longarray(tempVelOffset + (Vertbin + 1))
+     tempVertVel = (MSB * 256) + LSB
+     If tempVertVel = 32768 Then
+       tempVertVel = BadVel
+     EndIf 
+      'convert twos compliment
+     If tempVertVel > 32767 Then 'twos compliment for negative velocities
+       tempVertVel = tempVertVel - 65536 
+     EndIf
+     If tempVertVel <> BadVel Then
+       'convert to cm/s 
+       tempVertVel = tempVertVel * VelocityScaleWater
+       VerticalBinDisable(Counter) = False
+     Else
+       VerticalBinDisable(Counter) = True 
+     EndIf
+       VerticalVelocity(Counter) = tempVertVel     
+     Counter = Counter + 1     
+   Next Vertbin 
+  EndIf
+  Counter = 1
+EndSub
+
+Sub VertRSSIDecode
+ Dim Vertbin As Long
+ Dim tempRSSIOffset As Long 
+ tempRSSIOffset = VerticalRSSIOffset - 1   
+   tempRSSIOffset = tempRSSIOffset + 2
+ For Vertbin = 1 To VerticalBinNum
+    VerticalRSSI(Vertbin) = Longarray(tempRSSIOffset + Vertbin) 
+ Next Vertbin  
+EndSub
+
+Sub VertCorrDecode
+   Dim Vertbin As Long
+   Dim tempCorrOffset As Long 
+  tempCorrOffset = VerticalCorrOffset - 1   
+   tempCorrOffset = tempCorrOffset + 2
+ For Vertbin = 1 To VerticalBinNum
+    VerticalCorr(Vertbin) = Longarray(tempCorrOffset + Vertbin) 
+ Next Vertbin  
+EndSub
+
+
+#EndIf
+'====================================================================================================================================
+'-----------------------------------------------End Vertical decode section
+'====================================================================================================================================
+
+'====================================================================================================================================
+'-----------------------------------------Bottom Track Decode Section
+'====================================================================================================================================
+#If VMHasBottomTrack
+ Sub BtmTrackDecode   
+  BtmTrackOffset = BtmTrackOffset - 1
+  LSB = Longarray(BtmTrackOffset + 3)
+  MSB = Longarray(BtmTrackOffset + 4)
+  BtmTrackPings = (MSB * 256) + LSB
+  
+  BtmTrackMode = Longarray(BtmTrackOffset + 10)
+   
+  Dim BtIndex,BtCounter As Long
+  Dim BtTempRange As Float
+  BtCounter = 1 
+  For BtIndex = 17 To (15 + (NumBeams * 2)) Step 2
+  LSB = Longarray(BtmTrackOffset + BtIndex)
+  MSB = Longarray(BtmTrackOffset + (BtIndex + 1))
+  BtTempRange = (MSB * 256) + LSB  
+  If BtTempRange = 32768 Then
+     BtTempRange = BadVel
+     BtmRangeBeamDisable(BtCounter) = True
+   Else  
+     BtmTrackRange(BtCounter) = BtTempRange * 0.0328084 'cm to feet
+     BtmRangeBeamDisable(BtCounter) = False
+  End If
+  BtCounter = BtCounter + 1
+  Next BtIndex
+  
+  Dim btTempVel As Float
+  BtCounter = 1
+  For BtIndex = 25 To (23 + (NumBeams * 2)) Step 2
+  LSB = Longarray(BtmTrackOffset + BtIndex)
+  MSB = Longarray(BtmTrackOffset + (BtIndex + 1))
+  btTempVel = (MSB * 256) + LSB  
+  If btTempVel = 32768 Then
+     btTempVel = BadVel
+     BtmVelBeamDisable(BtCounter) = True
+  ElseIf btTempVel > 32767 'twos compliment (negative velocities)
+    btTempVel = btTempVel - 65536
+  End If 
+  If btTempVel <> BadVel Then  
+    BtmTrackVelocity(BtCounter) = btTempVel * VelocityScaleWater
+    BtmVelBeamDisable(BtCounter) = False
+  EndIf
+  BtCounter = BtCounter + 1
+  Next BtIndex
+  
+  For BtIndex = 1 To NumBeams
+   BtmTrackCorr(BtIndex) = Longarray(BtmTrackOffset + (BtIndex + 32)) 
+  Next BtIndex
+  
+  For BtIndex = 1 To NumBeams
+   BtmTrackRSSI(BtIndex) = Longarray(BtmTrackOffset + (BtIndex + 72))
+  Next BtIndex 
+ End Sub
+#EndIf
+'====================================================================================================================================
+'-----------------------------------------End Bottom Track Decode section
+'====================================================================================================================================
 
 '________________________________Last Good Bin Filter_______________________________________
 ' Check the validity of bin data based on user defined thresholds
@@ -8352,6 +8694,17 @@ EndSub
       CallBmChkEnd = Timer(DebugTimer,msec,4)
       CallBmChkEnd = CallBmChkEnd/1000
       CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
+      '------------------------------Vertical table calls-------------------------------
+      #If VMHasVertical Then
+        CallTable VerticalVelocities
+        CallTable Vertical1MinVel
+      #EndIf
+      '-----------------------------Bottom Track Table calls
+      #If VMHasBottomTrack
+        CallTable BottomTrack
+        CallTable BtmTrack1min
+      #EndIf
+        
       #If WqSonde = "WQ_SERIAL_BURST" Then
         RecBurstFlag = False
         '        Call ClearBurstVars
