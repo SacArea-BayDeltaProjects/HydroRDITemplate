@@ -6526,6 +6526,7 @@ Function Ftime (TimeIn As String * 25) As String * 25 'converts datalogger time 
   EndIf
   SendYear = Right(FSplitTime(3),4)
   ftime = SendMonth + "/" + SendDay + "/" + SendYear + " " + SendHour + ":" + SendMin + ":" + SendSec
+  Timestamp15min = SendYear + "-" + SendMonth + "-" + SendDay + " " + SendHour + ":" + SendMin + ":" + SendSec
 End Function
 #If (StoreAllToCard = true) AND HasVM Then
   Sub CheckSpikes 'change name later
@@ -7909,12 +7910,10 @@ EndSub
       Mod5Minutes = RealSeconds MOD 300
       Mod15Minutes = RealSeconds MOD 900
       Mod60Minutes = RealSeconds MOD 3600
-      ModDay = RealSeconds MOD 86400
+      ModDay = RealSeconds MOD 86400'
+
       If Mod15Minutes = 0 Then 'if at minute 0, 15, 30, or 45
-        If Minute = 0 Then
-          Minute = "0"+Minute 'force "Minute" variable to be 00
-        EndIf
-        Timestamp15min = Month+"/"+DOM+"/"+Year+" "+Hour+":"+Minute 'Create a Timestamp to be placed in column 1 of 15min data tables
+        FTime(Public.Timestamp)
       EndIf
       #If HasGPS Then
         Call CycleGPSPower
