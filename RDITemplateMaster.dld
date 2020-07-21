@@ -179,10 +179,10 @@ Const IsMaster = False  'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
-Const VMHasVertical = True
+Const VMHasVertical = False
 'value = True
 'value = False
-Const VMHasBottomTrack = True
+Const VMHasBottomTrack = False
 'value = True
 'value = False
 Const Debugging = False
@@ -373,6 +373,8 @@ Public VmDeadCount As Long 'number of times VM has bad data
 #EndIf
 'Declare variables to hold time values
 Dim rTime(9) As Float 'this array holds time values returned from the realtime statement
+Alias rTime(1) = Year
+Alias rTime(2) = Month
 Alias rTime(3) = DOM 'FOR BEAM CHECK
 Alias rTime(4) = Hour
 Alias rTime(5) = Minute
@@ -380,6 +382,7 @@ Alias rTime(6) = Second
 Alias rTime(7) = MicroSecond
 Alias rTime(8) = DOW
 Public LastScan As String * 6 'when did the datalogger most recently scan?
+Public Timestamp15min As String * 18 'Create timestamp to be used for data reporting
 Dim RealSeconds As Long 'used for computing elapsed time intervals
 Dim Mod5Minutes As Long 'used for computing elapsed time intervals
 Dim Mod15Minutes As Float 'used for computing elapsed time intervals
@@ -1788,6 +1791,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
     OpenInterval 'tells table to process from last execution of table
     CardOut (0,17280) 'sends copy of data to CF card
+    Sample (1,Timestamp15min,String)
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample (1,IndexVel,IEEE4)
@@ -1901,6 +1905,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (DataOut,Rec15minFlag,-1)'records data only when Record Flag = yes
     OpenInterval 'tells table to process from last execution of table
     CardOut (0,17280) 'sends copy of data to CF card
+    Sample (1,Timestamp15min,String)
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample (1,IndexVel,IEEE4)
@@ -2231,6 +2236,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (Aquarius,Rec15minFlag,-1) 'guaruntee aquarius table populates even if burst is not complete to avoid losing stage and velocity data
     CardOut (0,17280)
     OpenInterval
+    Sample (1,Timestamp15min,String)
     ' aquarius table for burst
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,MedBurstDate,IEEE4)
@@ -2317,6 +2323,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (Aquarius,Rec15minFlag,-1)
     CardOut (0,17280)
     OpenInterval
+    Sample (1,Timestamp15min,String)
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,WqDate,IEEE4)
     Sample (1,WqTime,IEEE4)
@@ -2388,6 +2395,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (Aquarius,Rec15minFlag,-1)
     CardOut (0,17280)
     OpenInterval
+    Sample (1,Timestamp15min,String)
     Minimum (1,CR1Volts,FP2,False,False)
     Sample (1,AvgPS1Stg,IEEE4)
     Sample (1,AvgPS2Stg,IEEE4)
@@ -2452,6 +2460,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (VelData,RecAllVelFlag,-1)
     OpenInterval 'tells table to process from last execution of table
     CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+    Sample (1,Timestamp15min,String)
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
     Sample(1,Coord,String)
@@ -2476,6 +2485,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (VerticalVelocities,Rec15minFlag,-1)
   OpenInterval 'tells table to process from last execution of table
    CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+   Sample (1,Timestamp15min,String)
    Sample (1,VerticalBinSize,UINT2)
    Sample (1,VerticalBinNum,UINT2)
    Sample (1,VerticalBin1Center,FP2)
@@ -2506,6 +2516,7 @@ SetStatus ("USRDriveSize",16384)
   DataTable (BottomTrack,Rec15minFlag,-1)
   OpenInterval 'tells table to process from last execution of table
    CardOut (0,17280) 'sends copy of data to CF card, maybe output this table...
+   Sample (1,Timestamp15min,String)
    Sample (1,BtmTrackPings,UINT2)
    Sample (1,BtmTrackMode,UINT2)
    Average(MaxBeams,BtmTrackRange(),IEEE4,BtmRangeBeamDisable())
@@ -2839,6 +2850,7 @@ EndTable
 DataTable (BeamCheck,RecBeamCheckFlag,-1)
   OpenInterval
   CardOut (0,17280)
+  Sample (1,TimeStamp15Min,String)
   Sample (1,SiteID,String)
   Sample (1,StagePrime,IEEE4)
   Sample (1,NumBeams,Long)
@@ -7898,6 +7910,9 @@ EndSub
       Mod15Minutes = RealSeconds MOD 900
       Mod60Minutes = RealSeconds MOD 3600
       ModDay = RealSeconds MOD 86400
+      If Mod15Minutes = 0 Then 'if at minute 0, 15, 30, or 45
+        Timestamp15min = Month+"/"+DOM+"/"+Year+" "+Hour+":"+Minute 'Create a Timestamp to be placed in column 1 of 15min data tables
+      EndIf
       #If HasGPS Then
         Call CycleGPSPower
       #EndIf
@@ -7959,7 +7974,7 @@ EndSub
           SpikeCounter = 0
         #EndIf
       EndIf
-      If Mod15Minutes = 0 Then 'at the 15 minute mark
+      If Mod15Minutes = 420 Then 'at the 7th minute into 15min interval
         Rec15minFlag = True ' set flag to record AQ and DataOut tables
         RecBeamCheckFlag = True 'set flag to record BeamCheck Table
         If RecordAll = True Then RecAllVelFlag = True 'set flag to record VelData table for special studies
