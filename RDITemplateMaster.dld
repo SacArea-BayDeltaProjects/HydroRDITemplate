@@ -4,9 +4,9 @@
 'HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20200713
-Const ProgramVersion = "5.00"
-'Last Modified by: Michael Simpson
+Const ProgramVersionDate = 20200722
+Const ProgramVersion = "5.10"
+'Last Modified by: Trevor Violette
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
 '-----------------IMPORTANT IMPORTANT-----------------------------------------------
@@ -49,6 +49,8 @@ Const ProgramVersion = "5.00"
 '20200513 - TAV 4.53 Tweaked manual switch for Suna wiper to prevent it from being on during sample window and added a redundancy to set to false in case user set to true after initial logic was passed.
 '20200514 - TAV 4.54 Added "SetSondeTime" constant to activate or deactive the clock set subroutine, most specifically for gages we don't solely operate in case of clock issues with other users' software.
 '20200713 - MRS 5.00 Corrected Numbins bug. Added code for Sentinel V vertical leader,velocities,RSSI and correlation, bottom track range,vel,RssI and Correlation
+'20200722 - TAV 5.10 Centered timestamp of velocity and stage measurements. Note: Use "Timestamp15Min" column of data tables. Added manual TF trigger to define time of first ping for ADCP.
+
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
 'IMPORTANT - For EXO2 serial operation, A MAX232 adapter must be used on CR6 "U" ports or CR1000 Com1.Com2,Com3 or Com4. An ADCP can run on all ports, but
