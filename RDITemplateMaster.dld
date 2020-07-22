@@ -332,6 +332,8 @@ Public PTempF As Float 'CR1000 panel temperature in Degf
 Public BurstPeriod As Long 'give user ability to alter burst period in the public table
 Public RecCalibData As Boolean 'flag to record data at 1 minute interval when measurements are being done.
 Public OneMinConsistent As Boolean 'flag to record data at 1 minute interval for prolonged periods of time
+Public SendTF As Boolean 'Manual trigger to set exact time ADCP should start pinging.
+Public SendTFString As String * 20
 #If HasSuna Then
   Public ManualSunaOn As Boolean
   Public ManSunaWiper As Boolean
@@ -3855,53 +3857,54 @@ EndSub
 'So this Sub is called to Sychronize the logger and VM times
 '--------------------------------------------------------------------
 Sub SetVMTime
-  Call CycleVmPower
+'  Call CycleVmPower
+  
   'The set time command to the VM Requires leading zeros, so the logger timestamp is split out and leading zeros added if needed
-  RawSetTime = Status.Timestamp 'get latest time from datalogger
-  SplitStr (SplitTime(),RawSetTime," ",6,0) 'take apart the time string
-  #If Debugging = True Then
-    Public SendVMMonth As String
-    Public SendVMDay As String
-    Public SendVmHour As String
-    Public SendVmMin As String
-    Public SendVmSec As String
-    Public SendVmYear As String
-  #Else
-    Dim SendVMMonth As String
-    Dim SendVMDay As String
-    Dim SendVmHour As String
-    Dim SendVmMin As String
-    Dim SendVmSec As String
-    Dim SendVmYear As String
-  #EndIf
-  If SplitTime(1) < 10 Then  'add leading zeros if needed
-    SendVMMonth = "0" + SplitTime(1)
-  Else
-    SendVMMonth = SplitTime(1)
-  EndIf
-  If SplitTime(2) < 10 Then
-    SendVMDay = "0" + SplitTime(2)
-  Else
-    SendVMDay = SplitTime(2)
-  EndIf
-  If SplitTime(4) < 10 Then
-    SendVmHour = "0" + SplitTime(4)
-  Else
-    SendVmHour = SplitTime(4)
-  EndIf
-  If SplitTime(5) < 10 Then
-    SendVmMin = "0" + SplitTime(5)
-  Else
-    SendVmMin = SplitTime(5)
-  EndIf
-  If Round(SplitTime(6),0) < 10 Then
-    SendVmSec = "0" + Round(SplitTime(6),0) 'eliminate fractional seconds
-  Else
-    SendVmSec = Round(SplitTime(6),0)
-  EndIf
-  SendVmYear = Right(SplitTime(3),2)
-  VMTimeString = "TS" + SendVmYear + "/" + SendVMMonth + "/" + SendVMDay + "," + SendVmHour + ":" + SendVmMin + ":" + SendVmSec 'Reconstruct time string
-
+  Call Ftime'Get Time from datalogger status table
+'  RawSetTime = Status.Timestamp 'get latest time from datalogger
+'  SplitStr (SplitTime(),RawSetTime," ",6,0) 'take apart the time string
+'  #If Debugging = True Then
+'    Public SendVMMonth As String
+'    Public SendVMDay As String
+'    Public SendVmHour As String
+'    Public SendVmMin As String
+'    Public SendVmSec As String
+'    Public SendVmYear As String
+'  #Else
+'    Dim SendVMMonth As String
+'    Dim SendVMDay As String
+'    Dim SendVmHour As String
+'    Dim SendVmMin As String
+'    Dim SendVmSec As String
+'    Dim SendVmYear As String
+'  #EndIf
+'  If SplitTime(1) < 10 Then  'add leading zeros if needed
+'    SendVMMonth = "0" + SplitTime(1)
+'  Else
+'    SendVMMonth = SplitTime(1)
+'  EndIf
+'  If SplitTime(2) < 10 Then
+'    SendVMDay = "0" + SplitTime(2)
+'  Else
+'    SendVMDay = SplitTime(2)
+'  EndIf
+'  If SplitTime(4) < 10 Then
+'    SendVmHour = "0" + SplitTime(4)
+'  Else
+'    SendVmHour = SplitTime(4)
+'  EndIf
+'  If SplitTime(5) < 10 Then
+'    SendVmMin = "0" + SplitTime(5)
+'  Else
+'    SendVmMin = SplitTime(5)
+'  EndIf
+'  If Round(SplitTime(6),0) < 10 Then
+'    SendVmSec = "0" + Round(SplitTime(6),0) 'eliminate fractional seconds
+'  Else
+'    SendVmSec = Round(SplitTime(6),0)
+'  EndIf
+'  SendVmYear = Right(SplitTime(3),2)
+'  VMTimeString = "TS" + SendVmYear + "/" + SendVMMonth + "/" + SendVMDay + "," + SendVmHour + ":" + SendVmMin + ":" + SendVmSec 'Reconstruct time string
   Call OpenADCPPort
   If IsVADCP = True Then 'the VADCP needs a CSTOP command to get into command mode
     SerialOut (AdcpPort,"+++","",0,100)'send alt break command
@@ -3911,7 +3914,7 @@ Sub SetVMTime
     SerialOut (AdcpPort,"CSTOP" + CHR(13) + CHR(10),"",0,100)
     SerialIn (Warning,AdcpPort,100,-1,100)
     SerialFlush (AdcpPort)
-    SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
+    SerialOut (AdcpPort,"TS" + VMTimeString + CHR(13) + CHR(10),"",0,100)
     SerialIn (Warning,AdcpPort,100,-1,100) 'get echo of CS command
     Delay (1,1,Sec)'wait for reply
     SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
@@ -3923,15 +3926,31 @@ Sub SetVMTime
     Delay (1,1,Sec)'wait for reply
     SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
     SerialFlush (AdcpPort)
-    SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
+    SerialOut (AdcpPort,"TS" + VMTimeString + CHR(13) + CHR(10),"",0,100)
     SerialIn (Warning,AdcpPort,100,-1,100) 'get echo of CS command
     Delay (1,1,Sec)'wait for reply
     SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
     SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
   EndIf
   SetVMTimeFlg = false 'set the flag back to false until next time sychro
-
 EndSub
+
+Sub SetTF
+  Call SetVMTime
+  Call FTime
+  Call OpenADCPPort
+  SerialOut (AdcpPort,"+++",">",0,100)'Send Break Command
+  Delay(1,150,mSec)
+  SerialIn (Banner,AdcpPort,100,-1,100) 'Get Banner
+  SerialFlush(AdcpPort)
+  SerialOut (AdcpPort,"TF" + SendTFString + CHR(13) + CHR(10),"",0,100)
+  SerialIn (Warning,AdcpPort,100,-1,100) 'Echo command
+  Delay (1,150,mSec)
+  SerialOut (AdcpPort,"CS" + CHR(13) + CHR(10),"",0,100)
+  SerialIn(CSCmd,AdcpPort,100,-1,100) 'Echo CS command
+  SendTF = False
+EndSub
+  
 'Set time on EXO
 #If (WqSonde = "WQ_SERIAL") OR (WqSonde = "WQ_SERIAL_BURST") Then
   #If SetSondeTime = True Then
@@ -6487,9 +6506,11 @@ Sub VADCPTransform 'reverse the V1 and V2 components because the brilliant RDI g
     Next TempCounter
   EndIf
 EndSub
-Function Ftime (TimeIn As String * 25) As String * 25 'converts datalogger time string into MM/DD/YYYY HH:MM:SS
-  'RawTime = Public.Timestamp
 
+Sub Ftime 'converts datalogger time string into MM/DD/YYYY HH:MM:SS
+  'RawTime = Public.Timestamp
+  Dim TimeIn As String * 25
+  TimeIn = Public.TimeStamp
   SplitStr (FSplitTime(),TimeIn," ",6,0)
   Dim SendMonth As String
   Dim SendDay As String
@@ -6497,6 +6518,10 @@ Function Ftime (TimeIn As String * 25) As String * 25 'converts datalogger time 
   Dim SendMin As String
   Dim SendSec As String
   Dim SendYear As String
+  Dim SendVmYear As String
+  Dim TFMin As String
+  Dim TempMin As Float
+  Dim TFSec As String
 
   If FSplitTime(1) < 10 Then
     SendMonth = "0" + FSplitTime(1)
@@ -6525,9 +6550,25 @@ Function Ftime (TimeIn As String * 25) As String * 25 'converts datalogger time 
     SendSec = Round(FSplitTime(6),0)
   EndIf
   SendYear = Right(FSplitTime(3),4)
-  ftime = SendMonth + "/" + SendDay + "/" + SendYear + " " + SendHour + ":" + SendMin + ":" + SendSec
+  SendVmYear = Right(FSplitTime(3),2)
+  'ftime = SendMonth + "/" + SendDay + "/" + SendYear + " " + SendHour + ":" + SendMin + ":" + SendSec
+  If SendTF = True Then
+    TempMin = FSplitTime(5)
+    TempMin = TempMin + 1
+    TFSec = 15
+    If TempMin < 10 Then
+      TFMin = "0" + TempMin
+      Else
+      TFMin = TempMin
+    EndIf
+    SendTFString = SendVmYear + "/" + SendMonth + "/" + SendDay + "," + SendHour + ":" + TFMin + ":" + TFSec
+  EndIf
+  VMTimeString = SendVmYear + "/" + SendMonth + "/" + SendDay + "," + SendHour + ":" + SendMin + ":" + SendSec
+  If Mod15Minutes = 0 Then
   Timestamp15min = SendYear + "-" + SendMonth + "-" + SendDay + " " + SendHour + ":" + SendMin + ":" + SendSec
-End Function
+  EndIf
+EndSub
+
 #If (StoreAllToCard = true) AND HasVM Then
   Sub CheckSpikes 'change name later
     'check the RSSI, Correlation, and velocity queues against incoming data for spikes.  Queues must be full before call
@@ -7913,7 +7954,10 @@ EndSub
       ModDay = RealSeconds MOD 86400'
 
       If Mod15Minutes = 0 Then 'if at minute 0, 15, 30, or 45
-        FTime(Public.Timestamp)
+        Call FTime
+      EndIf
+      If SendTF = True Then
+        Call SetTF
       EndIf
       #If HasGPS Then
         Call CycleGPSPower
