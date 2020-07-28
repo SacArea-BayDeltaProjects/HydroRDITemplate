@@ -411,7 +411,7 @@ Public ModDay As Float 'used for computing elapsed time intervals
   Dim VMDay As Long 'Date time from the Velocity meter clock
   Dim VMHour As Long 'Date time from the Velocity meter clock
   Dim VMMinute As Long 'Date time from the Velocity meter clock
-  Dim VMSecond As Long 'Date time from the Velocity meter clock
+  Public VMSecond As Long 'Date time from the Velocity meter clock
   Dim VMTime As String * 25 'Date time from the Velocity meter clock
   Dim SetVMTimeFlg As Boolean 'used it setting VM Time
   Dim VMTimeString As String * 25 'used it setting VM Time
@@ -3688,6 +3688,7 @@ EndSub
       SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
       SerialFlush (AdcpPort)
       SendCMD = False
+      Call SetTF
       Call EraseWH
       #If GetNoiseFloor = Yes Then
         Call ParsePT3
@@ -3910,7 +3911,7 @@ Sub SetVMTime
   Call OpenADCPPort
   If IsVADCP = True Then 'the VADCP needs a CSTOP command to get into command mode
     SerialOut (AdcpPort,"+++","",0,100)'send alt break command
-    Delay (1,1,Sec)'wait for reply
+    Delay (1,150,mSec)'wait for reply
     SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
     SerialFlush (AdcpPort)
     SerialOut (AdcpPort,"CSTOP" + CHR(13) + CHR(10),"",0,100)
@@ -3925,7 +3926,7 @@ Sub SetVMTime
     'RestartAttempts = RestartAttempts + 1
   Else
     SerialOut (AdcpPort,"+++","",0,100)'send alt break command
-    Delay (1,1,Sec)'wait for reply
+    Delay (1,150,mSec)'wait for reply
     SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
     SerialFlush (AdcpPort)
     SerialOut (AdcpPort,"TS" + VMTimeString + CHR(13) + CHR(10),"",0,100)
@@ -5360,7 +5361,7 @@ EndSub
 
 '__________________________Get Instrument Serial Numbers_________________
 Sub GetSN
-  If (ModDay > 79270) AND (ModDay < 79390) AND RecCalibData = False Then 'if 2200hrs + 1-3 minutes and not Calbrating then get serial numbers of all
+  If ModDay = 79200 AND RecCalibData = False Then 'if 2200hrs and not Calbrating then get serial numbers of all
     AdcpSN = AdcpSN
     If AdcpSN <> InitialAdcpSN Then
       NewADCP = True
@@ -8003,7 +8004,8 @@ EndSub
       #EndIf
       '-------------------------------------------------------------------------------------------------------
       If ModDay = 0 Then 'At midnight
-        SetVMTimeFlg = True
+        'SetVMTimeFlg = True
+        Call SetTF
         Rec24HrFlag = True 'Trigger for QAQC table
         CallTable QAQCInfo
         #If WqSonde = "WQ_SERIAL" OR WqSonde = "WQ_SERIAL_BURST" Then
@@ -8187,6 +8189,7 @@ EndSub
         If WakeUpVM Then
           Call WakeVM
           WakeUpVM = No
+          Call SetTF
         EndIf
         WakeVMEnd = Timer(DebugTimer,msec,4)
         WakeVMEnd = WakeVMEnd/1000
