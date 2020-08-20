@@ -7970,7 +7970,7 @@ EndSub
           #EndIf
         EndIf
         If Mod15Minutes = 0 Then
-          FTime = 3
+          FTimeIn = 3
           TimeStamp15min = FTime(Public.Timestamp)
         EndIf
         If Mod15Minutes = 420 Then 'at the 7th minute into 15min interval. This is to center the averaging window
