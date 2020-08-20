@@ -94,7 +94,7 @@ Const No = False
 'do not change commented items in this customization section!!!!!!, they are like the keypad menu items.
 
 'Start of Constants Customization Section
-Const WqSonde = "NONE"
+Const WqSonde = "WQ_SERIAL_BURST"
 'Value = "WQ_SDI12"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
@@ -102,7 +102,7 @@ Const WqSonde = "NONE"
 Const DWRSonde = False
 'value = True
 'value = False
-Const SetSondeTime = False 'Flag to activate or deactivate setting the sonde clock
+Const SetSondeTime = True 'Flag to activate or deactivate setting the sonde clock
 'value = True
 'value = False
 Const TopBottom = False  'Is there a second EXO daisy-chained in the system
@@ -141,13 +141,13 @@ Const MinBurstVals = 4
 'Min = 1
 'Max = 30
 'Inc = 1
-Const IsVmMax232 = True
+Const IsVmMax232 = False
 'value = True
 'value = False
 Const IsSpecStudy = False
 'value = True
 'value = False
-Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
 Const GetNoiseFloor = False
