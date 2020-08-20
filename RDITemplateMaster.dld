@@ -187,10 +187,10 @@ Const IsMaster = False  'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
-Const VMHasVertical = True
+Const VMHasVertical = False
 'value = True
 'value = False
-Const VMHasBottomTrack = True
+Const VMHasBottomTrack = False
 'value = True
 'value = False
 Const Debugging = False
@@ -3924,8 +3924,8 @@ EndSub
       SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
       SerialFlush (AdcpPort)
       FTimeIn = 1
-      VMTimeString = FTime(Public.Timestamp)
-      SerialOut(AdcpPort,"TF" + VMTimeString + CHR(13) + CHR(10),"",0,100)
+      VMTimeString = "TF" + FTime(Public.Timestamp)
+      SerialOut(AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
       SerialIn (TFEcho,AdcpPort,100,-1,30)
       Delay(1,250,mSec)
       SerialFlush(AdcpPort)
