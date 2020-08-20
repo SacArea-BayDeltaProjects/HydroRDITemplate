@@ -114,7 +114,7 @@ Const RedSonde = False 'Is there a second sonde with its own SOA **THIS WILL ONL
 Const HasIridium = False
 'value = True
 'value = False
-Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 40 'Increased to account for bad data and DarkFrames so we don't get variables out of bounds.
@@ -163,10 +163,10 @@ Const MaxBins = 27
 'Min = 1
 'Max = 100
 'Inc = 1
-Const VMStartSec = 15 'seconds into minute for ensemble to start
-'Min = 0
-'Max = 59
-'Inc = 1
+'Const VMStartSec = 15 'seconds into minute for ensemble to start
+''Min = 0
+''Max = 59
+''Inc = 1
 Const UseAutoRange = False
 'value = True
 'value = False
@@ -414,7 +414,7 @@ Public ModDay As Float 'used for computing elapsed time intervals
   Dim VMDay As Long 'Date time from the Velocity meter clock
   Dim VMHour As Long 'Date time from the Velocity meter clock
   Dim VMMinute As Long 'Date time from the Velocity meter clock
-  Dim VMSecond As Long 'Date time from the Velocity meter clock
+  Public VMSecond As Long 'Date time from the Velocity meter clock
   Dim VMTime As String * 25 'Date time from the Velocity meter clock
   Dim SetVMTimeFlg As Boolean 'used it setting VM Time
   Dim VMTimeString As String * 25 'used it setting VM Time
@@ -1458,6 +1458,7 @@ Public SendFlowData As Boolean 'user selectable flag to send only flow data
   Public Warning As String * 2000 'echo of ADCP response for anything other than a break
   Public TFEcho As String * 30 'Echo of TF command
   Public TSEcho As String * 30 'Echo of TS command
+  Public VMStartSec 'second into minute to start sampling
   Public FTimeIn 'Argument for which time format to use
   Public VMMemString As String * 200 'response for "get free memory" command
   'Public PT3Full As String * 2000 'Response from PT3 command
@@ -3193,7 +3194,11 @@ Function FTime(TimeIn As String * 25) As String *25 'converts datalogger time st
   Case 1 'if sending TF command to CM or WH
     If SendTF = True Then
       TempMin = FSplitTime(5)
-      TempMin = TempMin + 1
+      If Round(FSplitTime(6),0) < VMStartSec - 5 Then 'If we got to the TF set at least 5sec before the proposed start sec
+        TempMin = TempMin 'issue the start time for the same minute
+      Else
+        TempMin = TempMin + 1 'otherwise start collection on the next minute
+      EndIf
       If TempMin < 10 Then
         TFMin = "0" + TempMin
       Else
@@ -3756,6 +3761,7 @@ EndSub
       SerialOut (AdcpPort,CMD + CHR(13) + CHR(10),"",0,100)'Send user entered command
       SerialIn (Warning,AdcpPort,150,-1,100)'Get Warning (if any) from ADCP
       SerialFlush (AdcpPort)
+      SendTF = True
       FTimeIn = 1 'Set up for TF command
       VMTimeString = "TF" + Ftime(Public.TimeStamp) 'Set Time string to appropriate value, + 1 min, at VMStartSec
       SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
@@ -3766,6 +3772,7 @@ EndSub
       SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
       SerialFlush (AdcpPort)
       SendCMD = False
+      SendTF = False
       Call EraseWH
       #If GetNoiseFloor = Yes Then
         Call ParsePT3
@@ -3803,17 +3810,17 @@ EndSub
   Sub OpenWQPort
     #If LoggerType = CR6 'For a CR6 the port require a different configuration from a CR1000
       If UseCommsOneForSonde = True Then
-        SerialOpen (WqSerialPort,WqBaud,19,0,2000,1)'Max232 requires us to use TTL language, use comms mode one.The Max232 also converts to a binary like signal and requires serial open format of 19 to function. Standard code zero results in a communication error.
+        SerialOpen (WqSerialPort,WqBaud,19,0,4500,1)'Max232 requires us to use TTL language, use comms mode one.The Max232 also converts to a binary like signal and requires serial open format of 19 to function. Standard code zero results in a communication error.
       ElseIf UseCommsZeroForSonde = True Then
-        SerialOpen (WqSerialPort,WqBaud,0,0,2000,0)'No Max232 is present so we uses standard RS232 language
+        SerialOpen (WqSerialPort,WqBaud,0,0,4500,0)'No Max232 is present so we uses standard RS232 language
       Else
-        SerialOpen (WqSerialPort,WqBaud,0,0,2000)'In case we use a non-stanadard port configuration this is the generic code
+        SerialOpen (WqSerialPort,WqBaud,0,0,4500)'In case we use a non-stanadard port configuration this is the generic code
       EndIf
     #Else 'else it is a CR1000
       If (IsWqMax232 = True) AND (WqSerialPort <> ComME) Then
-        SerialOpen (WqSerialPort,WqBaud,19,0,2000)'need to use TTL if Max232 is present
+        SerialOpen (WqSerialPort,WqBaud,19,0,4500)'need to use TTL if Max232 is present
       Else
-        SerialOpen (WqSerialPort,WqBaud,0,0,2000)'standard RS232 language works if no Max232 is present
+        SerialOpen (WqSerialPort,WqBaud,0,0,4500)'standard RS232 language works if no Max232 is present
       EndIf
     #EndIf
   EndSub
@@ -3923,6 +3930,7 @@ EndSub
       Delay (1,1,Sec)'wait for reply
       SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
       SerialFlush (AdcpPort)
+      SendTF = True
       FTimeIn = 1
       VMTimeString = "TF" + FTime(Public.Timestamp)
       SerialOut(AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
@@ -3933,6 +3941,7 @@ EndSub
       SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
       SerialFlush (AdcpPort)
       VMRestartAttempts = VMRestartAttempts + 1
+      SendTF = False
     EndIf
     VmDeadCount = 0 'set to zero and try again
   EndSub
@@ -3942,7 +3951,6 @@ EndSub
 '--------------------------------------------------------------------
 Sub SetVMTime
   FTimeIn = 2 'Set FTime input argument to be "TS" formatting to set ADCP clock
-  VMTimeString = "TS" + Ftime(Public.Timestamp)
   Call OpenADCPPort
   If IsVADCP = True Then 'the VADCP needs a CSTOP command to get into command mode
     SerialOut (AdcpPort,"+++","",0,100)'send alt break command
@@ -3952,6 +3960,7 @@ Sub SetVMTime
     SerialOut (AdcpPort,"CSTOP" + CHR(13) + CHR(10),"",0,100)
     SerialIn (Warning,AdcpPort,100,-1,100)
     SerialFlush (AdcpPort)
+    VMTimeString = "TS" + Ftime(Public.Timestamp)
     SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
     SerialIn (Warning,AdcpPort,100,-1,100) 'get echo of CS command
     Delay (1,1,Sec)'wait for reply
@@ -3961,10 +3970,12 @@ Sub SetVMTime
     SetVMTimeFlg = False
     ExitSub
   Else
+    SendTF = True
     SerialOut (AdcpPort,"+++",">",2,100)'send alt break command
     'Delay (1,1,Sec)'wait for reply
     SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
     SerialFlush (AdcpPort)
+    VMTimeString = "TS" + Ftime(Public.Timestamp)
     SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
     SerialIn (TSEcho,AdcpPort,100,-1,100) 'get echo of TS command
     Delay (1,250,mSec)'wait for reply
@@ -3978,6 +3989,8 @@ Sub SetVMTime
     SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
     SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
     SerialFlush(AdcpPort)
+    SetVMTimeFlg = False
+    SendTF = False
     EndIf
   EndSub
 
@@ -7876,7 +7889,7 @@ EndSub
         EndIf
       #EndIf
       #If HasSuna = True Then 'programatically establish SunaPort as a ComPort before the scan. Otherwise, it waits until the 15th minute to allow a user to open/watch the port for in the emulator.
-        SerialOpen(SunaPort,115200,0,0,6000)
+        SerialOpen(SunaPort,115200,0,0,65000)
         SerialFlush(SunaPort)
         SerialClose(SunaPort)
       #EndIf
@@ -7919,7 +7932,7 @@ EndSub
           WipeSuna = False
           PortSet (SunaWipeSwitch,0)' keep wiper off
           If ManualSunaOn = True Then
-            SerialOpen(SunaPort,115200,0,0,6000)
+            SerialOpen(SunaPort,115200,0,0,65000)
             PortSet(SunaSwitch,1)
           Else
             SerialFlush(SunaPort)
@@ -8828,7 +8841,7 @@ EndSub
               Delay (1,250,mSec) 'delay 0.25 sec before checking time again
             Loop 'continue loop until we are ready
             If SunaReady = True Then 'now that we're ready
-              SerialOpen(SunaPort,115200,0,0,6000) 'open the serial port with enough buffer to hold 3 full strings
+              SerialOpen(SunaPort,115200,0,0,65000) 'open the serial port with enough buffer to hold 3 full strings
               oCount = 0 'start a counter at 0
               SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
               SunaSampleStart = SunaSampleStart/1000
