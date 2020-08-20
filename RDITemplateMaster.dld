@@ -51,6 +51,7 @@ Const ProgramVersion = "5.00"
 '20200713 - MRS 4.60 Corrected Numbins bug. Added code for Sentinel V vertical leader,velocities,RSSI and correlation, bottom track range,vel,RssI and Correlation
 '20200819 - TAV 5.00 *********IMPORTANT CHANGE!: NOW CENTERING OUTPUT IN SAMPLE AVERAGING WINDOW FOR VELOCITY AND STAGE! ****************
 '                    Added TF command to specify when ensemble should start within minute. Removed excess time formatting but utilizing our Function(FTime) and Select Case
+'                    Changed Default WQ port to C1 and SUNA to C3
 
 'IMPORTANT - SDI-12 Code should be commented out if program is not being used at Freeport Sites.  If program is being used at freeport then the SlaveCom master slave code (used for fish recievers) MUST be commented out
 'IMPORTANT - ADCP should be set for 1 minute TE and WP 60.
