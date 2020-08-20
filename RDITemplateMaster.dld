@@ -3752,24 +3752,24 @@ EndSub
       SerialFlush (AdcpPort)
       'Turn Power on and off to ADCP
       Call OpenADCPPort
-      SerialOut (AdcpPort,"+++",">",2,100)'send alt break command
+      SerialOut (AdcpPort,"+++",CHR(62),2,100)'send alt break command
       'Delay (1,1,Sec)'wait for reply
-      SerialIn (Banner,AdcpPort,500,">",200)'get banner from ADCP
+      SerialIn (Banner,AdcpPort,100,CHR(62),200)'get banner from ADCP
       SerialFlush (AdcpPort)
       ''send commands to HADCP
-      Delay (1,500,mSec)'wait for reply
+      Delay (1,100,mSec)'wait for reply
       SerialOut (AdcpPort,CMD + CHR(13) + CHR(10),"",0,100)'Send user entered command
-      SerialIn (Warning,AdcpPort,150,-1,100)'Get Warning (if any) from ADCP
+      SerialIn (Warning,AdcpPort,50,CHR(13) + CHR(10),100)'Get Warning (if any) from ADCP
       SerialFlush (AdcpPort)
       SendTF = True
       FTimeIn = 1 'Set up for TF command
       VMTimeString = "TF" + Ftime(Public.TimeStamp) 'Set Time string to appropriate value, + 1 min, at VMStartSec
       SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
-      SerialIn (TFEcho,AdcpPort,100,-1,30)
+      SerialIn (TFEcho,AdcpPort,100,CHR(13) + CHR(10),30)
       SerialFlush(AdcpPort)
       Delay(1,250,mSec) '.25s delay before issuing CS command
       SerialOut (AdcpPort,"CS" + CHR(13) + CHR(10),"",0,100)'CS command to start pinging
-      SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
+      SerialIn (CSCmd,AdcpPort,100,CHR(13) + CHR(10),100) 'get echo of CS command
       SerialFlush (AdcpPort)
       SendCMD = False
       SendTF = False
@@ -3927,14 +3927,14 @@ EndSub
       SerialFlush (AdcpPort)
       VMRestartAttempts = VMRestartAttempts + 1
     Else
-      Delay (1,1,Sec)'wait for reply
-      SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
+      SerialOut(AdcpPort,"+++",CHR(62),2,100)
+      SerialIn (Banner,AdcpPort,100,CHR(62),100)'get banner from ADCP
       SerialFlush (AdcpPort)
       SendTF = True
       FTimeIn = 1
       VMTimeString = "TF" + FTime(Public.Timestamp)
       SerialOut(AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
-      SerialIn (TFEcho,AdcpPort,100,-1,30)
+      SerialIn (TFEcho,AdcpPort,100,CHR(13) + CHR(10),30)
       Delay(1,250,mSec)
       SerialFlush(AdcpPort)
       SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,100)
@@ -3971,14 +3971,13 @@ Sub SetVMTime
     ExitSub
   Else
     SendTF = True
-    SerialOut (AdcpPort,"+++",">",2,100)'send alt break command
-    'Delay (1,1,Sec)'wait for reply
-    SerialIn (Banner,AdcpPort,100,-1,100)'get banner from ADCP
+    SerialOut (AdcpPort,"+++",CHR(62),2,100)'send alt break command twice, wait for >
+    SerialIn (Banner,AdcpPort,25,CHR(62),100)'get banner from ADCP
     SerialFlush (AdcpPort)
     VMTimeString = "TS" + Ftime(Public.Timestamp)
     SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
     SerialIn (TSEcho,AdcpPort,100,-1,100) 'get echo of TS command
-    Delay (1,250,mSec)'wait for reply
+    Delay (1,250,mSec)
     SerialFlush(AdcpPort)
     FTimeIn = 1 'Set up for TF command
     VMTimeString = "TF" + Ftime(Public.TimeStamp) 'Set Time string to appropriate value, + 1 min, at VMStartSec
@@ -3995,11 +3994,11 @@ Sub SetVMTime
   EndSub
 
 Sub SetTF
-  If IsVADCP = True Then ExitSub
+  If IsVADCP = True Then ExitSub 'VADCP doesn't have option for TF
     FTimeIn = 1 'Set up for TF command
     VMTimeString = "TF" + Ftime(Public.TimeStamp) 'Set Time string to appropriate value, + 1 min, at VMStartSec
-    SerialOut (AdcpPort,"+++",">",2,100)
-    SerialIn (Banner,AdcpPort,250,"",100)
+    SerialOut (AdcpPort,"+++",CHR(62),2,100)
+    SerialIn (Banner,AdcpPort,25,CHR(62),100)
     SerialFlush(AdcpPort)
     SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
     SerialIn (TFEcho,AdcpPort,100,-1,30)
