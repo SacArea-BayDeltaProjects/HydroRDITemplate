@@ -389,7 +389,8 @@ Alias rTime(6) = Second
 Alias rTime(7) = MicroSecond
 Alias rTime(8) = DOW
 Public LastScan As String * 6 'when did the datalogger most recently scan?
-Public TimeStamp15min As String * 20 'Create timestamp to be used for data reporting to allow for centered averagin
+Public TimeStamp15min As String * 20 'Create timestamp to be used for data reporting to allow for centered averaging
+Public ADCPCenterTime As String * 20 'Create timestamp for center of 1min table to reference the center of the ADCP sample
 Dim RealSeconds As Long 'used for computing elapsed time intervals
 Dim Mod5Minutes As Long 'used for computing elapsed time intervals
 Dim Mod15Minutes As Float 'used for computing elapsed time intervals
@@ -2771,7 +2772,8 @@ EndTable
 '1 MINUTE DATA OUTPUT TABLE
 DataTable (Data1m,Rec1MinFlag OR OneMinConsistent,-1)'if either flag is true the one min data table will be written
   OpenInterval
-  CardOut (0,169600)'trippled allocation from 43,200 to allow for continous 1min data collection
+  CardOut (0,169600)'tripled allocation from 43,200 to allow for continous 1min data collection
+  Sample (1,ADCPCenterTime,String)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,StagePrime,IEEE4)
@@ -3224,6 +3226,19 @@ Function FTime(TimeIn As String * 25) As String *25 'converts datalogger time st
       SendHour = SendHour
     EndIf
     Ftime = SendHour + ":" + SendMin + ":" + SendSec
+  Case 6 'centered ADCP 1min timestamp
+    TempMin = FSplitTime(5)
+    If TempMin = 0 Then
+      SendMin = 59
+    Else
+      TempMin = TempMin - 1
+      If TempMin < 10 Then
+        SendMin = "0" + TempMin
+      Else
+        SendMin = TempMin
+      EndIf
+    EndIf
+    Ftime = SendYear + "-" + SendMonth + "-" + SendDay + " " + SendHour + ":" + SendMin + ":" + "30"
   EndSelect
 End Function
 
@@ -3759,7 +3774,15 @@ EndSub
       ''send commands to HADCP
       Delay (1,100,mSec)'wait for reply
       SerialOut (AdcpPort,CMD + CHR(13) + CHR(10),"",0,100)'Send user entered command
-      SerialIn (Warning,AdcpPort,50,CHR(13) + CHR(10),100)'Get Warning (if any) from ADCP
+      #If GetNoiseFloor = True Then
+      If CMD = "PT3" Then
+      SerialIn (PT3String,AdcpPort,85,"",2000)'Get PT3 command response
+      Else
+      SerialIn (Warning,AdcpPort,25,"",75) 'store any other response to CMD in "Warning"
+      EndIf
+      #Else
+      SerialIn (Warning,AdcpPort,25,"",75) 'store any other response to CMD in "Warning"
+      #EndIf
       SerialFlush (AdcpPort)
       SendTF = True
       FTimeIn = 1 'Set up for TF command
@@ -3856,9 +3879,6 @@ EndSub
   '__________________________Parse Noise Floor___________________________________
   Sub ParsePT3 'This routine parses the response received from the ADVM when it's been issued a "PT3" command for CHANNEL MASTER ONLY.
     Public PT3String As String * 2000
-    'Zero the inputs
-    PT3String = ""
-    PT3String = Warning
     NoiseFlrParsed = ""
     Erase NoiseHGainW()
     Erase NoiseLGainW()
@@ -3902,8 +3922,9 @@ EndSub
         'NoiseLGainN(4) = Mid (NoiseFlrParsed,102,2)
       EndIf
     Else
-      Warning = ""
+      PT3String = ""
     EndIf 'if cmd = pt3
+    PT3String = ""
   EndSub
 #EndIf 'get noisfloor
 '_____________________________Wake VM______This should be modified now that we have the ability to turn the VM on and off__________________
@@ -3970,7 +3991,6 @@ Sub SetVMTime
     SetVMTimeFlg = False
     ExitSub
   Else
-    SendTF = True
     SerialOut (AdcpPort,"+++",CHR(62),2,100)'send alt break command twice, wait for >
     SerialIn (Banner,AdcpPort,25,CHR(62),100)'get banner from ADCP
     SerialFlush (AdcpPort)
@@ -4127,8 +4147,14 @@ EndSub
       SerialFlush (AdcpPort)
       Delay (1,500,mSec)
       SerialOut (AdcpPort,"RS?" + CHR(13) + CHR(10),"",0,100) 'Send "RS?" to check see how much memory is free on WH recorder
-      SerialIn (VMMemString,AdcpPort,150,-1,150) 'Get response back from "RS?" command in "VMMemString" variable
+      SerialIn (VMMemString,AdcpPort,50,-1,150) 'Get response back from "RS?" command in "VMMemString" variable
       SerialFlush (AdcpPort)
+      FTimeIn = 1
+      VMTimeString = "TF" + Ftime(Public.TimeStamp)
+      SerialOut (AdcpPort,VMTimeString + CHR(13) + CHR(10),"",0,100)
+      SerialIn (TFEcho,AdcpPort,100,-1,30)
+      SerialFlush(AdcpPort)
+      Delay(1,250,mSec) '.25s delay before issuing CS command
       SerialOut (AdcpPort,"CS" + CHR(13) + CHR(10),"",0,100)'CS command to start pinging
       SerialIn (CSCmd,AdcpPort,100,-1,100) 'get echo of CS command
       SerialFlush (AdcpPort)
@@ -7919,6 +7945,8 @@ EndSub
         Mod15Minutes = RealSeconds MOD 900
         Mod60Minutes = RealSeconds MOD 3600
         ModDay = RealSeconds MOD 86400
+        FTimeIn = 6
+        ADCPCenterTime = FTime(Public.Timestamp)
         #If HasGPS Then
           Call CycleGPSPower
         #EndIf
