@@ -226,3 +226,28 @@
 '20190529 - TAV Added Suna Code to program
 '20190610 - MRI Added "OneMinConsistent" variable to allow 1min data to be recorded for a long period of time
 '20190625 - TAV Adjusted timing of burst and suna samples, adjusted MOD functions and moved them to the top of the scan. Lessened delays between EXO redeploy routines to ensure we don't skip scans if the exo dies.
+
+BEGINNING OF NUMBERED VERSIONING ------------------------------------------------------------------------------------
+
+'20190703 - MRI 4.00 Implemented easier to track program versioning with variable "ProgramVersion". Starting at 4.0. Adjustment of the version number should reflect severity of the changes made.
+'20190705 - TAV 4.10 Added V1, V2, V3, V4 to DataOut table.
+'20190709 - TAV 4.11 Increased buffer for SUNA port when it's opened to record data. Eliminated delay between opening the SerialIn command. Adjusted when the Suna gets turned off if it was manually turned on.
+'20190710 - TAV 4.12 Added Program info to SVMaq table for easy access in case it's needed before midnight when QAQC gets written.
+'20190711 - TAV 4.13 Put "MaxBins" in the Customize Constants section to more easily establish how many bins are wanted at the site.
+'           TAV 4.20 Fixed some problems with conditional compiling if WqSonde = "NONE". Still some more work to do with other Customize Constant options.
+'20190712 - MRI 4.21 Adjusted BinSpikes to pull from MaxBins variable to stop error when more than 27 bins are being collected. Fixed bug with top bottom sonde where the btm error flags would not reset after a power cycle.
+'20190809 - MRI 4.22 Added FlowSign to the USR drive to prevent issue of incorrect flow sign being entered in the program, user reset in the field to be correct with the public table, and then a power cycle resets sign to original, incorrect value. 20190819-altered beamcheck table to be MaxBins*4 instead of just 108 incase we use more than 27 bins.
+'20190903 - MRI 4.23 Added additional timers for ADVM process to help with further troubleshooting. Altered position of some timers out of If statements because if conditions were not met the timers would remain at the last value and not reset for each scan. This gave the appearance of processes happening "back in time"
+'20191018 - MRI 4.24 Altered timing for the delay prior to taking the WQ serial burst sample to avoid skipped scans in a CR1000 due to its slower processing speed.
+'20191022 - TAV 4.25 Altered SerialIn TimeOut for the SUNA to account for longer integration periods and potentially timing out before the next value comes in from the sensor. Also open the SunaPort before the scan so it's immediately dedicated as a ComPort (for emulator purposes).
+'20191025 - MRI 4.30 Added backup iridium radio transmission capability for important sites. Done by turning the DCP into a SDI-12 sensor and taking Aquarius table data
+'20191029 - TAV 4.40 Overhauled SUNA sampling to allow for stats to be calculated with less than 30 values as well as record good and bad data in separate tables.
+'20191101 - MRI 4.41 In the scan moved the decodes section right after we take in the velocity data. After all ADVM routines are finished then continue on. This will allow decodes to occur while we wait for the burst to begin for a CR6. Hopefully this solves the timing issue. For CR1000s made it so there was no delay before doing the burst to help avoid skipped scans. Altered debugger table so all time follow the program order correctly.
+'20191217 - MRI 4.42 Added ability to have a redundant sonde with all the same functions but completely seperate of a single sonde. This version works with Serial only. Serial burst will be supported if and when it is needed. Added manual power cycle relay option for iridium radio
+'20200108 - TAV 4.43 Added code to turn real-time GNSS unit on and off.
+'20200130 - TAV 4.50 Reworked Suna code a bit to store both dark and light frames or NANs if there was an issue during the sampling period.
+'20200204 - TAV 4.51 Increased time GNSS unit is on from 12hr to 13hr to guarantee full 12 hours of collection before pushing to FTP.
+'20200512 - TAV 4.52 Added manual switch to turn on SUNA wiper controller for calibration purposes. Reverts to program control when ready for sampling.
+'20200513 - TAV 4.53 Tweaked manual switch for Suna wiper to prevent it from being on during sample window and added a redundancy to set to false in case user set to true after initial logic was passed.
+'20200518 - TAV 4.60 Added logic to Suna code to exit loop and provide warning if symptoms of lamp failure occur: "Warning" found in string or "-1" found < 40 bytes into LightFrame string.
+'20200713 - TAV 4.61 Added parsing of A350 for SUNA data and code for another error message. Changed from "Average" to "Median" stat for A254 and A350 per Alex Etheridge's request.
