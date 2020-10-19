@@ -36,7 +36,7 @@ Const ProgramVersion = "5.11"
 '                     Likely to eliminate CR1000 code in future releases.
 ' 20201014 - TAV 5.10 Added flags to indicate an NAN in stage values to prevent it from being averaged in using the DisableVariable in the Average function
 '                     Added VMElevation and WQElevation. These are based on StagePrime and Raw depth values from each sensor
-' 20201019 - TAV 5.11 Added OneMinCounter to Debugger Table for easy reference.
+' 20201019 - TAV/MRI 5.11 Added OneMinCounter to Debugger Table for easy reference. MRI: Created "OneMinCounterReset" Flag to act as redundant switch for techs to reset 1min counter if another visit was carried out the day before per recomendation by JH.
 
 SequentialMode 'We need to use Sequential mode
 
@@ -389,6 +389,7 @@ Public SkipScans As Long 'number of times a complete scan has been skipped (with
 Public FreeCFMem As Float 'how much memory does the external CF card have remaining
 Public ErrorEvent As String * 100 'what caused the automated "SiteVisit" table to be written?
 Public RecCalibData As Boolean 'Flag to store 1min data for 24hr
+Public OneMinCounterReset As Boolean 'Redundant flag to force the 1min counter to reset to zero and turn RecCabliData to true in the event a site visit occured the day before current visit
 Public OneMinConsistent As Boolean 'Flag to store 1min data for prolonged periods. Needs manual shut-off
 #If WqSonde = "WQ_SERIAL" OR WqSonde = "WQ_SERIAL_BURST" Then
   Public SetEXOTimeFlg As Boolean 'Trigger to set EXO clock if we have Serial communication
@@ -7179,6 +7180,11 @@ EndSub
         Rec1MinFlag = False 'stop recording 1min data
         OneMinCount = 0 'reset the counter
       EndIf 'we don't want 1min data
+      If OneMinCounterReset = True Then 'user wants to force a reset to the counter
+        RecCalibData = True 'Verify RecCalibData gets turned back on in case we reset directly at 24hr
+        Rec1MinFlag = True 'we want 1min data
+        OneMinCount = 0 'reset the counter
+      EndIf
       If Rec1MinFlag = True Then 'if 1min flag is set to true
         OneMinCount = OneMinCount + 1 'increase counter
         If OneMinCount > 1439 Then 'If 24hours has been recorded
