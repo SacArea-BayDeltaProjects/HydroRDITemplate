@@ -37,6 +37,7 @@ Const ProgramVersion = "5.11"
 ' 20201014 - TAV 5.10 Added flags to indicate an NAN in stage values to prevent it from being averaged in using the DisableVariable in the Average function
 '                     Added VMElevation and WQElevation. These are based on StagePrime and Raw depth values from each sensor
 ' 20201019 - TAV/MRI 5.11 Added OneMinCounter to Debugger Table for easy reference. MRI: Created "OneMinCounterReset" Flag to act as redundant switch for techs to reset 1min counter if another visit was carried out the day before per recomendation by JH.
+'                    Added Std. Dev. for SUNA' Nitrate mgL to AQ table
 
 SequentialMode 'We need to use Sequential mode
 
@@ -1000,6 +1001,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Dim StdSunaNitrateuM
   Dim AvgSunaNitratemgL
   Dim MedSunaNitratemgL
+  Dim StdSunaNitratemgL
   Dim AvgSunaFittingResult
   Dim StdSunaFittingResult
   Dim MedA254
@@ -1369,6 +1371,7 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     Sample (1,StdSunaNitrateuM,IEEE4)
     Sample (1,AvgSunaNitratemgL,IEEE4)
     Sample (1,MedSunaNitratemgL,IEEE4)
+    Sample (1,StdSunaNitratemgL,IEEE4)
     Sample (1,AvgSunaFittingResult,IEEE4)
     Sample (1,StdSunaFittingResult,IEEE4)
     Sample (1,MedA254,IEEE4)
@@ -2235,6 +2238,7 @@ EndTable
     StdDev (1,SunaNitrateuM,IEEE4,False)
     Average (1,SunaNitratemgL,IEEE4,False)
     Median (1,SunaNitratemgL,30,IEEE4,False)
+    StdDev (1,SunaNitratemgL,IEEE4,False)
     Average (1,SunaFittingResult,IEEE4,False)
     Median (1,SunaFittingResult,30,IEEE4,False)
     StdDev (1,SunaFittingResult,IEEE4,False)
@@ -2250,9 +2254,9 @@ EndTable
     Average (1,SunaVoltLamp,IEEE4,False)
     Sample (1,LFrameCnt,FP2,False)
     Sample (1,DFrameCnt,FP2,False)
+    Sample (1,BadSunaVals,FP2,False)
     Sample (1,LampWarn,Boolean)
     Sample (1,MemWarn,Boolean)
-    Sample (1,BadSunaVals,FP2,False)
     Sample (1,SunaWarning,String)
   EndTable
 
@@ -5700,6 +5704,7 @@ EndSub
     StdSunaNitrateuM = SunaStats.SunaNitrateuM_Std
     AvgSunaNitratemgL = SunaStats.SunaNitratemgL_Avg
     MedSunaNitratemgL = SunaStats.SunaNitratemgL_Med
+    StdSunaNitratemgL = SunaStats.SunaNitratemgL_Std
     AvgSunaFittingResult = SunaStats.SunaFittingResult_Avg
     StdSunaFittingResult = SunaStats.SunaFittingResult_Std
     MedA254 = SunaStats.A254_Med
@@ -5721,6 +5726,7 @@ EndSub
     StdSunaNitrateuM = BadDataIndicator
     AvgSunaNitratemgL = BadDataIndicator
     MedSunaNitratemgL = BadDataIndicator
+    StdSunaNitratemgL = BadDataIndicator
     AvgSunaFittingResult = BadDataIndicator
     StdSunaFittingResult = BadDataIndicator
     MedA254 = BadDataIndicator
