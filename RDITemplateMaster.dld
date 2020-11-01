@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20201019
-Const ProgramVersion = "5.11"
+Const ProgramVersionDate = 20201029
+Const ProgramVersion = "5.20"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -426,6 +426,7 @@ Public FTimeIn 'Argument for which time format to use based on instrument/file
 '--------------- STANDARD DIMS -----------------
 '===============================================
 Dim OneMinCount As Long 'Used to turn off 1min data after 24hr (if not OneMinConsistent)
+Dim OneMinMark As Float
 Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
 '===============================================
 '--------DECLARE PUBLICS AND DIMS FOR VM--------
@@ -1274,7 +1275,8 @@ Public NewAvg As Boolean
 '--------------------------------------- DATA TABLES SECTION ------------------------------------------------
 '============================================================================================================
 DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/NWIS
-  CardOut(0,35040) 'store 365 days of data on memory card
+   CardOut(0,35040) 'store 365 days of data on memory card
+  'TableFile("CRD:" + Status.StationName + "_Aquarius_"+Status.Timestamp,64,-1,35040,0,Day,0,0)
   OpenInterval
   Sample (1,TimeStamp15Min,String)
   Minimum(1,StationVolts,FP2,False,False)
@@ -1662,7 +1664,8 @@ EndTable
 
 DataTable(Data1m,Rec1MinFlag OR OneMinConsistent,-1)
   OpenInterval
-  CardOut(0,525600) 'Store 365 days of 1min data
+  TableFile("CRD:"+ Year + Month + DOM + "_" + Status.StationName + "_Data1m_",64,-1,20,0,Min,0,0)
+  'CardOut(0,525600) 'Store 365 days of 1min data
   #If HasVM = True Then
     Sample(1,ADCPCenterTime,String)
   #EndIf 'Has VM
@@ -7193,6 +7196,11 @@ EndSub
       EndIf
       If Rec1MinFlag = True Then 'if 1min flag is set to true
         OneMinCount = OneMinCount + 1 'increase counter
+        OneMinMark = OneMinMark + 1
+        If OneMinMark >= 3 Then
+          FileMark(Data1m)
+          OneMinMark = 0
+        EndIf
         If OneMinCount > 1439 Then 'If 24hours has been recorded
           RecCalibData = False 'set to false
           Rec1MinFlag = False  'set to false
