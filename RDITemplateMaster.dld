@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20201029
-Const ProgramVersion = "5.20"
+Const ProgramVersionDate = 20201102
+Const ProgramVersion = "5.12"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -38,6 +38,7 @@ Const ProgramVersion = "5.20"
 '                     Added VMElevation and WQElevation. These are based on StagePrime and Raw depth values from each sensor
 ' 20201019 - TAV/MRI 5.11 Added OneMinCounter to Debugger Table for easy reference. MRI: Created "OneMinCounterReset" Flag to act as redundant switch for techs to reset 1min counter if another visit was carried out the day before per recomendation by JH.
 '                    Added Std. Dev. for SUNA' Nitrate mgL to AQ table
+' 20201102 - TAV 5.12 Changed "CardOut" instruction to "TableFile" instruction. This allows use of more than 2GB of card memory. Adjusted SunaWarning string to be larger. (Was 30 characters, increased to 200. Noticed we were cutting the string off at CM72.)
 
 SequentialMode 'We need to use Sequential mode
 
@@ -426,7 +427,6 @@ Public FTimeIn 'Argument for which time format to use based on instrument/file
 '--------------- STANDARD DIMS -----------------
 '===============================================
 Dim OneMinCount As Long 'Used to turn off 1min data after 24hr (if not OneMinConsistent)
-Dim OneMinMark As Float
 Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
 '===============================================
 '--------DECLARE PUBLICS AND DIMS FOR VM--------
@@ -976,7 +976,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public LampWarn As Boolean
   Public MemWarn As Boolean
   Public LocSunaProb As Float
-  Public SunaWarning As String * 30
+  Public SunaWarning As String * 200
   Dim LFrameThreshold As Long = 30 'Number of Light Frames wanted for Calculations
   Dim SunaHeader As String * 7
   Dim SunaSN 'Suna Parameters
@@ -1275,8 +1275,7 @@ Public NewAvg As Boolean
 '--------------------------------------- DATA TABLES SECTION ------------------------------------------------
 '============================================================================================================
 DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/NWIS
-   CardOut(0,35040) 'store 365 days of data on memory card
-  'TableFile("CRD:" + Status.StationName + "_Aquarius_"+Status.Timestamp,64,-1,35040,0,Day,0,0)
+  TableFile("CRD:" + Status.StationName + "_Aquarius",64,-1,35040,0,Day,0,0)
   OpenInterval
   Sample (1,TimeStamp15Min,String)
   Minimum(1,StationVolts,FP2,False,False)
@@ -1391,7 +1390,7 @@ EndTable
 
 DataTable(DataOut,Rec15MinFlag,-1)
   OpenInterval
-  CardOut(0,35040) 'Store 365 days of data to card
+  TableFile("CRD:" + Status.StationName + "_DataOut",64,-1,35040,0,Day,0,0)
   Sample (1,TimeStamp15Min,String)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
@@ -1477,7 +1476,7 @@ EndTable
 
 DataTable(QAQCInfo,Rec24HrFlag,-1)
   OpenInterval
-  CardOut(0,365) '365 records to card
+TableFile("CRD:" + Status.StationName + "_QAQCInfo",64,-1,365,0,Day,0,0)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Maximum (1,StationVolts,FP2,False,False)
@@ -1574,7 +1573,7 @@ DataTable(QAQCInfo,Rec24HrFlag,-1)
 EndTable
 
 DataTable(SiteVisit,SiteVisTrig,50)
-  CardOut(0,50) 'store 50 events to card
+  TableFile("CRD:" + Status.StationName + "_SiteVisit",64,-1,50,0,Day,0,0)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,StationVolts,FP2)
@@ -1664,8 +1663,7 @@ EndTable
 
 DataTable(Data1m,Rec1MinFlag OR OneMinConsistent,-1)
   OpenInterval
-  TableFile("CRD:"+ Year + Month + DOM + "_" + Status.StationName + "_Data1m_",64,-1,20,0,Min,0,0)
-  'CardOut(0,525600) 'Store 365 days of 1min data
+  TableFile("CRD:" + Status.StationName + "_Data1m",64,-1,525600,0,Min,0,0)
   #If HasVM = True Then
     Sample(1,ADCPCenterTime,String)
   #EndIf 'Has VM
@@ -1736,7 +1734,7 @@ EndTable
 
 DataTable(Debugger,True,-1)
   OpenInterval
-  CardOut(0,20160) 'Store 7 Days of Debugger
+  TableFile("CRD:" + Status.StationName + "_Debugger",64,-1,10080,0,Day,0,0)
   Sample(3,ProcTimer,FP2)
   #If HasVM = True Then 'If has VM
     Sample(3,VMProcTimer,FP2)
@@ -1808,7 +1806,7 @@ EndTable
 #If HasVM = True Then
   DataTable (BeamCheck,Rec15MinFlag,-1)
     OpenInterval
-    CardOut (0,35040) 'Store 365 days of data
+    TableFile("CRD:" + Status.StationName + "_BeamCheck",64,-1,35040,0,Day,0,0)
     Sample (1,TimeStamp15Min,String)
     Sample (1,SiteID,String)
     Sample (1,StagePrime,IEEE4)
@@ -1834,7 +1832,7 @@ EndTable
   #If VMHasVertical Then 'if we have 5th beam
     DataTable (VerticalVelocities,Rec15MinFlag,-1)
       OpenInterval 'tells table to process from last execution of table
-      CardOut (0,35040) 'Store 365 days of data
+      TableFile("CRD:" + Status.StationName + "_VerticalVelocities",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,VerticalBinSize,UINT2)
       Sample (1,VerticalBinNum,UINT2)
@@ -1847,7 +1845,7 @@ EndTable
 
     DataTable (Vertical1MinVel,Rec1MinFlag OR OneMinConsistent,-1)
       OpenInterval 'tells table to process from last execution of table
-      CardOut (0,35040) 'Store 365 days of data
+      TableFile("CRD:" + Status.StationName + "_Vertical1MinVel",64,-1,525600,0,Day,0,0)
       Sample (1,VerticalBinSize,UINT2)
       Sample (1,VerticalBinNum,UINT2)
       Sample (1,VerticalBin1Center,FP2)
@@ -1863,7 +1861,7 @@ EndTable
   #If VMHasBottomTrack Then 'if we have Bottom Track active
     DataTable (BottomTrack,Rec15MinFlag,-1)
       OpenInterval 'tells table to process from last execution of table
-      CardOut (0,35040) 'Store 365 days of data
+      TableFile("CRD:" + Status.StationName + "_BottomTrack",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,BtmTrackPings,UINT2)
       Sample (1,BtmTrackMode,UINT2)
@@ -1878,7 +1876,7 @@ EndTable
 
     DataTable (BtmTrack1Min,Rec1MinFlag OR OneMinConsistent,-1)
       OpenInterval 'tells table to process from last execution of table
-      CardOut (0,35040) 'Store 365 days of data
+TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
       Sample (1,BtmTrackPings,UINT2)
       Sample (1,BtmTrackMode,UINT2)
       Sample(MaxBeams,BtmTrackRange(),IEEE4)
@@ -1894,7 +1892,7 @@ EndTable
   #If IsSpecStudy = True Then
     DataTable (VelData,Rec15MinFlag,-1)
       OpenInterval 'tells table to process from last execution of table
-      CardOut (0,35040) 'Store 365 days of data
+      TableFile("CRD:" + Status.StationName + "_VelData",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -1917,7 +1915,7 @@ EndTable
   #If GetNoiseFloor = True Then 'if we want noise floor
     DataTable (NoiseFloor,True,365)
       OpenInterval
-      CardOut (0,365) 'store 365 sample (happens automatically once daily but if user enters PT3, it also stores a record)
+      TableFile("CRD:" + Status.StationName + "_NoiseFloor",64,-1,365,0,Day,0,0)
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
       Sample (4,NoiseHGainW(),FP2)
@@ -1937,8 +1935,7 @@ EndTable
 
 #If WqSonde = "WQ_SERIAL_BURST" Then
   DataTable(Burst,RecBurstFlag,192) '2 days
-    'DataInterval(0,1,Min,-1)
-    CardOut (0,35040)
+    TableFile("CRD:" + Status.StationName + "_Burst",64,-1,35040,0,Day,0,0)
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
@@ -2043,7 +2040,7 @@ EndTable
   '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
   DataTable(SecBurst,True,360)
     'DataInterval(0,1,Min,-1)
-    CardOut (0,350000)
+    TableFile("CRD:" + Status.StationName + "_SecBurst",64,-1,86400,0,Day,0,0) '30 days per file
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
@@ -2076,20 +2073,10 @@ EndTable
     Sample (1,BurstErrCnt,FP2)
   EndTable
 
-  DataTable (BurstTest,True,60)
-    Sample(1,BurstIn,String)
-    Sample(1,WqBytes,String)
-  EndTable
-
-  DataTable (SortTable,True,60)
-    Sample(1,WqError,Boolean)
-    Sample(24,WqBurstData(),IEEE4)
-  EndTable
-
   #If TopBottom = True Then
     DataTable(BtmBurst,BtmRecBurstFlag,192)
       'DataInterval(0,1,Min,-1)
-      CardOut (0,35040)
+      TableFile("CRD:" + Status.StationName + "_BtmBurst",64,-1,35040,0,Day,0,0)
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -2194,7 +2181,7 @@ EndTable
     '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
     DataTable(BtmSecBurst,True,360) '30 min
       'DataInterval(0,1,Min,-1)
-      CardOut (0,350000)
+      TableFile("CRD:" + Status.StationName + "_BtmSecBurst",64,-1,86400,0,Day,0,0) '30 days per file
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -2234,7 +2221,7 @@ EndTable
 '============================================================================
 #If HasSuna = True Then
   DataTable (SunaStats,RecSunaData,-1)
-    CardOut(0,35040)
+    TableFile("CRD:" + Status.StationName + "_SunaStats",64,-1,35040,0,Day,0,0)
     Sample (1,SunaSN,FP2)
     Average (1,SunaNitrateuM,IEEE4,False)
     Median (1,SunaNitrateuM,30,IEEE4,False)
@@ -2264,19 +2251,20 @@ EndTable
   EndTable
 
   DataTable (SunaLFData,1,-1)
-    CardOut(0,350000)
+    TableFile("CRD:" + Status.StationName + "_SunaLFData",64,-1,86400,0,Day,0,0) '30 days per file
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (RawSunaData,1,-1)
     CardOut (0,350000)
+    TableFile("CRD:" + Status.StationName + "_RawSunaData",64,-1,95040,0,Day,0,0) '30 days per file, assume 33 records per sample (30LF, 3DF)
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (SunaLength,1,-1)
-    CardOut (0,3000)
+    TableFile("CRD:" + Status.StationName + "_SunaLength",64,-1,35040,0,Day,0,0)
     Sample (MaxSunaBurst,SunaStringLen(),FP2)
   EndTable
 #EndIf 'if has suna
@@ -2335,7 +2323,7 @@ EndTable
 
 #If HasHMS = True Then
   DataTable(HMSTable,WeBad OR HMS_Manual,60)
-    CardOut(0,60)
+    TableFile("CRD:" + Status.StationName + "_HMSTable",64,-1,60,0,Day,0,0)
     Sample(1,WeBad,Boolean)
     Sample(1,HMS_Manual,Boolean)
     #If HasVM = True Then
@@ -5423,7 +5411,6 @@ EndSub
         EndIf
         BurstIn = Replace(BurstIn,"-nan","-9999")
         SplitStr(BurstArray(i,1),BurstIn,CHR(32),WqNParams,0)
-        CallTable BurstTest
         Erase(BurstIn)
       Next i
       FillBurstEnd = Timer(DebugTimer,mSec,4)
@@ -5462,7 +5449,6 @@ EndSub
           BurstData(kCount) = BurstArray(jCount,kCount) 'get one parameter stored in k-th variable in array
         Next kCount 'loop through to put next value in next variable
         Call ParseTopBurst 'Parse the WqBurstData() into properly labeled variables
-        CallTable SortTable
         If WqError = True Then 'something wrong with the sample
           WqBadData = True 'Set flag to bad data
           BurstErrCnt = BurstErrCnt + 1 'increase error counter used to calculate number of values in calculations
@@ -7196,11 +7182,6 @@ EndSub
       EndIf
       If Rec1MinFlag = True Then 'if 1min flag is set to true
         OneMinCount = OneMinCount + 1 'increase counter
-        OneMinMark = OneMinMark + 1
-        If OneMinMark >= 3 Then
-          FileMark(Data1m)
-          OneMinMark = 0
-        EndIf
         If OneMinCount > 1439 Then 'If 24hours has been recorded
           RecCalibData = False 'set to false
           Rec1MinFlag = False  'set to false
