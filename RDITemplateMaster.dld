@@ -92,7 +92,7 @@ Const IsVmMax232 = False
 Const IsSpecStudy = False
 'value = True
 'value = False
-Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
 Const HasModem = True
@@ -1275,7 +1275,7 @@ Public NewAvg As Boolean
 '--------------------------------------- DATA TABLES SECTION ------------------------------------------------
 '============================================================================================================
 DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/NWIS
-  TableFile("CRD:" + Status.StationName + "_Aquarius",64,-1,35040,0,Day,0,0)
+  TableFile("CRD:" + Status.StationName + "_Aquarius_",64,-1,35040,0,Day,0,0)
   OpenInterval
   Sample (1,TimeStamp15Min,String)
   Minimum(1,StationVolts,FP2,False,False)
@@ -1390,7 +1390,7 @@ EndTable
 
 DataTable(DataOut,Rec15MinFlag,-1)
   OpenInterval
-  TableFile("CRD:" + Status.StationName + "_DataOut",64,-1,35040,0,Day,0,0)
+  TableFile("CRD:" + Status.StationName + "_DataOut_",64,-1,35040,0,Day,0,0)
   Sample (1,TimeStamp15Min,String)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
@@ -1476,7 +1476,7 @@ EndTable
 
 DataTable(QAQCInfo,Rec24HrFlag,-1)
   OpenInterval
-TableFile("CRD:" + Status.StationName + "_QAQCInfo",64,-1,365,0,Day,0,0)
+TableFile("CRD:" + Status.StationName + "_QAQCInfo_",64,-1,365,0,Day,0,0)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Maximum (1,StationVolts,FP2,False,False)
@@ -1573,7 +1573,7 @@ TableFile("CRD:" + Status.StationName + "_QAQCInfo",64,-1,365,0,Day,0,0)
 EndTable
 
 DataTable(SiteVisit,SiteVisTrig,50)
-  TableFile("CRD:" + Status.StationName + "_SiteVisit",64,-1,50,0,Day,0,0)
+  TableFile("CRD:" + Status.StationName + "_SiteVisit_",64,-1,50,0,Day,0,0)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Sample (1,StationVolts,FP2)
@@ -1663,7 +1663,7 @@ EndTable
 
 DataTable(Data1m,Rec1MinFlag OR OneMinConsistent,-1)
   OpenInterval
-  TableFile("CRD:" + Status.StationName + "_Data1m",64,-1,525600,0,Min,0,0)
+  TableFile("CRD:" + Status.StationName + "_Data1m_",64,-1,525600,0,Min,0,0)
   #If HasVM = True Then
     Sample(1,ADCPCenterTime,String)
   #EndIf 'Has VM
@@ -1734,7 +1734,7 @@ EndTable
 
 DataTable(Debugger,True,-1)
   OpenInterval
-  TableFile("CRD:" + Status.StationName + "_Debugger",64,-1,10080,0,Day,0,0)
+  TableFile("CRD:" + Status.StationName + "_Debugger_",64,-1,10080,0,Day,0,0)
   Sample(3,ProcTimer,FP2)
   #If HasVM = True Then 'If has VM
     Sample(3,VMProcTimer,FP2)
@@ -1806,7 +1806,7 @@ EndTable
 #If HasVM = True Then
   DataTable (BeamCheck,Rec15MinFlag,-1)
     OpenInterval
-    TableFile("CRD:" + Status.StationName + "_BeamCheck",64,-1,35040,0,Day,0,0)
+    TableFile("CRD:" + Status.StationName + "_BeamCheck_",64,-1,35040,0,Day,0,0)
     Sample (1,TimeStamp15Min,String)
     Sample (1,SiteID,String)
     Sample (1,StagePrime,IEEE4)
@@ -1832,7 +1832,7 @@ EndTable
   #If VMHasVertical Then 'if we have 5th beam
     DataTable (VerticalVelocities,Rec15MinFlag,-1)
       OpenInterval 'tells table to process from last execution of table
-      TableFile("CRD:" + Status.StationName + "_VerticalVelocities",64,-1,35040,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_VerticalVelocities_",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,VerticalBinSize,UINT2)
       Sample (1,VerticalBinNum,UINT2)
@@ -1845,7 +1845,7 @@ EndTable
 
     DataTable (Vertical1MinVel,Rec1MinFlag OR OneMinConsistent,-1)
       OpenInterval 'tells table to process from last execution of table
-      TableFile("CRD:" + Status.StationName + "_Vertical1MinVel",64,-1,525600,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_Vertical1MinVel_",64,-1,525600,0,Day,0,0)
       Sample (1,VerticalBinSize,UINT2)
       Sample (1,VerticalBinNum,UINT2)
       Sample (1,VerticalBin1Center,FP2)
@@ -1861,7 +1861,7 @@ EndTable
   #If VMHasBottomTrack Then 'if we have Bottom Track active
     DataTable (BottomTrack,Rec15MinFlag,-1)
       OpenInterval 'tells table to process from last execution of table
-      TableFile("CRD:" + Status.StationName + "_BottomTrack",64,-1,35040,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_BottomTrack_",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,BtmTrackPings,UINT2)
       Sample (1,BtmTrackMode,UINT2)
@@ -1876,7 +1876,7 @@ EndTable
 
     DataTable (BtmTrack1Min,Rec1MinFlag OR OneMinConsistent,-1)
       OpenInterval 'tells table to process from last execution of table
-TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
+TableFile("CRD:" + Status.StationName + "_BtmTrack1Min_",64,-1,525600,0,Day,0,0)
       Sample (1,BtmTrackPings,UINT2)
       Sample (1,BtmTrackMode,UINT2)
       Sample(MaxBeams,BtmTrackRange(),IEEE4)
@@ -1892,7 +1892,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
   #If IsSpecStudy = True Then
     DataTable (VelData,Rec15MinFlag,-1)
       OpenInterval 'tells table to process from last execution of table
-      TableFile("CRD:" + Status.StationName + "_VelData",64,-1,35040,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_VelData_",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -1915,7 +1915,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
   #If GetNoiseFloor = True Then 'if we want noise floor
     DataTable (NoiseFloor,True,365)
       OpenInterval
-      TableFile("CRD:" + Status.StationName + "_NoiseFloor",64,-1,365,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_NoiseFloor_",64,-1,365,0,Day,0,0)
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
       Sample (4,NoiseHGainW(),FP2)
@@ -1935,7 +1935,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
 
 #If WqSonde = "WQ_SERIAL_BURST" Then
   DataTable(Burst,RecBurstFlag,192) '2 days
-    TableFile("CRD:" + Status.StationName + "_Burst",64,-1,35040,0,Day,0,0)
+    TableFile("CRD:" + Status.StationName + "_Burst_",64,-1,35040,0,Day,0,0)
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
@@ -2040,7 +2040,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
   '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
   DataTable(SecBurst,True,360)
     'DataInterval(0,1,Min,-1)
-    TableFile("CRD:" + Status.StationName + "_SecBurst",64,-1,86400,0,Day,0,0) '30 days per file
+    TableFile("CRD:" + Status.StationName + "_SecBurst_",64,-1,86400,0,Day,0,0) '30 days per file
     OpenInterval
     Sample (1,SiteID,String)
     Sample (1,SiteNum,String)
@@ -2076,7 +2076,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
   #If TopBottom = True Then
     DataTable(BtmBurst,BtmRecBurstFlag,192)
       'DataInterval(0,1,Min,-1)
-      TableFile("CRD:" + Status.StationName + "_BtmBurst",64,-1,35040,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_BtmBurst_",64,-1,35040,0,Day,0,0)
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -2181,7 +2181,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
     '_____________________collect each 1 second value that is being used to calculate "Burst" table values________________
     DataTable(BtmSecBurst,True,360) '30 min
       'DataInterval(0,1,Min,-1)
-      TableFile("CRD:" + Status.StationName + "_BtmSecBurst",64,-1,86400,0,Day,0,0) '30 days per file
+      TableFile("CRD:" + Status.StationName + "_BtmSecBurst_",64,-1,86400,0,Day,0,0) '30 days per file
       OpenInterval
       Sample (1,SiteID,String)
       Sample (1,SiteNum,String)
@@ -2221,7 +2221,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
 '============================================================================
 #If HasSuna = True Then
   DataTable (SunaStats,RecSunaData,-1)
-    TableFile("CRD:" + Status.StationName + "_SunaStats",64,-1,35040,0,Day,0,0)
+    TableFile("CRD:" + Status.StationName + "_SunaStats_",64,-1,35040,0,Day,0,0)
     Sample (1,SunaSN,FP2)
     Average (1,SunaNitrateuM,IEEE4,False)
     Median (1,SunaNitrateuM,30,IEEE4,False)
@@ -2251,20 +2251,19 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
   EndTable
 
   DataTable (SunaLFData,1,-1)
-    TableFile("CRD:" + Status.StationName + "_SunaLFData",64,-1,86400,0,Day,0,0) '30 days per file
+    TableFile("CRD:" + Status.StationName + "_SunaLFData_",64,-1,86400,0,Day,0,0) '30 days per file
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (RawSunaData,1,-1)
-    CardOut (0,350000)
-    TableFile("CRD:" + Status.StationName + "_RawSunaData",64,-1,95040,0,Day,0,0) '30 days per file, assume 33 records per sample (30LF, 3DF)
+    TableFile("CRD:" + Status.StationName + "_RawSunaData_",64,-1,95040,0,Day,0,0) '30 days per file, assume 33 records per sample (30LF, 3DF)
     Sample(1,SunaHeader,String)
     Sample(282,SunaBurstData(),IEEE4)
   EndTable
 
   DataTable (SunaLength,1,-1)
-    TableFile("CRD:" + Status.StationName + "_SunaLength",64,-1,35040,0,Day,0,0)
+    TableFile("CRD:" + Status.StationName + "_SunaLength_",64,-1,35040,0,Day,0,0)
     Sample (MaxSunaBurst,SunaStringLen(),FP2)
   EndTable
 #EndIf 'if has suna
@@ -2323,7 +2322,7 @@ TableFile("CRD:" + Status.StationName + "_BtmTrack1Min",64,-1,525600,0,Day,0,0)
 
 #If HasHMS = True Then
   DataTable(HMSTable,WeBad OR HMS_Manual,60)
-    TableFile("CRD:" + Status.StationName + "_HMSTable",64,-1,60,0,Day,0,0)
+    TableFile("CRD:" + Status.StationName + "_HMSTable_",64,-1,60,0,Day,0,0)
     Sample(1,WeBad,Boolean)
     Sample(1,HMS_Manual,Boolean)
     #If HasVM = True Then
