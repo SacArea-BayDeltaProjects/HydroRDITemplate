@@ -62,7 +62,7 @@ CL0
 cf11111
 ck
 $D1
-$p NOW ENTER CM SETUP COMMANDS...  
+$p NOW ENTER WH SETUP COMMANDS...  
 $p You must hit "Enter" after each command  
 $p You have about 20 seconds to enter each command  
 $p
@@ -93,7 +93,7 @@ ck
 $D30
 ck
 $D1
-$p All CM SETUP COMMANDS HAVE BEEN SAVED!  
+$p All WH SETUP COMMANDS HAVE BEEN SAVED!  
 $p
 $p Type your initials now and hit "Enter"
 $D10
