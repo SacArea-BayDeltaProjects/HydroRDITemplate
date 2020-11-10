@@ -30,7 +30,7 @@ $D3
 PA
 $W62
 PT200
-$D6
+$W62
 $p SYSTEM TESTS COMPLETED. PLEASE CHECK FOR FAILURES!
 $D30
 $p
@@ -76,7 +76,7 @@ $D20
 $p Set number of cells wn??? (example wn27, for 27 cells)  
 ck
 $D20
-$p Set deployment name rn???. ("rnWGA" for example)  
+$p Set deployment name rn???. ("rn_GES_" for example. MUST BE 5 CHARACTERS)  
 ck
 $D20
 ck
@@ -84,7 +84,7 @@ $p DISPLAYING ENTERED COMMANDS NOW...
 wf?
 ws?
 wn?
-mn?
+rn?
 cb?
 $D2
 $p Please make sure above settings are correct!  
