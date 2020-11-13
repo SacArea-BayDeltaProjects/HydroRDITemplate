@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20201102
-Const ProgramVersion = "5.12"
+Const ProgramVersionDate = 20201110
+Const ProgramVersion = "5.13"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -39,6 +39,7 @@ Const ProgramVersion = "5.12"
 ' 20201019 - TAV/MRI 5.11 Added OneMinCounter to Debugger Table for easy reference. MRI: Created "OneMinCounterReset" Flag to act as redundant switch for techs to reset 1min counter if another visit was carried out the day before per recomendation by JH.
 '                    Added Std. Dev. for SUNA' Nitrate mgL to AQ table
 ' 20201102 - TAV 5.12 Changed "CardOut" instruction to "TableFile" instruction. This allows use of more than 2GB of card memory. Adjusted SunaWarning string to be larger. (Was 30 characters, increased to 200. Noticed we were cutting the string off at CM72.)
+' 20201110 - TAV 5.13 Fixed "IsWorkhorse" recognition; adjusting timing necessary for WH to respond to a "+++"; added "PBRoutes" to Debugger to help identify excess connectivity with servers/computers.
 
 SequentialMode 'We need to use Sequential mode
 
@@ -318,6 +319,7 @@ Dim AQTabTimer(3): Alias AQTabTimer = AQTabStart, AQTabEnd, AQTabTotTime 'Time o
 #If HasModem = True Then
   Dim ModemChkTimer(3): Alias ModemChkTimer = ModemChkStart, ModemChkEnd, ModemChkTotTime 'Checking on Modem status
 #EndIf
+Dim PBRoutes As String * 100
 
 '==============================================
 '-------------DECLARE VM CONSTANTS-------------
@@ -1799,6 +1801,7 @@ DataTable(Debugger,True,-1)
     Sample(1,PingResp,FP2)
   #EndIf
     Sample(1,OneMinCount,IEEE4)
+    Sample(1,PBRoutes,String)
 EndTable
 
 
@@ -2950,9 +2953,15 @@ EndSub
   '================== SOFTWARE BREAK ======================
   '   Sends +++ to VM to initialize a break
   Sub SoftwareBreak
-    SerialOut (AdcpPort,"+++",CHR(62),2,50)'send alt break command twice, wait for >
-    SerialIn (Banner,AdcpPort,25,CHR(62),100)'get banner from ADCP
-    SerialFlush (AdcpPort)
+    If IsWorkHorse = True Then
+      SerialOut(AdcpPort,"+++",CHR(62),2,225) 'Workhorse takes longer to respond, with >
+      SerialIn(Banner,AdcpPort,25,CHR(62),130)
+      SerialFlush(AdcpPort)
+    Else
+      SerialOut (AdcpPort,"+++",CHR(62),2,50)'send alt break command twice, wait for >
+      SerialIn (Banner,AdcpPort,25,CHR(62),100)'get banner from ADCP
+      SerialFlush (AdcpPort)
+    EndIf
     SentBreak = True
   EndSub
 
@@ -3544,7 +3553,7 @@ EndSub
           Call BtmTrackDecode
         #EndIf
       Case VMStageID
-        'Ok it matches Surface track (vertical beam) Status ID
+        'Ok it matches Surface track (vertical beam) Status ID, it's either CM or VADCP
         VMStageDatOffset = Offsets(IdCounter)
         If NumBeams = 2 Then
           IsCM = True
@@ -3552,14 +3561,12 @@ EndSub
           IsVADCP = True
           Call VADCPTransform
         EndIf
-        If (IsCM = False) AND (IsVADCP = False)
-          If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkHorse = True 'It's a 4 beamworkhorse or 3 beam Hadcp)
-        EndIf
-        Call VMStageDecode
-
-        '=======================================================================
       EndSelect
     Next IdCounter
+    If (IsCM = False) AND (IsVADCP = False) Then 'we didn't get the surface track ID, so it's a workhorse
+        If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkHorse = True 'It's a 4 beamworkhorse or 3 beam Hadcp)
+    EndIf
+    Call VMStageDecode
 
     '=================================================================================
     'after all IDs have been checked then we can decode vertical info if it is present
@@ -7764,6 +7771,7 @@ EndSub
         HMS_24hrcount = HMS_24hrcount + 1
         Call HMS
       #EndIf
+      PBRoutes = Status.PakBusRoutes
       CallTable Debugger
       Call ZeroTimers
     NextScan
