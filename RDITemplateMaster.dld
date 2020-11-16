@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20201110
-Const ProgramVersion = "5.13"
+Const ProgramVersionDate = 20201116
+Const ProgramVersion = "5.14"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -40,6 +40,7 @@ Const ProgramVersion = "5.13"
 '                    Added Std. Dev. for SUNA' Nitrate mgL to AQ table
 ' 20201102 - TAV 5.12 Changed "CardOut" instruction to "TableFile" instruction. This allows use of more than 2GB of card memory. Adjusted SunaWarning string to be larger. (Was 30 characters, increased to 200. Noticed we were cutting the string off at CM72.)
 ' 20201110 - TAV 5.13 Fixed "IsWorkhorse" recognition; adjusting timing necessary for WH to respond to a "+++"; added "PBRoutes" to Debugger to help identify excess connectivity with servers/computers.
+' 20201116 - TAV 5.14 Added external voltage check for uses with WorkHorses. ReadExtPwr must be true. 10:1 voltage divider is used to read voltage from the 12 to 48V converter and output as VMVolts. (Workhorses don't output voltage in PD0).
 
 SequentialMode 'We need to use Sequential mode
 
@@ -254,8 +255,7 @@ EndConstTable
     Const HMS_OkPort = U12
   #EndIf
   #If ReadExtPwr = True Then 'if needing to read high external voltage
-    Const ExtPwrCom = U11
-    Const ExtSolarCom = U9
+    Const ExtPwrCom = U9
   #EndIf 'if external voltage
 #EndIf 'Logger type determination
 
@@ -320,7 +320,9 @@ Dim AQTabTimer(3): Alias AQTabTimer = AQTabStart, AQTabEnd, AQTabTotTime 'Time o
   Dim ModemChkTimer(3): Alias ModemChkTimer = ModemChkStart, ModemChkEnd, ModemChkTotTime 'Checking on Modem status
 #EndIf
 Dim PBRoutes As String * 100
-
+#If ReadExtPwr = True Then
+  Dim WHConvertVolt
+#EndIf
 '==============================================
 '-------------DECLARE VM CONSTANTS-------------
 '==============================================
@@ -4907,6 +4909,16 @@ EndSub
   #EndIf 'If StoreAllToCard = True
 #EndIf 'If HasVM or Pressure Sensors
 
+#If ReadExtPwr = True Then
+  Sub ReadExtVolt
+    'Datalogger can only read in 5 volts or less
+    'To be used with 10:1 DC voltage divider module from Campbell
+    'Module divides input voltage by 10 converting to mv(13 volts results in 1300mv (1.3v))
+    'Then multiplies by a number (.01) to bring at back to volts again
+    VoltDiff (WHConvertVolt,1,mV5000,ExtPwrCom,True,0,250,0.01,0)
+    'VoltDiff (ExtSolarVolt,1,mv5000,ExtSolarCom,true,0,250,0.01,0)
+  End Sub
+#EndIf
 '=======================================================================================
 '------------------------- WQ SPECIFIC SUBS --------------------------------------------
 '=======================================================================================
@@ -7080,6 +7092,9 @@ EndSub
     '=========================================================================
     Scan(ScanRate,ScanUnit,5,0) 'Start scan, default = 60sec scan rate
       Call GetSysInfo 'Get our system vitals and start timer for debugging
+      #If ReadExtPwr = True Then
+        Call ReadExtVolt
+      #EndIf
       CurrentDateTime = SecsSince1990(Status.Timestamp,1)
       CheckDateTime = SecsSince1990(AvgChangeTime,1)
       If CurrentDateTime >= CheckDateTime Then
@@ -7256,6 +7271,11 @@ EndSub
           EndIf 'if we have 20 scans
           Call AddSpikes 'remove oldest data from buffer, fill with new value
         #EndIf 'if we want to store to card
+        #If ReadExtPwr = True Then
+          If IsWorkHorse = True Then
+            VMVolts = WHConvertVolt
+          EndIf
+        #EndIf
         If WakeUpVM = True Then Call WakeVM 'Either user established or auto based on "VM Dead"
         VMTimeEnd = Timer(DebugTimer,mSec,4)
         VMTimeEnd = VMTimeEnd/1000
