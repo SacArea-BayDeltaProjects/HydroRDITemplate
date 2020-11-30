@@ -463,16 +463,14 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #If VMHasVertical Then
     Public VerticalBinSize As Long 'Bin Size of 5th beam bins
     Public VerticalBin1Center As Float 'Center of 1st vertical bin
+    Public VertNumBins As Long 'Number of bins for 5th beam
+    Public VerticalPings As Long 'Number of pings per ensemble for 5th beam
   #EndIf
   '------------------------------
   Public BlankDist As Long
   Public NumADCPBins As Long 'number of bins ADCP is outputting
   Public Numbins As Long 'number of bins user sets to use
-  '--------Vert Conditional ------
-  #If VMHasVertical Then
-    Public VerticalBinNum As Long 'Number of bins for 5th beam
-  #EndIf
-  '--------------------------------
+
   '---------Bottom Track Conditional ---------
   #If VMHasBottomTrack Then
     Public BtmTrackPings As Long 'Number of pings for bottom tracking
@@ -480,11 +478,6 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #EndIf
   '------------------------------------------
   Public EnsPings As Long 'number of pings per ensemble
-  '--------Vert Conditional -------
-  #If VMHasVertical Then
-    Public VerticalPings As Long 'Number of pings per ensemble for 5th beam
-  #EndIf
-  '--------------------------------
   Public NumBeams As Long 'number of beams on instrument
   Public EX As Long 'Coordinate transformation
   Public ES As Long 'salinity setting in ADCP
@@ -519,6 +512,10 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Public DucerDepthOffset As Float 'Difference between depth sensor and transducer face. (Pos/Neg) + if Sensor is higher than ducer, - if lower than ducer
     Public RangeSource As Long 'Sensor Source for ducer depth calculation
     Public CutOffBins As Float 'Number of bins to cut off. Ex. If large bins, may only need to cut off 1, if small bins, may need to cut of multiple
+    #If VMHasVertical = True Then
+      Public VertRangedBin As Float = 0
+      Public VertCutOffBins As Float
+    #EndIf
   #EndIf
   Public FlowSign As Long 'Multiplier for velocity depending on which side of the channel instrument is on
   Public UseDir As Boolean 'should user use compass flow direction to indicate flood vs. ebb
@@ -622,6 +619,9 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
 
   '=================== VARIABLES FOR DATA STORAGE =========================================
   Public IndexVel As Float 'index velocity based on rating, put these in SVMAQ table
+  #If VMHasVertical = True Then
+    Public VertIndexVel As Float 'Average of vertical velocity bins
+  #EndIf
   Public MeanVel As Float 'average channel velocity based on all bin data
   Public Qcfs As Float 'total discharge
   Public VMVolts As Float
@@ -1840,7 +1840,7 @@ EndTable
       TableFile("CRD:" + Status.StationName + "_VerticalVelocities_",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
       Sample (1,VerticalBinSize,UINT2)
-      Sample (1,VerticalBinNum,UINT2)
+      Sample (1,VertNumBins,UINT2)
       Sample (1,VerticalBin1Center,FP2)
       Sample (1,VerticalPings,Uint2)
       Average(MaxBins,VerticalVelocity(),IEEE4,VerticalBinDisable())
@@ -1852,7 +1852,7 @@ EndTable
       OpenInterval 'tells table to process from last execution of table
       TableFile("CRD:" + Status.StationName + "_Vertical1MinVel_",64,-1,525600,0,Day,0,0)
       Sample (1,VerticalBinSize,UINT2)
-      Sample (1,VerticalBinNum,UINT2)
+      Sample (1,VertNumBins,UINT2)
       Sample (1,VerticalBin1Center,FP2)
       Sample (1,VerticalPings,Uint2)
       Sample(MaxBins,VerticalVelocity(),IEEE4)
@@ -2494,7 +2494,7 @@ Sub UserDefaults
     UseDir = False
     IsVMNClosed = True 'Default setting for the existance of a normally Closed VM power Relay
     #If UseAutoRange Then
-      RangeSource = UPbeam 'sensor to use for water depth over VM transducer faces
+      RangeSource = PSpress 'sensor to use for water depth over VM transducer faces
       DucerDepthOffset = 0 'difference between water depth sensor and VM transducer face
       RangedBin = 0 'starting point for range calculation
       CutOffBins = 1 'Starting point for number of bins to discard when using AutoRange feature
@@ -3914,7 +3914,7 @@ EndSub
       tempLeadOffset = VerticalLeadOffset - 1
       LSB = LongArray(tempLeadOffset + 3)
       MSB = LongArray(tempLeadOffset + 4)
-      VerticalBinNum = (MSB * 256) + LSB
+      VertNumBins = (MSB * 256) + LSB
       LSB = LongArray(tempLeadOffset + 5)
       MSB = LongArray(tempLeadOffset + 6)
       VerticalPings = (MSB * 256) + LSB
@@ -3928,7 +3928,7 @@ EndSub
 
     Sub VertVelocityDecode
       'decode vertical velocity profile
-      If VerticalBinNum <> NaN Then 'ok we have vertical velocity bins
+      If VertNumBins <> NaN Then 'ok we have vertical velocity bins
         Dim Vertbin As Long
         Dim tempVelOffset As Long
         Dim tempVertVel As Float
@@ -3936,7 +3936,7 @@ EndSub
         Dim vertbinstep As Long = 2
         Dim Counter As Long = 1
         tempVelOffset = tempVelOffset + 2
-        For Vertbin = 1 To (VerticalBinNum * 2) Step vertbinstep
+        For Vertbin = 1 To (VertNumBins * 2) Step vertbinstep
           tempVertVel = 0
           LSB = LongArray(tempVelOffset + Vertbin)
           MSB = LongArray(tempVelOffset + (Vertbin + 1))
@@ -3967,7 +3967,7 @@ EndSub
       Dim tempRSSIOffset As Long
       tempRSSIOffset = VerticalRSSIOffset - 1
       tempRSSIOffset = tempRSSIOffset + 2
-      For Vertbin = 1 To VerticalBinNum
+      For Vertbin = 1 To VertNumBins
         VerticalRSSI(Vertbin) = LongArray(tempRSSIOffset + Vertbin)
       Next Vertbin
     EndSub
@@ -3977,7 +3977,7 @@ EndSub
       Dim tempCorrOffset As Long
       tempCorrOffset = VerticalCorrOffset - 1
       tempCorrOffset = tempCorrOffset + 2
-      For Vertbin = 1 To VerticalBinNum
+      For Vertbin = 1 To VertNumBins
         VerticalCorr(Vertbin) = LongArray(tempCorrOffset + Vertbin)
       Next Vertbin
     EndSub
