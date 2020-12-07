@@ -131,7 +131,7 @@ Const VMDeadCntMax = 20
 Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF TRUE THIS WILL ONLY COMPILE ON CR6-RF451!!
 'value = True
 'value = False
-Const IsMaster = False  'Is the datalogger the Master in a radio network?
+Const IsMaster = False 'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
 Const StoreAllToCard = True 'set to true if you want VM spike data
@@ -164,7 +164,7 @@ ConstTable (DLDSettings,1)
   Const = VMStartSec = 20 'Used to define the exact sec to start pinging. Testing ConstTable
   #If RadioNetwork = True Then
     #If IsMaster = True Then
-      Const NetworkSlaves = 2 'How many nodes are in the system
+      Const NetworkSlaves = 1 'How many nodes are in the system
     #EndIf
   #EndIf
 EndConstTable
@@ -424,7 +424,9 @@ Public OneMinConsistent As Boolean 'Flag to store 1min data for prolonged period
 Public StoreVariablesFlg As Boolean 'Used to trigger variable storage to USR drive
 Public GetVariablesFlg As Boolean 'Used to trigger variable retrieval from USR drive
 Public PreserveFile As String * 500 'THIS CAN BE LOCALIZED WITHIN READ/STORE VARIABLES SUBS
+#If HasVM = True OR HasModem = True Then
 Public IsSubmersed As Boolean '****LETS THINK ABOUT THIS: originally, used to switch the function of the SW12V port so it's used for ADCP if the datalogger is in a submersible enclosure (with no relays, CDMA, etc.)
+#EndIf
 Public FTimeIn 'Argument for which time format to use based on instrument/file
 
 '===============================================
@@ -1144,9 +1146,11 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
 'Declare variables based on if the logger is in a radio network and whether it's the master in the network or not.
 #If IsMaster = True AND RadioNetwork = True Then
   #If NetworkSlaves > 0 Then
-    Public AllLinksDead As Float 'counter to record how many times all links have been dead
     Public SendToNetwork As Float 'Placeholder variable to send to the network, used to get response from loggers whether communication is successful or not
     Public ResetMaster As Boolean
+    #If NetworkSlaves > 1 Then
+      Public AllLinksDead As Float 'counter to record how many times all links have been dead
+    #EndIf
     #If NetworkSlaves = 1 Then 'if there is only one node in the network (Simple Master/Slave communication, 2 dataloggers in network, 1 master, 1 slave)
       Public SendToAresult As Float 'Result of whether the SendVariable worked or not (cue for if comms were successful)
       Public SendToAFailCnt As Float 'count for how many times the comms have failed
@@ -7083,6 +7087,7 @@ EndSub
       SerialClose(SunaPort)
     #EndIf
     #If RadioNetwork = True Then
+      Call SetRadSetting
       ResetTryOK = True 'It's ok to try a reset once initial dead thresholds have been met, no need to wait.
       NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio without waiting the first time.
     #EndIf
@@ -7717,7 +7722,9 @@ EndSub
       ScanEnd = Timer(DebugTimer,mSec,4) 'read timer for end of scan
       ScanEnd = ScanEnd/1000 'convert
       ProcessTime = ScanEnd - ScanStart 'calculate total time
+      #If HasModem = True Then
       Call ModemCheck
+      #EndIf
       #If RadioNetwork = True Then 'only compile if it's in a radio network
         If ReadRadSettings = True Then 'if user wants to store radio settings
           Call ReadRF 'read in settings
