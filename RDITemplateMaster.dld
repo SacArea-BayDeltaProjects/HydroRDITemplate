@@ -2601,9 +2601,9 @@ Sub Initialize
     AvgRSSIEndBin  = EndBin
     VMPower = True
     IsSubmersed = False
-    IsCM = True 'These are auto set, should not matter
+    IsCM = False 'These are auto set if ensembles are actively coming in.
     IsVADCP = False
-    IsWorkHorse = False
+    IsWorkHorse = True
     TrueUpBeamStg = BadDataIndicator
     TrueVMPressStg = BadDataIndicator
     TruePS1Stg = BadDataIndicator
@@ -3071,7 +3071,14 @@ EndSub
       SerialIn (TSEcho,AdcpPort,15,-1,55) 'get echo of TS command
       SerialFlush(AdcpPort)
       Delay(1,100,mSec)
+      If VMHasVertical = False AND VMHasBottomTrack = False Then 'Sentinel and RiverPro don't accept TF command
       Call SetTF
+      Else
+        SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,25)
+        SerialIn (CSCmd,AdcpPort,25,-1,100) 'get echo of CS command
+        SerialFlush(AdcpPort)
+      EndIf
+        SendTF = False
       SetVMTimeFlg = False
       SentBreak = False
     EndIf
@@ -5013,6 +5020,7 @@ EndSub
      StorePD0Start = StorePD0/1000
      FileListDest() = "No File Present"
     VM_Binary = ""
+    FileNum = 0
     For i = 1 To NumBytes
       MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2)
     Next i
@@ -5027,11 +5035,11 @@ EndSub
       PD0_SecsSince1990 = FileTime(FileListDest(FileNum)) 'use assumption that last PD0 in list is most recent
       PD0FileAge = PD0_SecsSince1990 - FileStartTime
       If PD0FileAge >= 120 Then 'more than 2min old for testing
-         PD0_Timestamp = SecsSince1990(Status.TimeStamp,4) 'check time
+         PD0_Timestamp = Status.TimeStamp(1,1) 'check time
          PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
          PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
          FileWrite(PD0Handle,VM_Binary,NumBytes)
-         FileStartTime = SecsSince1990(Status.TimeStamp,4) 'record start time of file in seconds
+         FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
          FileClose(PD0Handle)
       Else 'if less than 1 week old continue to write to same file
         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 
@@ -5042,11 +5050,11 @@ EndSub
       PD0_SecsSince1990 = FileTime(FileListDest(FileNum)) 'use assumption that last PD0 in list is most recent
       PD0FileAge = PD0_SecsSince1990 - FileStartTime
       If PD0FileAge >= 120 Then 'more than 2min old for testing
-         PD0_Timestamp = SecsSince1990(Status.TimeStamp,4) 'check time
+         PD0_Timestamp = Status.TimeStamp(1,1) 'check time
          PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
          PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
          FileWrite(PD0Handle,VM_Binary,NumBytes)
-         FileStartTime = SecsSince1990(Status.TimeStamp,4) 'record start time of file in seconds
+         FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
          FileClose(PD0Handle)
       Else 'if less than 1 week old continue to write to same file
         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 
@@ -5054,11 +5062,11 @@ EndSub
         FileClose(PD0Handle)
       EndIf
     Else 'We didn't find a PD0 on the card
-      PD0_Timestamp = SecsSince1990(Status.TimeStamp,1) 'check time
+      PD0_Timestamp = Status.TimeStamp(1,1) 'check time
       PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
       PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
       FileWrite(PD0Handle,VM_Binary,NumBytes)
-      FileStartTime = SecsSince1990(Status.TimeStamp,1) 'record start time of file in seconds
+      FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
       FileClose(PD0Handle)
     EndIf
     StorePD0End = Timer(DebugTimer,mSec,4)
