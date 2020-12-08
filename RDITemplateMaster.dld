@@ -91,7 +91,7 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = False
+Const IsSpecStudy = True
 'value = True
 'value = False
 Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
@@ -109,7 +109,10 @@ Const HasSlave = False
 Const HasVM = True
 'value = True
 'value = False
-Const MaxBins = 27
+Const StorePD0 = True
+'value = True
+'value = False
+Const MaxBins = 30
 'Min = 1
 'Max = 100
 'Inc = 1
@@ -117,7 +120,7 @@ Const MaxBins = 27
 ''Min = 0
 ''Max = 59
 ''Inc = 1
-Const UseAutoRange = False
+Const UseAutoRange = True
 'value = True
 'value = False
 Const WQDeadCntMax = 20
@@ -137,7 +140,7 @@ Const IsMaster = False 'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = True 'set to true if you want VM spike data
 'value = True
 'value = False
-Const VMHasVertical = False
+Const VMHasVertical = True
 'value = True
 'value = False
 Const VMHasBottomTrack = False
@@ -203,7 +206,7 @@ EndConstTable
   #EndIf 'if using iridium
 #ElseIf LoggerType = CR6 Then
   #If HasVM = True Then 'if we have a VM or Pressure sensors
-    Const AdcpPort = ComU1
+    Const AdcpPort = ComC3
     Const VMSwitchPort = U4
     Const PS1Com3 = U3
     Const PS1Com5 = U5
@@ -461,32 +464,36 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public PS2SN As String * 40 'used to get pressure sensor brand, model, and serial number
   Public NewPS2 As Boolean 'is it a new pressure sensor?
   Public BinSize As Long 'Bin size in cm
-  '-------Vert Conditional ------
-  #If VMHasVertical Then
-    Public VerticalBinSize As Long 'Bin Size of 5th beam bins
-    Public VerticalBin1Center As Float 'Center of 1st vertical bin
-    Public VertNumBins As Long 'Number of bins for 5th beam
-    Public VerticalPings As Long 'Number of pings per ensemble for 5th beam
-  #EndIf
+
   '------------------------------
   Public BlankDist As Long
   Public NumADCPBins As Long 'number of bins ADCP is outputting
   Public Numbins As Long 'number of bins user sets to use
+  Public EnsPings As Long 'number of pings per ensemble
 
+  '-------Vert Conditional ------
+  #If VMHasVertical Then
+    Public VertBinSize As Long 'Bin Size of 5th beam bins
+    Public VerticalBin1Center As Float 'Center of 1st vertical bin
+    Public VertBlankDist As Float
+    Public VertNumBins As Long 'Number of bins for 5th beam
+    Public VerticalPings As Long 'Number of pings per ensemble for 5th beam
+  #EndIf
+  '------------------------------
   '---------Bottom Track Conditional ---------
   #If VMHasBottomTrack Then
     Public BtmTrackPings As Long 'Number of pings for bottom tracking
     Public BtmTrackMode As Long 'Mode for bottom tracking
   #EndIf
   '------------------------------------------
-  Public EnsPings As Long 'number of pings per ensemble
   Public NumBeams As Long 'number of beams on instrument
   Public EX As Long 'Coordinate transformation
   Public ES As Long 'salinity setting in ADCP
   Public BIT As Long 'Built in tests, see manual. if 0, no tests failures
+  Public SpeedOfSound As Long 'ADCP's calculated speed of sound from ensemble
   Public EnsembleNo As Long 'ADCP's internal Ensemble count
   Public EnsembleLen As Long 'ADCP's ensemble length, (LongArray(3) + (LongArray(4)*256))
-  Public Decode As String * 70 'how is the dat abeing decoded
+  Public Decode As String * 70 'how is the data being decoded
   Public Coord As String * 20 'which coordinate system is the ADCP using?
   Public FramingError As Long
   Public EnsBytes As Long 'Number of bytes PD0 says are in ensemble
@@ -522,7 +529,11 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public FlowSign As Long 'Multiplier for velocity depending on which side of the channel instrument is on
   Public UseDir As Boolean 'should user use compass flow direction to indicate flood vs. ebb
   Public PosFlowDir As Float 'compass direction of positive flow (outgoing/ebb)
+  #If VMHasVertical = False Then
   Public BinDist(6) As Float: Alias BinDist = StartBin, EndBin, StartEbbBin, EndEbbBin, StartFldBin, EndFldBin 'Bin Distribution
+  #Else
+    Public BinDist(8) As Float: Alias BinDist = StartBin, EndBin, StartEbbBin, EndEbbBin, StartFldBin, EndFldBin, VertStartBin, VertEndBin
+  #EndIf
   Public BiRating As Boolean = False 'Use this flag if using Ebb/Flood rating
   Public BiRatOK As Boolean = False 'Used by program to determin if BiRating can be done
   Public UseBiRat As Boolean = False 'flag set if both the above are true
@@ -538,6 +549,12 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Public SendHeader As Boolean = True
     Public TestTime As String * 20
     Public CardError As String * 25
+  #EndIf
+  #If StorePD0 = True Then
+    Public VM_Binary As String * 2000
+    Public PD0Handle As Long
+    Public PD0_StartDate As String * 30
+    Public PD0_Timestamp As String * 30
   #EndIf
 
   '=============RATING VALUES, MEAN CHANNEL/AREA RATINGS===============================
@@ -624,7 +641,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #If VMHasVertical = True Then
     Public VertIndexVel As Float 'Average of vertical velocity bins
   #EndIf
-  Public MeanVel As Float 'average channel velocity based on all bin data
+  Public MeanVel As Float 'average channel velocity based on user bin distribution and rating equation
   Public Qcfs As Float 'total discharge
   Public VMVolts As Float
   Public VMtempC As Float
@@ -750,6 +767,10 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Dim V2Cnt As Long
   Dim V3Cnt As Long
   Dim V4Cnt As Long
+  #If VMHasVertical = True Then
+    Dim VertVelSum As Float
+    Dim VertVelCnt As Long
+  #EndIf
 
   '========================= RSSI Data Variables ==============================
   Dim ensRSSI(MaxBins,4) As Long  'MaxBins bins and 4 beams max  RSSI Data
@@ -841,6 +862,9 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Dim StoreToCrdTimer(3): Alias StoreToCrdTimer = StoreToCrdStart, StoreToCrdEnd, StoreToCrdTotTime
     Dim ChkSpikeTimer(3): Alias ChkSpikeTimer = ChkSpikeStart, ChkSpikeEnd, ChkSpikeTotTime
     Dim AddSpikeTimer(3): Alias AddSpikeTimer = AddSpikeStart, AddSpikeEnd, AddSpikeTotTime
+  #EndIf
+  #If StorePD0 = True Then
+    Dim StorePD0Timer(3): Alias StorePD0Timer = StorePD0Start, StorePD0End, StorePD0TotTime
   #EndIf
 #EndIf 'If HasVM = True
 
@@ -1431,6 +1455,10 @@ DataTable(DataOut,Rec15MinFlag,-1)
     #If UseAutoRange = True Then 'If we want to autorange last uplooker bin
       Average (1,RangedBin,FP2,False)
       Sample (1,RangedBin,FP2)
+      #If VMHasVertical = True Then
+        Average(1,VertRangedBin,FP2,False)
+        Sample(1,VertRangedBin,FP2)
+      #EndIf
     #EndIf 'if we want to auto range
     Average (MaxBins,VMBinVel(),IEEE4,VmBinVelDisable())
     Average(MaxBins,V1(),FP2,V1Disable())
@@ -1531,6 +1559,9 @@ TableFile("CRD:" + Status.StationName + "_QAQCInfo_",64,-1,365,0,Day,0,0)
     Sample (1,UseV2,Boolean)
     #If UseAutoRange = True Then
       Sample (1,CutOffBins,FP2)
+      #If VMHasVertical = True Then
+        Sample(1,VertCutOffBins,FP2)
+      #EndIf
     #EndIf
     Sample (4,StgOffsets(),IEEE4)
     #If WqSonde <> "NONE" Then
@@ -1612,6 +1643,9 @@ DataTable(SiteVisit,SiteVisTrig,50)
     Sample (6,BinDist(),FP2)
     #If UseAutoRange = True Then 'if autoranging uplooker
       Sample (1,CutOffBins,FP2)
+      #If VMHasVertical = True Then
+        Sample(1,VertCutOffBins,FP2)
+      #EndIf
     #EndIf 'if autoranging
     Sample (15,RatArray(),IEEE4)
     Sample (1,BadQCount,Long)
@@ -1691,6 +1725,10 @@ DataTable(Data1m,Rec1MinFlag OR OneMinConsistent,-1)
     #If UseAutoRange = True Then
       Sample(1,RangedBin,FP2)
       Sample(1,CutOffBins,FP2)
+      #If VMHasVertical = True Then
+        Sample (1,VertRangedBin,FP2)
+        Sample (1,VertCutOffBins,FP2)
+      #EndIf
     #EndIf 'AutoRange
     Sample(1,StgSelect,String)
   #EndIf 'If HasVM
@@ -1765,6 +1803,9 @@ DataTable(Debugger,True,-1)
       Sample(3,StoreToCrdTimer,FP2)
       Sample(3,AddSpikeTimer,FP2)
     #EndIf 'if store to card
+    #If StorePD0 = True Then
+      Sample(3,StorePD0Timer,FP2)
+    #EndIf
     Sample(3,WakeVMTimer,FP2)
   #EndIf 'if has vm
   #If WqSonde <> "NONE" Then
@@ -1843,10 +1884,18 @@ EndTable
       OpenInterval 'tells table to process from last execution of table
       TableFile("CRD:" + Status.StationName + "_VerticalVelocities_",64,-1,35040,0,Day,0,0)
       Sample (1,TimeStamp15Min,String)
-      Sample (1,VerticalBinSize,UINT2)
+      Sample (1,VertBinSize,UINT2)
       Sample (1,VertNumBins,UINT2)
       Sample (1,VerticalBin1Center,FP2)
       Sample (1,VerticalPings,Uint2)
+      #If UseAutoRange = False Then
+        Sample(1,VertEndBin,FP2)
+        #Else
+      Average(1,VertEndBin,FP2,False)
+      Minimum(1,VertEndBin,FP2,False,False)
+      Maximum(1,VertEndBin,FP2,False,False)
+      #EndIf
+      Average(1,VertIndexVel,IEEE4,False)
       Average(MaxBins,VerticalVelocity(),IEEE4,VerticalBinDisable())
       Average(MaxBins,VerticalRSSI(),Uint2,False)
       Average(MaxBins,VerticalCorr(),Uint2,False)
@@ -1855,10 +1904,15 @@ EndTable
     DataTable (Vertical1MinVel,Rec1MinFlag OR OneMinConsistent,-1)
       OpenInterval 'tells table to process from last execution of table
       TableFile("CRD:" + Status.StationName + "_Vertical1MinVel_",64,-1,525600,0,Day,0,0)
-      Sample (1,VerticalBinSize,UINT2)
+      Sample (1,VertBinSize,UINT2)
       Sample (1,VertNumBins,UINT2)
       Sample (1,VerticalBin1Center,FP2)
       Sample (1,VerticalPings,Uint2)
+      Sample (1,VertEndBin,FP2)
+      #If UseAutoRange = True Then
+      Sample (1,VertCutOffBins,FP2)
+      #EndIf
+      Sample(1,VertIndexVel,IEEE4)
       Sample(MaxBins,VerticalVelocity(),IEEE4)
       Sample(MaxBins,VerticalRSSI(),Uint2)
       Sample(MaxBins,VerticalCorr(),Uint2)
@@ -2502,6 +2556,10 @@ Sub UserDefaults
       DucerDepthOffset = 0 'difference between water depth sensor and VM transducer face
       RangedBin = 0 'starting point for range calculation
       CutOffBins = 1 'Starting point for number of bins to discard when using AutoRange feature
+      #If VMHasVertical = True Then
+        VertRangedBin = 0
+        VertCutOffBins = 1
+      #EndIf
     #EndIf 'If use auto range for uplookers
   #EndIf 'If has VM
   #If WqSonde <> "NONE" Then
@@ -2810,6 +2868,9 @@ Sub ZeroTimers
       ChkSpikeTimer() = BadDataIndicator
       AddSpikeTimer() = BadDataIndicator
     #EndIf 'end store to card
+    #If StorePD0 = True Then
+      StorePD0Timer() = BadDataIndicator
+    #EndIf
   #EndIf 'end has vm
   #If WqSonde <> "NONE" Then
     RedeployTimer() = BadDataIndicator
@@ -3586,6 +3647,9 @@ EndSub
     #EndIf
     '====================================================================================
     'After calling all the decoders, Zero out the LongArray
+    #If StorePD0 = True Then
+      Call StorePD0File
+    #EndIf
     Erase (LongArray())
     MainDecodeEnd = Timer(DebugTimer,msec,4)
     MainDecodeEnd = MainDecodeEnd/1000
@@ -3618,6 +3682,10 @@ EndSub
     LSB = LongArray(VarLeadOffset + 13)
     MSB = LongArray(VarLeadOffset + 14)
     BIT = (256 * MSB) + LSB
+    'get Speed of Sound
+    LSB = LongArray(VarLeadOffset + 15)
+    MSB = LongArray(VarLeadOffset + 16)
+    SpeedOfSound = (256 * MSB) + LSB
     'get Heading
     LSB = LongArray(VarLeadOffset + 19)
     MSB = LongArray(VarLeadOffset + 20)
@@ -3923,8 +3991,8 @@ EndSub
       MSB = LongArray(tempLeadOffset + 6)
       VerticalPings = (MSB * 256) + LSB
       LSB = LongArray(tempLeadOffset + 7)
-      MSB = LongArray(tempLeadOffset + 6)
-      VerticalBinSize = (MSB * 256) + LSB
+      MSB = LongArray(tempLeadOffset + 8)
+      VertBinSize = (MSB * 256) + LSB
       LSB = LongArray(tempLeadOffset + 9)
       MSB = LongArray(tempLeadOffset + 10)
       VerticalBin1Center = (MSB * 256) + LSB
@@ -4074,6 +4142,11 @@ EndSub
       DucerDepthCM = DucerDepth * 30.48
       RangedBin = (FIX((DucerDepthCM - BlankDist)/BinSize))-CutOffBins 'remove user selected number of bins (based on beamchecks)
       EndBin = RangedBin 'Set end bin to the ranged bin for Index calcs
+      #If VMHasVertical = True Then
+        VertBlankDist = VerticalBin1Center - VertBinSize
+        VertRangedBin = (FIX((DucerDepthCM - VertBlankDist)/VertBinSize))-VertCutOffBins
+        VertEndBin = VertRangedBin
+      #EndIf
       CalcRangeEnd = Timer(DebugTimer,msec,4)
       CalcRangeEnd = CalcRangeEnd/1000
       CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
@@ -4316,6 +4389,21 @@ EndSub
     EndIf
     'now lets count the bad velocity bins to keep track of them
     BadBinCount = (((EndBin+1)-StartBin)- VelCount)
+    #If VMHasVertical = True Then 'calculate "index" for vertical velocity for AQ table
+      VertVelCnt = 0
+      VertIndexVel = 0
+      For Cnt = VertStartBin To VertEndBin
+        If VerticalVelocity(Cnt) <> BadDataIndicator Then
+          VertVelSum = VertVelSum + VerticalVelocity(Cnt)
+          VertVelCnt = VertVelCnt + 1
+        EndIf
+      Next Cnt
+      If VertVelSum <> 0 Then
+        VertIndexVel = VertVelSum/VertVelCnt
+      Else
+        VertIndexVel = 0
+      EndIf
+    #EndIf
     OneMinCalcEnd = Timer(DebugTimer,msec,4)
     OneMinCalcEnd = OneMinCalcEnd/1000
     OneMinCalcTotTime = OneMinCalcEnd - OneMinCalcStart
@@ -4911,6 +4999,73 @@ EndSub
       StoreToCrdTotTime = StoreToCrdEnd-StoreToCrdStart
     EndSub
   #EndIf 'If StoreAllToCard = True
+  #If StorePD0 = True Then
+   Sub StorePD0File
+     Public FileListDest(50) As String * 50
+     Public NumCRDFiles
+     Public PD0_InStr
+     Public PD0_SecsSince1990 As Long
+     Public PD0FileAge As Long
+     Public FileStartTime As Long
+     Public FileNum
+     Dim i
+     StorePD0Start = Timer(DebugTimer,mSec,4)
+     StorePD0Start = StorePD0/1000
+     FileListDest() = "No File Present"
+    VM_Binary = ""
+    For i = 1 To NumBytes
+      MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2)
+    Next i
+   NumCRDFiles = FileList("CRD",FileListDest())
+    For i = 1 To NumCRDFiles
+      PD0_InStr = InStr(1,FileListDest(i),".PD0",2)
+      If PD0_InStr <> 0 Then
+        FileNum = i 'determine which file is PD0 <- making assumption that newest file will be last in list. Check this
+      EndIf
+    Next i
+    If PD0_InStr = 0 AND FileNum <> 0 Then 'We found a file, but it wasn't last in the list
+      PD0_SecsSince1990 = FileTime(FileListDest(FileNum)) 'use assumption that last PD0 in list is most recent
+      PD0FileAge = PD0_SecsSince1990 - FileStartTime
+      If PD0FileAge >= 120 Then 'more than 2min old for testing
+         PD0_Timestamp = SecsSince1990(Status.TimeStamp,4) 'check time
+         PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
+         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
+         FileWrite(PD0Handle,VM_Binary,NumBytes)
+         FileStartTime = SecsSince1990(Status.TimeStamp,4) 'record start time of file in seconds
+         FileClose(PD0Handle)
+      Else 'if less than 1 week old continue to write to same file
+        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 
+        FileWrite(PD0Handle,VM_Binary,NumBytes)
+        FileClose(PD0Handle)
+      EndIf
+    ElseIf PD0_InStr <> 0 Then 'we found a .PD0 file on the card at the last file
+      PD0_SecsSince1990 = FileTime(FileListDest(FileNum)) 'use assumption that last PD0 in list is most recent
+      PD0FileAge = PD0_SecsSince1990 - FileStartTime
+      If PD0FileAge >= 120 Then 'more than 2min old for testing
+         PD0_Timestamp = SecsSince1990(Status.TimeStamp,4) 'check time
+         PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
+         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
+         FileWrite(PD0Handle,VM_Binary,NumBytes)
+         FileStartTime = SecsSince1990(Status.TimeStamp,4) 'record start time of file in seconds
+         FileClose(PD0Handle)
+      Else 'if less than 1 week old continue to write to same file
+        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 
+        FileWrite(PD0Handle,VM_Binary,NumBytes)
+        FileClose(PD0Handle)
+      EndIf
+    Else 'We didn't find a PD0 on the card
+      PD0_Timestamp = SecsSince1990(Status.TimeStamp,1) 'check time
+      PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
+      PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
+      FileWrite(PD0Handle,VM_Binary,NumBytes)
+      FileStartTime = SecsSince1990(Status.TimeStamp,1) 'record start time of file in seconds
+      FileClose(PD0Handle)
+    EndIf
+    StorePD0End = Timer(DebugTimer,mSec,4)
+    StorePD0End = StorePD0End/1000
+    StorePD0TotTime = StorePD0End - StorePD0Start
+  EndSub
+#EndIf 'If StorePD0
 #EndIf 'If HasVM or Pressure Sensors
 
 #If ReadExtPwr = True Then
