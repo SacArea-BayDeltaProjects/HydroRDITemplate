@@ -5009,16 +5009,25 @@ EndSub
   #If StorePD0 = True Then
    Sub StorePD0File
      Public FileListDest(50) As String * 50
+     Public PD0File(15) As String * 50
+     Public PD0_SS1990(15) As Long
+     Public NewestPD0(2)
      Public NumCRDFiles
      Public PD0_InStr
+     Public PD0Cnt
      Public PD0_SecsSince1990 As Long
      Public PD0FileAge As Long
+     Public PD0SizeThresh
      Public FileStartTime As Long
+     Public OldPD0_StartDate As String * 50
      Public FileNum
      Dim i
      StorePD0Start = Timer(DebugTimer,mSec,4)
-     StorePD0Start = StorePD0/1000
+     StorePD0Start = StorePD0Start/1000
      FileListDest() = "No File Present"
+     PD0File() = "No File Present"
+     PD0_SS1990() = BadDataIndicator
+     PD0Cnt = 0
     VM_Binary = ""
     FileNum = 0
     For i = 1 To NumBytes
@@ -5028,46 +5037,44 @@ EndSub
     For i = 1 To NumCRDFiles
       PD0_InStr = InStr(1,FileListDest(i),".PD0",2)
       If PD0_InStr <> 0 Then
-        FileNum = i 'determine which file is PD0 <- making assumption that newest file will be last in list. Check this
+        PD0Cnt = PD0Cnt + 1
+        PD0File(PD0Cnt) = FileListDest(i)
       EndIf
     Next i
-    If PD0_InStr = 0 AND FileNum <> 0 Then 'We found a file, but it wasn't last in the list
-      PD0_SecsSince1990 = FileTime(FileListDest(FileNum)) 'use assumption that last PD0 in list is most recent
-      PD0FileAge = PD0_SecsSince1990 - FileStartTime
-      If PD0FileAge >= 120 Then 'more than 2min old for testing
+    If PD0Cnt <> 0 Then 'We found a file
+      For i = 1 To PD0Cnt
+        PD0_SS1990(i) = FileTime(PD0File(i)) 'get file time in SecsSince1990 for each file
+      Next i
+      MaxSpa(NewestPD0(),PD0Cnt,PD0_SS1990()) 'get max of "FileTime" outputs
+      PD0_SecsSince1990 = FileTime(PD0File(NewestPD0(2))) 'use Max value's array index for newest file
+      PD0FileAge = PD0_SecsSince1990 - FileStartTime 'check the age of the file, in seconds
+      If PD0FileAge >= PD0SizeThresh Then 'number of seconds. if we're above threshold, make new file
          PD0_Timestamp = Status.TimeStamp(1,1) 'check time
          PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
-         FileWrite(PD0Handle,VM_Binary,NumBytes)
+         If PD0_StartDate = OldPD0_StartDate Then 'if it's the same date as previous file (short files < 1 day)
+           FileNum = FileNum + 1 'increase file number
+           Else
+           FileNum = 0 'otherwise, it's a new day, start with file #0
+         EndIf
+         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open file
+         FileWrite(PD0Handle,VM_Binary,NumBytes)'write the binary to card
          FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-         FileClose(PD0Handle)
-      Else 'if less than 1 week old continue to write to same file
-        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 
-        FileWrite(PD0Handle,VM_Binary,NumBytes)
-        FileClose(PD0Handle)
-      EndIf
-    ElseIf PD0_InStr <> 0 Then 'we found a .PD0 file on the card at the last file
-      PD0_SecsSince1990 = FileTime(FileListDest(FileNum)) 'use assumption that last PD0 in list is most recent
-      PD0FileAge = PD0_SecsSince1990 - FileStartTime
-      If PD0FileAge >= 120 Then 'more than 2min old for testing
-         PD0_Timestamp = Status.TimeStamp(1,1) 'check time
-         PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
-         FileWrite(PD0Handle,VM_Binary,NumBytes)
-         FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-         FileClose(PD0Handle)
-      Else 'if less than 1 week old continue to write to same file
-        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 
+         FileClose(PD0Handle) 'close the file
+         OldPD0_StartDate = PD0_StartDate 'set comparison date to new file date
+      Else 'if less than threshold continue to write to same file
+        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 
         FileWrite(PD0Handle,VM_Binary,NumBytes)
         FileClose(PD0Handle)
       EndIf
     Else 'We didn't find a PD0 on the card
       PD0_Timestamp = Status.TimeStamp(1,1) 'check time
       PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-      PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_VMData.PD0","ab",-1) 'open new file
-      FileWrite(PD0Handle,VM_Binary,NumBytes)
+      FileNum = 0 'ensure starting at file #0
+      PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open new file
+      FileWrite(PD0Handle,VM_Binary,NumBytes) 'write ensemble to file
       FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-      FileClose(PD0Handle)
+      FileClose(PD0Handle) 'close file
+      OldPD0_StartDate = PD0_StartDate 'comparison start date = current file date.
     EndIf
     StorePD0End = Timer(DebugTimer,mSec,4)
     StorePD0End = StorePD0End/1000
