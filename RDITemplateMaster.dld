@@ -428,7 +428,7 @@ Public StoreVariablesFlg As Boolean 'Used to trigger variable storage to USR dri
 Public GetVariablesFlg As Boolean 'Used to trigger variable retrieval from USR drive
 Public PreserveFile As String * 500 'THIS CAN BE LOCALIZED WITHIN READ/STORE VARIABLES SUBS
 #If HasVM = True OR HasModem = True Then
-Public IsSubmersed As Boolean '****LETS THINK ABOUT THIS: originally, used to switch the function of the SW12V port so it's used for ADCP if the datalogger is in a submersible enclosure (with no relays, CDMA, etc.)
+  Public IsSubmersed As Boolean '****LETS THINK ABOUT THIS: originally, used to switch the function of the SW12V port so it's used for ADCP if the datalogger is in a submersible enclosure (with no relays, CDMA, etc.)
 #EndIf
 Public FTimeIn 'Argument for which time format to use based on instrument/file
 
@@ -530,7 +530,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public UseDir As Boolean 'should user use compass flow direction to indicate flood vs. ebb
   Public PosFlowDir As Float 'compass direction of positive flow (outgoing/ebb)
   #If VMHasVertical = False Then
-  Public BinDist(6) As Float: Alias BinDist = StartBin, EndBin, StartEbbBin, EndEbbBin, StartFldBin, EndFldBin 'Bin Distribution
+    Public BinDist(6) As Float: Alias BinDist = StartBin, EndBin, StartEbbBin, EndEbbBin, StartFldBin, EndFldBin 'Bin Distribution
   #Else
     Public BinDist(8) As Float: Alias BinDist = StartBin, EndBin, StartEbbBin, EndEbbBin, StartFldBin, EndFldBin, VertStartBin, VertEndBin
   #EndIf
@@ -1512,7 +1512,7 @@ EndTable
 
 DataTable(QAQCInfo,Rec24HrFlag,-1)
   OpenInterval
-TableFile("CRD:" + Status.StationName + "_QAQCInfo_",64,-1,365,0,Day,0,0)
+  TableFile("CRD:" + Status.StationName + "_QAQCInfo_",64,-1,365,0,Day,0,0)
   Sample (1,SiteID,String)
   Sample (1,SiteNum,String)
   Maximum (1,StationVolts,FP2,False,False)
@@ -1596,8 +1596,8 @@ TableFile("CRD:" + Status.StationName + "_QAQCInfo_",64,-1,365,0,Day,0,0)
   #If WqSonde <> "NONE" Then
     Maximum (1,WqBatt,FP2,False,False)
     Minimum (1,WqBatt,FP2,False,False)
-        Sample (1,WqElevation,FP2)
-        Average(1,WqElevation,FP2,WqBadData)
+    Sample (1,WqElevation,FP2)
+    Average(1,WqElevation,FP2,WqBadData)
     Sample (1,WqTotErrs,FP2)
     Sample (1,WqPwrCycleTries,FP2)
     #If TopBottom = True Then 'if we have top bottom
@@ -1847,8 +1847,8 @@ DataTable(Debugger,True,-1)
     Sample(3,ModemChkTimer,FP2)
     Sample(1,PingResp,FP2)
   #EndIf
-    Sample(1,OneMinCount,IEEE4)
-    Sample(1,PBRoutes,String)
+  Sample(1,OneMinCount,IEEE4)
+  Sample(1,PBRoutes,String)
 EndTable
 
 
@@ -1890,10 +1890,10 @@ EndTable
       Sample (1,VerticalPings,Uint2)
       #If UseAutoRange = False Then
         Sample(1,VertEndBin,FP2)
-        #Else
-      Average(1,VertEndBin,FP2,False)
-      Minimum(1,VertEndBin,FP2,False,False)
-      Maximum(1,VertEndBin,FP2,False,False)
+      #Else
+        Average(1,VertEndBin,FP2,False)
+        Minimum(1,VertEndBin,FP2,False,False)
+        Maximum(1,VertEndBin,FP2,False,False)
       #EndIf
       Average(1,VertIndexVel,IEEE4,False)
       Average(MaxBins,VerticalVelocity(),IEEE4,VerticalBinDisable())
@@ -1910,7 +1910,7 @@ EndTable
       Sample (1,VerticalPings,Uint2)
       Sample (1,VertEndBin,FP2)
       #If UseAutoRange = True Then
-      Sample (1,VertCutOffBins,FP2)
+        Sample (1,VertCutOffBins,FP2)
       #EndIf
       Sample(1,VertIndexVel,IEEE4)
       Sample(MaxBins,VerticalVelocity(),IEEE4)
@@ -1939,7 +1939,7 @@ EndTable
 
     DataTable (BtmTrack1Min,Rec1MinFlag OR OneMinConsistent,-1)
       OpenInterval 'tells table to process from last execution of table
-TableFile("CRD:" + Status.StationName + "_BtmTrack1Min_",64,-1,525600,0,Day,0,0)
+      TableFile("CRD:" + Status.StationName + "_BtmTrack1Min_",64,-1,525600,0,Day,0,0)
       Sample (1,BtmTrackPings,UINT2)
       Sample (1,BtmTrackMode,UINT2)
       Sample(MaxBeams,BtmTrackRange(),IEEE4)
@@ -2565,7 +2565,7 @@ Sub UserDefaults
   #If WqSonde <> "NONE" Then
     IsWqNClosed = True 'Is there a normally closed relay powering Sonde
     #If HasVM = True Then
-    SondeOffset = 0
+      SondeOffset = 0
     #EndIf
     #If TopBottom = True Then
       IsBtmWqNClosed = True 'Standard NC relay
@@ -2643,7 +2643,7 @@ Sub Initialize
   '------End of VM only variables ---------
   #If WqSonde <> "NONE" Then 'If WqSonde present
     #If HasVM = True Then
-    TrueSondeStg = BadDataIndicator
+      TrueSondeStg = BadDataIndicator
     #EndIf
     WqData() = 0'<----------CHANGE THESE VARIABLE NAMES
     WqDataArray() = 0'<------------------THEY WILL BE CONFUSING
@@ -3072,13 +3072,13 @@ EndSub
       SerialFlush(AdcpPort)
       Delay(1,100,mSec)
       If VMHasVertical = False AND VMHasBottomTrack = False Then 'Sentinel and RiverPro don't accept TF command
-      Call SetTF
+        Call SetTF
       Else
         SerialOut (AdcpPort,"CS"+ CHR(13) + CHR(10),"",0,25)
         SerialIn (CSCmd,AdcpPort,25,-1,100) 'get echo of CS command
         SerialFlush(AdcpPort)
       EndIf
-        SendTF = False
+      SendTF = False
       SetVMTimeFlg = False
       SentBreak = False
     EndIf
@@ -3638,7 +3638,7 @@ EndSub
       EndSelect
     Next IdCounter
     If (IsCM = False) AND (IsVADCP = False) Then 'we didn't get the surface track ID, so it's a workhorse
-        If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkHorse = True 'It's a 4 beamworkhorse or 3 beam Hadcp)
+      If (NumBeams = 4) OR (NumBeams = 3) Then IsWorkHorse = True 'It's a 4 beamworkhorse or 3 beam Hadcp)
     EndIf
     Call VMStageDecode
 
@@ -3902,10 +3902,10 @@ EndSub
     VMpressure = TempM
     VMupBeam = VMupBeam * Meters_to_Feet 'convert to Feet
     VMpressure = VMpressure * Meters_to_Feet 'convert to Feet
-    If VMupBeam = BadDataIndicator Then 
-    BadUpbeamFlg = True
-    BadUpbeamCnt = BadUpbeamCnt + 1
-    BadUpbeamCntTot = BadUpbeamCntTot + 1
+    If VMupBeam = BadDataIndicator Then
+      BadUpbeamFlg = True
+      BadUpbeamCnt = BadUpbeamCnt + 1
+      BadUpbeamCntTot = BadUpbeamCntTot + 1
     Else
       BadUpbeamFlg = False
       BadUpbeamCnt = BadUpbeamCnt
@@ -5007,80 +5007,79 @@ EndSub
     EndSub
   #EndIf 'If StoreAllToCard = True
   #If StorePD0 = True Then
-   Sub StorePD0File
-     Public FileListDest(50) As String * 50
-     Public PD0File(15) As String * 50
-     Public PD0_SS1990(15) As Long
-     Public NewestPD0(2)
-     Public NumCRDFiles
-     Public PD0_InStr
-     Public PD0Cnt
-     Public PD0_SecsSince1990 As Long
-     Public PD0FileAge As Long
-     Public PD0SizeThresh
-     Public FileStartTime As Long
-     Public OldPD0_StartDate As String * 50
-     Public FileNum
-     Dim i
-     StorePD0Start = Timer(DebugTimer,mSec,4)
-     StorePD0Start = StorePD0Start/1000
-     FileListDest() = "No File Present"
-     PD0File() = "No File Present"
-     PD0_SS1990() = BadDataIndicator
-     PD0Cnt = 0
-    VM_Binary = ""
-    FileNum = 0
-    For i = 1 To NumBytes
-      MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2)
-    Next i
-   NumCRDFiles = FileList("CRD",FileListDest())
-    For i = 1 To NumCRDFiles
-      PD0_InStr = InStr(1,FileListDest(i),".PD0",2)
-      If PD0_InStr <> 0 Then
-        PD0Cnt = PD0Cnt + 1
-        PD0File(PD0Cnt) = FileListDest(i)
-      EndIf
-    Next i
-    If PD0Cnt <> 0 Then 'We found a file
-      For i = 1 To PD0Cnt
-        PD0_SS1990(i) = FileTime(PD0File(i)) 'get file time in SecsSince1990 for each file
+    Sub StorePD0File
+      Public FileListDest(50) As String * 50
+      Public PD0File(15) As String * 50
+      Public PD0_SS1990(15) As Long
+      Public NewestPD0(2)
+      Public NumCRDFiles
+      Public PD0_InStr
+      Public PD0Cnt
+      Public PD0_SecsSince1990 As Long
+      Public PD0FileAge As Long
+      Public PD0SizeThresh
+      Public FileStartTime As Long
+      Public OldPD0_StartDate As String * 50
+      Public FileNum
+      Dim i
+      StorePD0Start = Timer(DebugTimer,mSec,4)
+      StorePD0Start = StorePD0Start/1000
+      FileListDest() = "No File Present"
+      PD0File() = "No File Present"
+      PD0_SS1990() = BadDataIndicator
+      PD0Cnt = 0
+      VM_Binary = ""
+      For i = 1 To NumBytes
+        MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2)
       Next i
-      MaxSpa(NewestPD0(),PD0Cnt,PD0_SS1990()) 'get max of "FileTime" outputs
-      PD0_SecsSince1990 = FileTime(PD0File(NewestPD0(2))) 'use Max value's array index for newest file
-      PD0FileAge = PD0_SecsSince1990 - FileStartTime 'check the age of the file, in seconds
-      If PD0FileAge >= PD0SizeThresh Then 'number of seconds. if we're above threshold, make new file
-         PD0_Timestamp = Status.TimeStamp(1,1) 'check time
-         PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-         If PD0_StartDate = OldPD0_StartDate Then 'if it's the same date as previous file (short files < 1 day)
-           FileNum = FileNum + 1 'increase file number
-           Else
-           FileNum = 0 'otherwise, it's a new day, start with file #0
-         EndIf
-         PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open file
-         FileWrite(PD0Handle,VM_Binary,NumBytes)'write the binary to card
-         FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-         FileClose(PD0Handle) 'close the file
-         OldPD0_StartDate = PD0_StartDate 'set comparison date to new file date
-      Else 'if less than threshold continue to write to same file
-        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 
-        FileWrite(PD0Handle,VM_Binary,NumBytes)
-        FileClose(PD0Handle)
+      NumCRDFiles = FileList("CRD",FileListDest())
+      For i = 1 To NumCRDFiles
+        PD0_InStr = InStr(1,FileListDest(i),".PD0",2)
+        If PD0_InStr <> 0 Then
+          PD0Cnt = PD0Cnt + 1
+          PD0File(PD0Cnt) = FileListDest(i)
+        EndIf
+      Next i
+      If PD0Cnt <> 0 Then 'We found a file
+        For i = 1 To PD0Cnt
+          PD0_SS1990(i) = FileTime(PD0File(i)) 'get file time in SecsSince1990 for each file
+        Next i
+        MaxSpa(NewestPD0(),PD0Cnt,PD0_SS1990()) 'get max of "FileTime" outputs
+        PD0_SecsSince1990 = FileTime(PD0File(NewestPD0(2))) 'use Max value's array index for newest file
+        PD0FileAge = PD0_SecsSince1990 - FileStartTime 'check the age of the file, in seconds
+        If PD0FileAge >= PD0SizeThresh Then 'number of seconds. if we're above threshold, make new file
+          PD0_Timestamp = Status.TimeStamp(1,1) 'check time
+          PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
+          If PD0_StartDate = OldPD0_StartDate Then 'if it's the same date as previous file (short files < 1 day)
+            FileNum = FileNum + 1 'increase file number
+          Else
+            FileNum = 0 'otherwise, it's a new day, start with file #0
+          EndIf
+          PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open file
+          FileWrite(PD0Handle,VM_Binary,NumBytes)'write the binary to card
+          FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
+          FileClose(PD0Handle) 'close the file
+          OldPD0_StartDate = PD0_StartDate 'set comparison date to new file date
+        Else 'if less than threshold continue to write to same file
+          PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1)
+          FileWrite(PD0Handle,VM_Binary,NumBytes)
+          FileClose(PD0Handle)
+        EndIf
+      Else 'We didn't find a PD0 on the card
+        PD0_Timestamp = Status.TimeStamp(1,1) 'check time
+        PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
+        FileNum = 0 'ensure starting at file #0
+        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open new file
+        FileWrite(PD0Handle,VM_Binary,NumBytes) 'write ensemble to file
+        FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
+        FileClose(PD0Handle) 'close file
+        OldPD0_StartDate = PD0_StartDate 'comparison start date = current file date.
       EndIf
-    Else 'We didn't find a PD0 on the card
-      PD0_Timestamp = Status.TimeStamp(1,1) 'check time
-      PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-      FileNum = 0 'ensure starting at file #0
-      PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open new file
-      FileWrite(PD0Handle,VM_Binary,NumBytes) 'write ensemble to file
-      FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-      FileClose(PD0Handle) 'close file
-      OldPD0_StartDate = PD0_StartDate 'comparison start date = current file date.
-    EndIf
-    StorePD0End = Timer(DebugTimer,mSec,4)
-    StorePD0End = StorePD0End/1000
-    StorePD0TotTime = StorePD0End - StorePD0Start
-  EndSub
-#EndIf 'If StorePD0
+      StorePD0End = Timer(DebugTimer,mSec,4)
+      StorePD0End = StorePD0End/1000
+      StorePD0TotTime = StorePD0End - StorePD0Start
+    EndSub
+  #EndIf 'If StorePD0
 #EndIf 'If HasVM or Pressure Sensors
 
 #If ReadExtPwr = True Then
@@ -5470,11 +5469,11 @@ EndSub
         WqElevation = StagePrime - (WqDepthM*3.281)
       EndIf
       #If TopBottom = True Then
-       If BtmWqLocDepthFt <> 0 Then
-        BtmWqElevation = StagePrime - BtmWqDepthFt
-      ElseIf BtmWqLocDepthM <> 0 Then
-        BtmWqElevation = StagePrime - (BtmWqDepthM*3.281)
-      EndIf
+        If BtmWqLocDepthFt <> 0 Then
+          BtmWqElevation = StagePrime - BtmWqDepthFt
+        ElseIf BtmWqLocDepthM <> 0 Then
+          BtmWqElevation = StagePrime - (BtmWqDepthM*3.281)
+        EndIf
       #EndIf
     #EndIf
   EndSub
@@ -6078,14 +6077,14 @@ EndSub
 '=======================================================================
 #If HasVM = True OR WqSonde <> "NONE" Then
   Sub CheckCase
-        #If HasVM = True Then
+    #If HasVM = True Then
       #If WqSonde = "NONE" Then
         #If UseAutoRange = False Then
           Const NumVars = 34
           UsrCase = 1
         #Else
           Const NumVars = 36
-         ' Dim InVar(NumVars)
+          ' Dim InVar(NumVars)
           UsrCase = 2
         #EndIf
       #ElseIf WqSonde = "WQ_SERIAL" Then
@@ -6114,7 +6113,7 @@ EndSub
         UsrCase = 8
       #EndIf
     #EndIf 'VM determination
-  EndSub  
+  EndSub
 
   Sub ReadVariables
     Public PreserveHandle As Long
@@ -6130,217 +6129,217 @@ EndSub
     EndIf
     SplitStr(InVar,PreserveFile,",",NumVars,0)
     Select Case UsrCase
-    #If HasVM = True Then
-    Case 1
-      StartBin = InVar(1)
-      EndBin = InVar(2)
-      StartEbbBin = InVar(3)
-      EndEbbBin = InVar(4)
-      StartFldBin = InVar(5)
-      EndFldBin = InVar(6)
-      BiRating = InVar(7)
-      BiRatTran = InVar(8)
-      SelStgPrime = InVar(9)
-      SelStgSecnd = InVar(10)
-      UpBeamOffset = InVar(11)
-      VMPressOffset = InVar(12)
-      PS1Offset = InVar(13)
-      PS2Offset = InVar(14)
-      CalcQ = InVar(15)
-      StgOffset = InVar(16)
-      StgCoef = InVar(17)
-      StgCoef2 = InVar(18)
-      VelOffset = InVar(19)
-      VelCoef = InVar(20)
-      VelCoef2 = InVar(21)
-      VelCoef3 = InVar(22)
-      UpVelOffset = InVar(23)
-      UpVelCoef = InVar(24)
-      UpVelCoef2 = InVar(25)
-      UpVelCoef3 = InVar(26)
-      LowVelOffset = InVar(27)
-      LowVelCoef = InVar(28)
-      LowVelCoef2 = InVar(29)
-      LowVelCoef3 = InVar(30)
-      IsSubmersed = InVar(31)
-      IsVMNClosed = InVar(32)
-      FlowSign = InVar(33)
-      OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
+      #If HasVM = True Then
+      Case 1
+        StartBin = InVar(1)
+        EndBin = InVar(2)
+        StartEbbBin = InVar(3)
+        EndEbbBin = InVar(4)
+        StartFldBin = InVar(5)
+        EndFldBin = InVar(6)
+        BiRating = InVar(7)
+        BiRatTran = InVar(8)
+        SelStgPrime = InVar(9)
+        SelStgSecnd = InVar(10)
+        UpBeamOffset = InVar(11)
+        VMPressOffset = InVar(12)
+        PS1Offset = InVar(13)
+        PS2Offset = InVar(14)
+        CalcQ = InVar(15)
+        StgOffset = InVar(16)
+        StgCoef = InVar(17)
+        StgCoef2 = InVar(18)
+        VelOffset = InVar(19)
+        VelCoef = InVar(20)
+        VelCoef2 = InVar(21)
+        VelCoef3 = InVar(22)
+        UpVelOffset = InVar(23)
+        UpVelCoef = InVar(24)
+        UpVelCoef2 = InVar(25)
+        UpVelCoef3 = InVar(26)
+        LowVelOffset = InVar(27)
+        LowVelCoef = InVar(28)
+        LowVelCoef2 = InVar(29)
+        LowVelCoef3 = InVar(30)
+        IsSubmersed = InVar(31)
+        IsVMNClosed = InVar(32)
+        FlowSign = InVar(33)
+        OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
 
-    Case 2
-      StartBin = InVar(1)
-      EndBin = InVar(2)
-      StartEbbBin = InVar(3)
-      EndEbbBin = InVar(4)
-      StartFldBin = InVar(5)
-      EndFldBin = InVar(6)
-      BiRating = InVar(7)
-      BiRatTran = InVar(8)
-      SelStgPrime = InVar(9)
-      SelStgSecnd = InVar(10)
-      UpBeamOffset = InVar(11)
-      VMPressOffset = InVar(12)
-      PS1Offset = InVar(13)
-      PS2Offset = InVar(14)
-      CalcQ = InVar(15)
-      StgOffset = InVar(16)
-      StgCoef = InVar(17)
-      StgCoef2 = InVar(18)
-      VelOffset = InVar(19)
-      VelCoef = InVar(20)
-      VelCoef2 = InVar(21)
-      VelCoef3 = InVar(22)
-      UpVelOffset = InVar(23)
-      UpVelCoef = InVar(24)
-      UpVelCoef2 = InVar(25)
-      UpVelCoef3 = InVar(26)
-      LowVelOffset = InVar(27)
-      LowVelCoef = InVar(28)
-      LowVelCoef2 = InVar(29)
-      LowVelCoef3 = InVar(30)
-      IsSubmersed = InVar(31)
-      IsVMNClosed = InVar(32)
-      FlowSign = InVar(33)
-      OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
-      #If UseAutoRange = True Then
-        RangeSource = InVar(35)
-        DucerDepthOffset = InVar(36)
+      Case 2
+        StartBin = InVar(1)
+        EndBin = InVar(2)
+        StartEbbBin = InVar(3)
+        EndEbbBin = InVar(4)
+        StartFldBin = InVar(5)
+        EndFldBin = InVar(6)
+        BiRating = InVar(7)
+        BiRatTran = InVar(8)
+        SelStgPrime = InVar(9)
+        SelStgSecnd = InVar(10)
+        UpBeamOffset = InVar(11)
+        VMPressOffset = InVar(12)
+        PS1Offset = InVar(13)
+        PS2Offset = InVar(14)
+        CalcQ = InVar(15)
+        StgOffset = InVar(16)
+        StgCoef = InVar(17)
+        StgCoef2 = InVar(18)
+        VelOffset = InVar(19)
+        VelCoef = InVar(20)
+        VelCoef2 = InVar(21)
+        VelCoef3 = InVar(22)
+        UpVelOffset = InVar(23)
+        UpVelCoef = InVar(24)
+        UpVelCoef2 = InVar(25)
+        UpVelCoef3 = InVar(26)
+        LowVelOffset = InVar(27)
+        LowVelCoef = InVar(28)
+        LowVelCoef2 = InVar(29)
+        LowVelCoef3 = InVar(30)
+        IsSubmersed = InVar(31)
+        IsVMNClosed = InVar(32)
+        FlowSign = InVar(33)
+        OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
+        #If UseAutoRange = True Then
+          RangeSource = InVar(35)
+          DucerDepthOffset = InVar(36)
+        #EndIf
       #EndIf
-    #EndIf
     Case 3
       #If HasVM = True Then
-      StartBin = InVar(1)
-      EndBin = InVar(2)
-      StartEbbBin = InVar(3)
-      EndEbbBin = InVar(4)
-      StartFldBin = InVar(5)
-      EndFldBin = InVar(6)
-      BiRating = InVar(7)
-      BiRatTran = InVar(8)
-      SelStgPrime = InVar(9)
-      SelStgSecnd = InVar(10)
-      UpBeamOffset = InVar(11)
-      VMPressOffset = InVar(12)
-      PS1Offset = InVar(13)
-      PS2Offset = InVar(14)
-      CalcQ = InVar(15)
-      StgOffset = InVar(16)
-      StgCoef = InVar(17)
-      StgCoef2 = InVar(18)
-      VelOffset = InVar(19)
-      VelCoef = InVar(20)
-      VelCoef2 = InVar(21)
-      VelCoef3 = InVar(22)
-      UpVelOffset = InVar(23)
-      UpVelCoef = InVar(24)
-      UpVelCoef2 = InVar(25)
-      UpVelCoef3 = InVar(26)
-      LowVelOffset = InVar(27)
-      LowVelCoef = InVar(28)
-      LowVelCoef2 = InVar(29)
-      LowVelCoef3 = InVar(30)
-      IsSubmersed = InVar(31)
-      IsVMNClosed = InVar(32)
-      FlowSign = InVar(33)
+        StartBin = InVar(1)
+        EndBin = InVar(2)
+        StartEbbBin = InVar(3)
+        EndEbbBin = InVar(4)
+        StartFldBin = InVar(5)
+        EndFldBin = InVar(6)
+        BiRating = InVar(7)
+        BiRatTran = InVar(8)
+        SelStgPrime = InVar(9)
+        SelStgSecnd = InVar(10)
+        UpBeamOffset = InVar(11)
+        VMPressOffset = InVar(12)
+        PS1Offset = InVar(13)
+        PS2Offset = InVar(14)
+        CalcQ = InVar(15)
+        StgOffset = InVar(16)
+        StgCoef = InVar(17)
+        StgCoef2 = InVar(18)
+        VelOffset = InVar(19)
+        VelCoef = InVar(20)
+        VelCoef2 = InVar(21)
+        VelCoef3 = InVar(22)
+        UpVelOffset = InVar(23)
+        UpVelCoef = InVar(24)
+        UpVelCoef2 = InVar(25)
+        UpVelCoef3 = InVar(26)
+        LowVelOffset = InVar(27)
+        LowVelCoef = InVar(28)
+        LowVelCoef2 = InVar(29)
+        LowVelCoef3 = InVar(30)
+        IsSubmersed = InVar(31)
+        IsVMNClosed = InVar(32)
+        FlowSign = InVar(33)
       #EndIf
       OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        SondeOffset = InVar(35)
+          SondeOffset = InVar(35)
         #EndIf
         IsWqNClosed = InVar(36)
       #EndIf
 
     Case 4
       #If HasVM = True Then
-      StartBin = InVar(1)
-      EndBin = InVar(2)
-      StartEbbBin = InVar(3)
-      EndEbbBin = InVar(4)
-      StartFldBin = InVar(5)
-      EndFldBin = InVar(6)
-      BiRating = InVar(7)
-      BiRatTran = InVar(8)
-      SelStgPrime = InVar(9)
-      SelStgSecnd = InVar(10)
-      UpBeamOffset = InVar(11)
-      VMPressOffset = InVar(12)
-      PS1Offset = InVar(13)
-      PS2Offset = InVar(14)
-      CalcQ = InVar(15)
-      StgOffset = InVar(16)
-      StgCoef = InVar(17)
-      StgCoef2 = InVar(18)
-      VelOffset = InVar(19)
-      VelCoef = InVar(20)
-      VelCoef2 = InVar(21)
-      VelCoef3 = InVar(22)
-      UpVelOffset = InVar(23)
-      UpVelCoef = InVar(24)
-      UpVelCoef2 = InVar(25)
-      UpVelCoef3 = InVar(26)
-      LowVelOffset = InVar(27)
-      LowVelCoef = InVar(28)
-      LowVelCoef2 = InVar(29)
-      LowVelCoef3 = InVar(30)
-      IsSubmersed = InVar(31)
-      IsVMNClosed = InVar(32)
-      FlowSign = InVar(33)
+        StartBin = InVar(1)
+        EndBin = InVar(2)
+        StartEbbBin = InVar(3)
+        EndEbbBin = InVar(4)
+        StartFldBin = InVar(5)
+        EndFldBin = InVar(6)
+        BiRating = InVar(7)
+        BiRatTran = InVar(8)
+        SelStgPrime = InVar(9)
+        SelStgSecnd = InVar(10)
+        UpBeamOffset = InVar(11)
+        VMPressOffset = InVar(12)
+        PS1Offset = InVar(13)
+        PS2Offset = InVar(14)
+        CalcQ = InVar(15)
+        StgOffset = InVar(16)
+        StgCoef = InVar(17)
+        StgCoef2 = InVar(18)
+        VelOffset = InVar(19)
+        VelCoef = InVar(20)
+        VelCoef2 = InVar(21)
+        VelCoef3 = InVar(22)
+        UpVelOffset = InVar(23)
+        UpVelCoef = InVar(24)
+        UpVelCoef2 = InVar(25)
+        UpVelCoef3 = InVar(26)
+        LowVelOffset = InVar(27)
+        LowVelCoef = InVar(28)
+        LowVelCoef2 = InVar(29)
+        LowVelCoef3 = InVar(30)
+        IsSubmersed = InVar(31)
+        IsVMNClosed = InVar(32)
+        FlowSign = InVar(33)
       #EndIf
       OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
       #If HasVM = True Then
-      #If UseAutoRange = True Then
-        RangeSource = InVar(35)
-        DucerDepthOffset = InVar(36)
-      #EndIf
+        #If UseAutoRange = True Then
+          RangeSource = InVar(35)
+          DucerDepthOffset = InVar(36)
+        #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        SondeOffset = InVar(37)
+          SondeOffset = InVar(37)
         #EndIf
         IsWqNClosed = InVar(38)
       #EndIf
 
     Case 5
       #If HasVM = True Then
-      StartBin = InVar(1)
-      EndBin = InVar(2)
-      StartEbbBin = InVar(3)
-      EndEbbBin = InVar(4)
-      StartFldBin = InVar(5)
-      EndFldBin = InVar(6)
-      BiRating = InVar(7)
-      BiRatTran = InVar(8)
-      SelStgPrime = InVar(9)
-      SelStgSecnd = InVar(10)
-      UpBeamOffset = InVar(11)
-      VMPressOffset = InVar(12)
-      PS1Offset = InVar(13)
-      PS2Offset = InVar(14)
-      CalcQ = InVar(15)
-      StgOffset = InVar(16)
-      StgCoef = InVar(17)
-      StgCoef2 = InVar(18)
-      VelOffset = InVar(19)
-      VelCoef = InVar(20)
-      VelCoef2 = InVar(21)
-      VelCoef3 = InVar(22)
-      UpVelOffset = InVar(23)
-      UpVelCoef = InVar(24)
-      UpVelCoef2 = InVar(25)
-      UpVelCoef3 = InVar(26)
-      LowVelOffset = InVar(27)
-      LowVelCoef = InVar(28)
-      LowVelCoef2 = InVar(29)
-      LowVelCoef3 = InVar(30)
-      IsSubmersed = InVar(31)
-      IsVMNClosed = InVar(32)
-      FlowSign = InVar(33)
+        StartBin = InVar(1)
+        EndBin = InVar(2)
+        StartEbbBin = InVar(3)
+        EndEbbBin = InVar(4)
+        StartFldBin = InVar(5)
+        EndFldBin = InVar(6)
+        BiRating = InVar(7)
+        BiRatTran = InVar(8)
+        SelStgPrime = InVar(9)
+        SelStgSecnd = InVar(10)
+        UpBeamOffset = InVar(11)
+        VMPressOffset = InVar(12)
+        PS1Offset = InVar(13)
+        PS2Offset = InVar(14)
+        CalcQ = InVar(15)
+        StgOffset = InVar(16)
+        StgCoef = InVar(17)
+        StgCoef2 = InVar(18)
+        VelOffset = InVar(19)
+        VelCoef = InVar(20)
+        VelCoef2 = InVar(21)
+        VelCoef3 = InVar(22)
+        UpVelOffset = InVar(23)
+        UpVelCoef = InVar(24)
+        UpVelCoef2 = InVar(25)
+        UpVelCoef3 = InVar(26)
+        LowVelOffset = InVar(27)
+        LowVelCoef = InVar(28)
+        LowVelCoef2 = InVar(29)
+        LowVelCoef3 = InVar(30)
+        IsSubmersed = InVar(31)
+        IsVMNClosed = InVar(32)
+        FlowSign = InVar(33)
       #EndIf
       OneMinConsistent = InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        SondeOffset = InVar(35)
+          SondeOffset = InVar(35)
         #EndIf
         IsWqNClosed = InVar(36)
         #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -6350,50 +6349,50 @@ EndSub
 
     Case 6
       #If HasVM = True Then
-      StartBin = InVar(1)
-      EndBin = InVar(2)
-      StartEbbBin = InVar(3)
-      EndEbbBin = InVar(4)
-      StartFldBin = InVar(5)
-      EndFldBin = InVar(6)
-      BiRating = InVar(7)
-      BiRatTran = InVar(8)
-      SelStgPrime = InVar(9)
-      SelStgSecnd = InVar(10)
-      UpBeamOffset = InVar(11)
-      VMPressOffset = InVar(12)
-      PS1Offset = InVar(13)
-      PS2Offset = InVar(14)
-      CalcQ = InVar(15)
-      StgOffset = InVar(16)
-      StgCoef = InVar(17)
-      StgCoef2 = InVar(18)
-      VelOffset = InVar(19)
-      VelCoef = InVar(20)
-      VelCoef2 = InVar(21)
-      VelCoef3 = InVar(22)
-      UpVelOffset = InVar(23)
-      UpVelCoef = InVar(24)
-      UpVelCoef2 = InVar(25)
-      UpVelCoef3 = InVar(26)
-      LowVelOffset = InVar(27)
-      LowVelCoef = InVar(28)
-      LowVelCoef2 = InVar(29)
-      LowVelCoef3 = InVar(30)
-      IsSubmersed = InVar(31)
-      IsVMNClosed = InVar(32)
-      FlowSign = InVar(33)
+        StartBin = InVar(1)
+        EndBin = InVar(2)
+        StartEbbBin = InVar(3)
+        EndEbbBin = InVar(4)
+        StartFldBin = InVar(5)
+        EndFldBin = InVar(6)
+        BiRating = InVar(7)
+        BiRatTran = InVar(8)
+        SelStgPrime = InVar(9)
+        SelStgSecnd = InVar(10)
+        UpBeamOffset = InVar(11)
+        VMPressOffset = InVar(12)
+        PS1Offset = InVar(13)
+        PS2Offset = InVar(14)
+        CalcQ = InVar(15)
+        StgOffset = InVar(16)
+        StgCoef = InVar(17)
+        StgCoef2 = InVar(18)
+        VelOffset = InVar(19)
+        VelCoef = InVar(20)
+        VelCoef2 = InVar(21)
+        VelCoef3 = InVar(22)
+        UpVelOffset = InVar(23)
+        UpVelCoef = InVar(24)
+        UpVelCoef2 = InVar(25)
+        UpVelCoef3 = InVar(26)
+        LowVelOffset = InVar(27)
+        LowVelCoef = InVar(28)
+        LowVelCoef2 = InVar(29)
+        LowVelCoef3 = InVar(30)
+        IsSubmersed = InVar(31)
+        IsVMNClosed = InVar(32)
+        FlowSign = InVar(33)
       #EndIf
       OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
       #If HasVM = True Then
-      #If UseAutoRange = True Then
-        RangeSource = InVar(35)
-        DucerDepthOffset = InVar(36)
-      #EndIf
+        #If UseAutoRange = True Then
+          RangeSource = InVar(35)
+          DucerDepthOffset = InVar(36)
+        #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        SondeOffset = InVar(37)
+          SondeOffset = InVar(37)
         #EndIf
         IsWqNClosed = InVar(38)
         #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -6433,216 +6432,216 @@ EndSub
 
     Select Case UsrCase
       #If HasVM = True Then
-    Case 1
-      Var(1) = StartBin
-      Var(2) = EndBin
-      Var(3) = StartEbbBin
-      Var(4) = EndEbbBin
-      Var(5) = StartFldBin
-      Var(6) = EndFldBin
-      Var(7) = BiRating
-      Var(8) = BiRatTran
-      Var(9) = SelStgPrime
-      Var(10) = SelStgSecnd
-      Var(11) = UpBeamOffset
-      Var(12) = VMPressOffset
-      Var(13) = PS1Offset
-      Var(14) = PS2Offset
-      Var(15) = CalcQ
-      Var(16) = StgOffset
-      Var(17) = StgCoef
-      Var(18) = StgCoef2
-      Var(19) = VelOffset
-      Var(20) = VelCoef
-      Var(21) = VelCoef2
-      Var(22) = VelCoef3
-      Var(23) = UpVelOffset
-      Var(24) = UpVelCoef
-      Var(25) = UpVelCoef2
-      Var(26) = UpVelCoef3
-      Var(27) = LowVelOffset
-      Var(28) = LowVelCoef
-      Var(29) = LowVelCoef2
-      Var(30) = LowVelCoef3
-      Var(31) = IsSubmersed
-      Var(32) = IsVMNClosed
-      Var(33) = FlowSign
-      Var(34) = OneMinConsistent
+      Case 1
+        Var(1) = StartBin
+        Var(2) = EndBin
+        Var(3) = StartEbbBin
+        Var(4) = EndEbbBin
+        Var(5) = StartFldBin
+        Var(6) = EndFldBin
+        Var(7) = BiRating
+        Var(8) = BiRatTran
+        Var(9) = SelStgPrime
+        Var(10) = SelStgSecnd
+        Var(11) = UpBeamOffset
+        Var(12) = VMPressOffset
+        Var(13) = PS1Offset
+        Var(14) = PS2Offset
+        Var(15) = CalcQ
+        Var(16) = StgOffset
+        Var(17) = StgCoef
+        Var(18) = StgCoef2
+        Var(19) = VelOffset
+        Var(20) = VelCoef
+        Var(21) = VelCoef2
+        Var(22) = VelCoef3
+        Var(23) = UpVelOffset
+        Var(24) = UpVelCoef
+        Var(25) = UpVelCoef2
+        Var(26) = UpVelCoef3
+        Var(27) = LowVelOffset
+        Var(28) = LowVelCoef
+        Var(29) = LowVelCoef2
+        Var(30) = LowVelCoef3
+        Var(31) = IsSubmersed
+        Var(32) = IsVMNClosed
+        Var(33) = FlowSign
+        Var(34) = OneMinConsistent
 
-    Case 2
-      Var(1) = StartBin
-      Var(2) = EndBin
-      Var(3) = StartEbbBin
-      Var(4) = EndEbbBin
-      Var(5) = StartFldBin
-      Var(6) = EndFldBin
-      Var(7) = BiRating
-      Var(8) = BiRatTran
-      Var(9) = SelStgPrime
-      Var(10) = SelStgSecnd
-      Var(11) = UpBeamOffset
-      Var(12) = VMPressOffset
-      Var(13) = PS1Offset
-      Var(14) = PS2Offset
-      Var(15) = CalcQ
-      Var(16) = StgOffset
-      Var(17) = StgCoef
-      Var(18) = StgCoef2
-      Var(19) = VelOffset
-      Var(20) = VelCoef
-      Var(21) = VelCoef2
-      Var(22) = VelCoef3
-      Var(23) = UpVelOffset
-      Var(24) = UpVelCoef
-      Var(25) = UpVelCoef2
-      Var(26) = UpVelCoef3
-      Var(27) = LowVelOffset
-      Var(28) = LowVelCoef
-      Var(29) = LowVelCoef2
-      Var(30) = LowVelCoef3
-      Var(31) = IsSubmersed
-      Var(32) = IsVMNClosed
-      Var(33) = FlowSign
-      Var(34) = OneMinConsistent
-      #If UseAutoRange = True Then
-        Var(35) = RangeSource
-        Var(36) = DucerDepthOffset
+      Case 2
+        Var(1) = StartBin
+        Var(2) = EndBin
+        Var(3) = StartEbbBin
+        Var(4) = EndEbbBin
+        Var(5) = StartFldBin
+        Var(6) = EndFldBin
+        Var(7) = BiRating
+        Var(8) = BiRatTran
+        Var(9) = SelStgPrime
+        Var(10) = SelStgSecnd
+        Var(11) = UpBeamOffset
+        Var(12) = VMPressOffset
+        Var(13) = PS1Offset
+        Var(14) = PS2Offset
+        Var(15) = CalcQ
+        Var(16) = StgOffset
+        Var(17) = StgCoef
+        Var(18) = StgCoef2
+        Var(19) = VelOffset
+        Var(20) = VelCoef
+        Var(21) = VelCoef2
+        Var(22) = VelCoef3
+        Var(23) = UpVelOffset
+        Var(24) = UpVelCoef
+        Var(25) = UpVelCoef2
+        Var(26) = UpVelCoef3
+        Var(27) = LowVelOffset
+        Var(28) = LowVelCoef
+        Var(29) = LowVelCoef2
+        Var(30) = LowVelCoef3
+        Var(31) = IsSubmersed
+        Var(32) = IsVMNClosed
+        Var(33) = FlowSign
+        Var(34) = OneMinConsistent
+        #If UseAutoRange = True Then
+          Var(35) = RangeSource
+          Var(36) = DucerDepthOffset
+        #EndIf
       #EndIf
-    #EndIf
     Case 3
       #If HasVM = True Then
-      Var(1) = StartBin
-      Var(2) = EndBin
-      Var(3) = StartEbbBin
-      Var(4) = EndEbbBin
-      Var(5) = StartFldBin
-      Var(6) = EndFldBin
-      Var(7) = BiRating
-      Var(8) = BiRatTran
-      Var(9) = SelStgPrime
-      Var(10) = SelStgSecnd
-      Var(11) = UpBeamOffset
-      Var(12) = VMPressOffset
-      Var(13) = PS1Offset
-      Var(14) = PS2Offset
-      Var(15) = CalcQ
-      Var(16) = StgOffset
-      Var(17) = StgCoef
-      Var(18) = StgCoef2
-      Var(19) = VelOffset
-      Var(20) = VelCoef
-      Var(21) = VelCoef2
-      Var(22) = VelCoef3
-      Var(23) = UpVelOffset
-      Var(24) = UpVelCoef
-      Var(25) = UpVelCoef2
-      Var(26) = UpVelCoef3
-      Var(27) = LowVelOffset
-      Var(28) = LowVelCoef
-      Var(29) = LowVelCoef2
-      Var(30) = LowVelCoef3
-      Var(31) = IsSubmersed
-      Var(32) = IsVMNClosed
-      Var(33) = FlowSign
+        Var(1) = StartBin
+        Var(2) = EndBin
+        Var(3) = StartEbbBin
+        Var(4) = EndEbbBin
+        Var(5) = StartFldBin
+        Var(6) = EndFldBin
+        Var(7) = BiRating
+        Var(8) = BiRatTran
+        Var(9) = SelStgPrime
+        Var(10) = SelStgSecnd
+        Var(11) = UpBeamOffset
+        Var(12) = VMPressOffset
+        Var(13) = PS1Offset
+        Var(14) = PS2Offset
+        Var(15) = CalcQ
+        Var(16) = StgOffset
+        Var(17) = StgCoef
+        Var(18) = StgCoef2
+        Var(19) = VelOffset
+        Var(20) = VelCoef
+        Var(21) = VelCoef2
+        Var(22) = VelCoef3
+        Var(23) = UpVelOffset
+        Var(24) = UpVelCoef
+        Var(25) = UpVelCoef2
+        Var(26) = UpVelCoef3
+        Var(27) = LowVelOffset
+        Var(28) = LowVelCoef
+        Var(29) = LowVelCoef2
+        Var(30) = LowVelCoef3
+        Var(31) = IsSubmersed
+        Var(32) = IsVMNClosed
+        Var(33) = FlowSign
       #EndIf
       Var(34) = OneMinConsistent
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        Var(35) = SondeOffset
+          Var(35) = SondeOffset
         #EndIf
         Var(36) = IsWqNClosed
       #EndIf
 
     Case 4
       #If HasVM = True Then
-      Var(1) = StartBin
-      Var(2) = EndBin
-      Var(3) = StartEbbBin
-      Var(4) = EndEbbBin
-      Var(5) = StartFldBin
-      Var(6) = EndFldBin
-      Var(7) = BiRating
-      Var(8) = BiRatTran
-      Var(9) = SelStgPrime
-      Var(10) = SelStgSecnd
-      Var(11) = UpBeamOffset
-      Var(12) = VMPressOffset
-      Var(13) = PS1Offset
-      Var(14) = PS2Offset
-      Var(15) = CalcQ
-      Var(16) = StgOffset
-      Var(17) = StgCoef
-      Var(18) = StgCoef2
-      Var(19) = VelOffset
-      Var(20) = VelCoef
-      Var(21) = VelCoef2
-      Var(22) = VelCoef3
-      Var(23) = UpVelOffset
-      Var(24) = UpVelCoef
-      Var(25) = UpVelCoef2
-      Var(26) = UpVelCoef3
-      Var(27) = LowVelOffset
-      Var(28) = LowVelCoef
-      Var(29) = LowVelCoef2
-      Var(30) = LowVelCoef3
-      Var(31) = IsSubmersed
-      Var(32) = IsVMNClosed
-      Var(33) = FlowSign
+        Var(1) = StartBin
+        Var(2) = EndBin
+        Var(3) = StartEbbBin
+        Var(4) = EndEbbBin
+        Var(5) = StartFldBin
+        Var(6) = EndFldBin
+        Var(7) = BiRating
+        Var(8) = BiRatTran
+        Var(9) = SelStgPrime
+        Var(10) = SelStgSecnd
+        Var(11) = UpBeamOffset
+        Var(12) = VMPressOffset
+        Var(13) = PS1Offset
+        Var(14) = PS2Offset
+        Var(15) = CalcQ
+        Var(16) = StgOffset
+        Var(17) = StgCoef
+        Var(18) = StgCoef2
+        Var(19) = VelOffset
+        Var(20) = VelCoef
+        Var(21) = VelCoef2
+        Var(22) = VelCoef3
+        Var(23) = UpVelOffset
+        Var(24) = UpVelCoef
+        Var(25) = UpVelCoef2
+        Var(26) = UpVelCoef3
+        Var(27) = LowVelOffset
+        Var(28) = LowVelCoef
+        Var(29) = LowVelCoef2
+        Var(30) = LowVelCoef3
+        Var(31) = IsSubmersed
+        Var(32) = IsVMNClosed
+        Var(33) = FlowSign
       #EndIf
       Var(34) = OneMinConsistent
       #If HasVM = True Then
-      #If UseAutoRange = True Then
-        Var(35) = RangeSource
-        Var(36) = DucerDepthOffset
-      #EndIf
+        #If UseAutoRange = True Then
+          Var(35) = RangeSource
+          Var(36) = DucerDepthOffset
+        #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        Var(37) = SondeOffset
+          Var(37) = SondeOffset
         #EndIf
         Var(38) = IsWqNClosed
       #EndIf
 
     Case 5
       #If HasVM = True Then
-      Var(1) = StartBin
-      Var(2) = EndBin
-      Var(3) = StartEbbBin
-      Var(4) = EndEbbBin
-      Var(5) = StartFldBin
-      Var(6) = EndFldBin
-      Var(7) = BiRating
-      Var(8) = BiRatTran
-      Var(9) = SelStgPrime
-      Var(10) = SelStgSecnd
-      Var(11) = UpBeamOffset
-      Var(12) = VMPressOffset
-      Var(13) = PS1Offset
-      Var(14) = PS2Offset
-      Var(15) = CalcQ
-      Var(16) = StgOffset
-      Var(17) = StgCoef
-      Var(18) = StgCoef2
-      Var(19) = VelOffset
-      Var(20) = VelCoef
-      Var(21) = VelCoef2
-      Var(22) = VelCoef3
-      Var(23) = UpVelOffset
-      Var(24) = UpVelCoef
-      Var(25) = UpVelCoef2
-      Var(26) = UpVelCoef3
-      Var(27) = LowVelOffset
-      Var(28) = LowVelCoef
-      Var(29) = LowVelCoef2
-      Var(30) = LowVelCoef3
-      Var(31) = IsSubmersed
-      Var(32) = IsVMNClosed
-      Var(33) = FlowSign
+        Var(1) = StartBin
+        Var(2) = EndBin
+        Var(3) = StartEbbBin
+        Var(4) = EndEbbBin
+        Var(5) = StartFldBin
+        Var(6) = EndFldBin
+        Var(7) = BiRating
+        Var(8) = BiRatTran
+        Var(9) = SelStgPrime
+        Var(10) = SelStgSecnd
+        Var(11) = UpBeamOffset
+        Var(12) = VMPressOffset
+        Var(13) = PS1Offset
+        Var(14) = PS2Offset
+        Var(15) = CalcQ
+        Var(16) = StgOffset
+        Var(17) = StgCoef
+        Var(18) = StgCoef2
+        Var(19) = VelOffset
+        Var(20) = VelCoef
+        Var(21) = VelCoef2
+        Var(22) = VelCoef3
+        Var(23) = UpVelOffset
+        Var(24) = UpVelCoef
+        Var(25) = UpVelCoef2
+        Var(26) = UpVelCoef3
+        Var(27) = LowVelOffset
+        Var(28) = LowVelCoef
+        Var(29) = LowVelCoef2
+        Var(30) = LowVelCoef3
+        Var(31) = IsSubmersed
+        Var(32) = IsVMNClosed
+        Var(33) = FlowSign
       #EndIf
       Var(34) = OneMinConsistent
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        Var(35) = SondeOffset
+          Var(35) = SondeOffset
         #EndIf
         Var(36) = IsWqNClosed
         #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -6652,50 +6651,50 @@ EndSub
 
     Case 6
       #If HasVM = True Then
-      Var(1) = StartBin
-      Var(2) = EndBin
-      Var(3) = StartEbbBin
-      Var(4) = EndEbbBin
-      Var(5) = StartFldBin
-      Var(6) = EndFldBin
-      Var(7) = BiRating
-      Var(8) = BiRatTran
-      Var(9) = SelStgPrime
-      Var(10) = SelStgSecnd
-      Var(11) = UpBeamOffset
-      Var(12) = VMPressOffset
-      Var(13) = PS1Offset
-      Var(14) = PS2Offset
-      Var(15) = CalcQ
-      Var(16) = StgOffset
-      Var(17) = StgCoef
-      Var(18) = StgCoef2
-      Var(19) = VelOffset
-      Var(20) = VelCoef
-      Var(21) = VelCoef2
-      Var(22) = VelCoef3
-      Var(23) = UpVelOffset
-      Var(24) = UpVelCoef
-      Var(25) = UpVelCoef2
-      Var(26) = UpVelCoef3
-      Var(27) = LowVelOffset
-      Var(28) = LowVelCoef
-      Var(29) = LowVelCoef2
-      Var(30) = LowVelCoef3
-      Var(31) = IsSubmersed
-      Var(32) = IsVMNClosed
-      Var(33) = FlowSign
+        Var(1) = StartBin
+        Var(2) = EndBin
+        Var(3) = StartEbbBin
+        Var(4) = EndEbbBin
+        Var(5) = StartFldBin
+        Var(6) = EndFldBin
+        Var(7) = BiRating
+        Var(8) = BiRatTran
+        Var(9) = SelStgPrime
+        Var(10) = SelStgSecnd
+        Var(11) = UpBeamOffset
+        Var(12) = VMPressOffset
+        Var(13) = PS1Offset
+        Var(14) = PS2Offset
+        Var(15) = CalcQ
+        Var(16) = StgOffset
+        Var(17) = StgCoef
+        Var(18) = StgCoef2
+        Var(19) = VelOffset
+        Var(20) = VelCoef
+        Var(21) = VelCoef2
+        Var(22) = VelCoef3
+        Var(23) = UpVelOffset
+        Var(24) = UpVelCoef
+        Var(25) = UpVelCoef2
+        Var(26) = UpVelCoef3
+        Var(27) = LowVelOffset
+        Var(28) = LowVelCoef
+        Var(29) = LowVelCoef2
+        Var(30) = LowVelCoef3
+        Var(31) = IsSubmersed
+        Var(32) = IsVMNClosed
+        Var(33) = FlowSign
       #EndIf
       Var(34) = OneMinConsistent
       #If HasVM = True Then
-      #If UseAutoRange = True Then
-        Var(35) = RangeSource
-        Var(36) = DucerDepthOffset
-      #EndIf
+        #If UseAutoRange = True Then
+          Var(35) = RangeSource
+          Var(36) = DucerDepthOffset
+        #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
         #If HasVM = True Then
-        Var(37) = SondeOffset
+          Var(37) = SondeOffset
         #EndIf
         Var(38) = IsWqNClosed
         #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -7212,17 +7211,9 @@ EndSub
           #EndIf
         #EndIf
       EndIf
-      #EndIf
-      If HMS_Manual = False Then 'if it's not a manual trigger check standard methods
-        If WeBad = True AND HMS_24hrcount >= 1440 Then 'if we've met "catastrophy" failure status and it's been 24hr since logger reboot
-          CallTable HMSTable 'call table so we can have a record of what caused the problem
-          PortSet(HMS_ErrPort,1) 'flip our switch high/send signal to arduino
-          Delay(1,1,Sec) 'delay for 1s (arduino is on a 0.5s "scan", 1s ensures signal to be heard)
-          PortSet(HMS_ErrPort,0) 'set port back to low, in case arduino didn't catch it
-          WeBad = False 'set flag back to false, in case arduino didn't flip the switch
-          HMS_Manual = False
-        EndIf
-      Else 'if it is a manual trigger
+    #EndIf
+    If HMS_Manual = False Then 'if it's not a manual trigger check standard methods
+      If WeBad = True AND HMS_24hrcount >= 1440 Then 'if we've met "catastrophy" failure status and it's been 24hr since logger reboot
         CallTable HMSTable 'call table so we can have a record of what caused the problem
         PortSet(HMS_ErrPort,1) 'flip our switch high/send signal to arduino
         Delay(1,1,Sec) 'delay for 1s (arduino is on a 0.5s "scan", 1s ensures signal to be heard)
@@ -7230,652 +7221,660 @@ EndSub
         WeBad = False 'set flag back to false, in case arduino didn't flip the switch
         HMS_Manual = False
       EndIf
-    EndSub
+    Else 'if it is a manual trigger
+      CallTable HMSTable 'call table so we can have a record of what caused the problem
+      PortSet(HMS_ErrPort,1) 'flip our switch high/send signal to arduino
+      Delay(1,1,Sec) 'delay for 1s (arduino is on a 0.5s "scan", 1s ensures signal to be heard)
+      PortSet(HMS_ErrPort,0) 'set port back to low, in case arduino didn't catch it
+      WeBad = False 'set flag back to false, in case arduino didn't flip the switch
+      HMS_Manual = False
+    EndIf
+  EndSub
+#EndIf
+'========================================================================================
+'------------------------------- MAIN PROGRAM -------------------------------------------
+'========================================================================================
+PreserveVariables
+
+BeginProg
+  SetStatus ("USRDriveSize",16384)
+  #If HasVM = True OR WqSonde <> "NONE" Then
+    Call CheckCase
   #EndIf
-  '========================================================================================
-  '------------------------------- MAIN PROGRAM -------------------------------------------
-  '========================================================================================
-  PreserveVariables
+  Call UserDefaults 'formerly named "GetStartup"
+  Call Initialize
+  Call SetPorts
+  #If HasVM = True Then
+    Call OpenADCPPort
+  #EndIf
+  #If WqSonde <> "NONE" Then
+    Call OpenWQPort
+  #EndIf
+  #If HasSuna = True Then 'programatically establish SunaPort as a ComPort before the scan. Otherwise, it waits until the 15th minute to allow a user to open/watch the port for in the emulator.
+    SerialOpen(SunaPort,115200,0,0,6000)
+    SerialFlush(SunaPort)
+    SerialClose(SunaPort)
+  #EndIf
+  #If RadioNetwork = True Then
+    Call SetRadSetting
+    ResetTryOK = True 'It's ok to try a reset once initial dead thresholds have been met, no need to wait.
+    NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio without waiting the first time.
+  #EndIf
 
-  BeginProg
-    SetStatus ("USRDriveSize",16384)
+  '=========================================================================
+  '---------------- SCAN STARTS HERE ---------------------------------------
+  '=========================================================================
+  Scan(ScanRate,ScanUnit,5,0) 'Start scan, default = 60sec scan rate
+    Call GetSysInfo 'Get our system vitals and start timer for debugging
+    #If ReadExtPwr = True Then
+      Call ReadExtVolt
+    #EndIf
+    CurrentDateTime = SecsSince1990(Status.Timestamp,1)
+    CheckDateTime = SecsSince1990(AvgChangeTime,1)
+    If CurrentDateTime >= CheckDateTime Then
+      NewAvg = True
+    Else
+      NewAvg = False
+    EndIf
     #If HasVM = True OR WqSonde <> "NONE" Then
-      Call CheckCase
+      If GetVariablesFlg = True Then
+        Call ReadVariables
+        GetVariablesFlg = False
+      EndIf
     #EndIf
-    Call UserDefaults 'formerly named "GetStartup"
-    Call Initialize
-    Call SetPorts
-    #If HasVM = True Then
-      Call OpenADCPPort
-    #EndIf
+    #If HasVM = True Then 'if we have a VM make sure it's powered first thing
+      Call ToggleVMPower 'Turn power on or off, based on user input
+    #EndIf 'if we have VM
     #If WqSonde <> "NONE" Then
-      Call OpenWQPort
+      Call WqPwrOn
     #EndIf
-    #If HasSuna = True Then 'programatically establish SunaPort as a ComPort before the scan. Otherwise, it waits until the 15th minute to allow a user to open/watch the port for in the emulator.
-      SerialOpen(SunaPort,115200,0,0,6000)
-      SerialFlush(SunaPort)
-      SerialClose(SunaPort)
+    RealTime(rTime) 'get time for start of scan. Note, this produces the timestamp at START of scan, no matter where it's placed within scan
+    Call CalcMods 'calculate "Mod" times for timing intervals
+    #If HasGPS Then
+      Call CycleGPSPower
     #EndIf
-    #If RadioNetwork = True Then
-      Call SetRadSetting
-      ResetTryOK = True 'It's ok to try a reset once initial dead thresholds have been met, no need to wait.
-      NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio without waiting the first time.
-    #EndIf
-
-    '=========================================================================
-    '---------------- SCAN STARTS HERE ---------------------------------------
-    '=========================================================================
-    Scan(ScanRate,ScanUnit,5,0) 'Start scan, default = 60sec scan rate
-      Call GetSysInfo 'Get our system vitals and start timer for debugging
-      #If ReadExtPwr = True Then
-        Call ReadExtVolt
-      #EndIf
-      CurrentDateTime = SecsSince1990(Status.Timestamp,1)
-      CheckDateTime = SecsSince1990(AvgChangeTime,1)
-      If CurrentDateTime >= CheckDateTime Then
-        NewAvg = True
+    #If HasSuna = True Then
+      If ManualSunaOn = True Then 'if user wants suna powered
+        SerialOpen(SunaPort,115200,0,0,6000) 'open the port
+        PortSet(SunaSwitch,1) 'turn it on
       Else
-        NewAvg = False
-      EndIf      
-      #If HasVM = True OR WqSonde <> "NONE" Then
-        If GetVariablesFlg = True Then
-          Call ReadVariables
-          GetVariablesFlg = False
-        EndIf
-      #EndIf
-      #If HasVM = True Then 'if we have a VM make sure it's powered first thing
-        Call ToggleVMPower 'Turn power on or off, based on user input
+        SerialFlush(SunaPort) 'otherwise flush, close, and turn off
+        SerialClose(SunaPort)
+        PortSet(SunaSwitch,0)
+      EndIf
+      If Mod15Minutes = 840 Then '14th minute for suna stuff
+        WipeSuna = True 'set a trigger to wipe the suna
+        ManSunaWiper = False 'turn off the manual suna wiper
+        ManualSunaOn = False 'turn off the manual suna power
+        SerialFlush(SunaPort) 'flush port
+        SerialClose(SunaPort) 'close port
+        PortSet(SunaSwitch,0) 'turn power off to suna
+      EndIf
+      If Mod15Minutes = 0 Then 'top of 15th min for suna stuff
+        ManSunaWiper = False 'keep manual wiper off
+        PortSet(SunaSwitch,1) 'turn the suna on
+        Timer(SunaSampleTimer,mSec,2) 'Start warmup timer
+        SampleSuna = True 'Set flag for sampling routine
+      ElseIf Mod15Minutes <> 0 AND ManualSunaOn = False Then
+        PortSet(SunaSwitch,0) 'otherwise keep suna off
+        SampleSuna = False 'don't trigger sampling routine
+      EndIf
+      If ManSunaWiper = True AND WipeSuna <> True AND SampleSuna <> True Then 'only allow user to turn wiper on outside of 14th and 15th min
+        PortSet (SunaWipeSwitch,1)
+      Else
+        PortSet (SunaWipeSwitch,0)
+      EndIf
+    #EndIf
+    If ModDay = 0 Then 'it's Midnight, so set flags to set instrument clocks at beginning of scan
+      'StoreVariablesFlag = True 'Set flag to store critical variables to USR drive
+      Rec24HrFlag = True
+      #If HasVM = True Then 'if we have VM
+        SetVMTimeFlg = True
       #EndIf 'if we have VM
-      #If WqSonde <> "NONE" Then
-        Call WqPwrOn
+      #If WqSonde <> "NONE" Then 'if serial sonde
+        SetEXOTimeFlg = True 'set flag to set the flag at midnight
+      #EndIf 'if sonde present
+    Else 'not Midnight keep 24hr flag false
+      Rec24HrFlag = False
+    EndIf 'if it's midnight
+    If Mod15Minutes = 0 Then 'at top of 15min interval ( hh:00, hh:15, hh:30, hh:45)
+      FTimeIn = 1 'set Select Case value for FTime function
+      TimeStamp15Min = FTime(Public.Timestamp) 'store timestamp to allow for centering vel/stage data in sample period
+      #If WqSonde = "WQ_SERIAL_BURST" Then
+        GetBurst = True
       #EndIf
-      RealTime(rTime) 'get time for start of scan. Note, this produces the timestamp at START of scan, no matter where it's placed within scan
-      Call CalcMods 'calculate "Mod" times for timing intervals
-      #If HasGPS Then
-        Call CycleGPSPower
-      #EndIf
-      #If HasSuna = True Then
-        If ManualSunaOn = True Then 'if user wants suna powered
-          SerialOpen(SunaPort,115200,0,0,6000) 'open the port
-          PortSet(SunaSwitch,1) 'turn it on
-        Else
-          SerialFlush(SunaPort) 'otherwise flush, close, and turn off
-          SerialClose(SunaPort)
-          PortSet(SunaSwitch,0)
-        EndIf
-        If Mod15Minutes = 840 Then '14th minute for suna stuff
-          WipeSuna = True 'set a trigger to wipe the suna
-          ManSunaWiper = False 'turn off the manual suna wiper
-          ManualSunaOn = False 'turn off the manual suna power
-          SerialFlush(SunaPort) 'flush port
-          SerialClose(SunaPort) 'close port
-          PortSet(SunaSwitch,0) 'turn power off to suna
-        EndIf
-        If Mod15Minutes = 0 Then 'top of 15th min for suna stuff
-          ManSunaWiper = False 'keep manual wiper off
-          PortSet(SunaSwitch,1) 'turn the suna on
-          Timer(SunaSampleTimer,mSec,2) 'Start warmup timer
-          SampleSuna = True 'Set flag for sampling routine
-        ElseIf Mod15Minutes <> 0 AND ManualSunaOn = False Then
-          PortSet(SunaSwitch,0) 'otherwise keep suna off
-          SampleSuna = False 'don't trigger sampling routine
-        EndIf
-        If ManSunaWiper = True AND WipeSuna <> True AND SampleSuna <> True Then 'only allow user to turn wiper on outside of 14th and 15th min
-          PortSet (SunaWipeSwitch,1)
-        Else
-          PortSet (SunaWipeSwitch,0)
-        EndIf
-      #EndIf
-      If ModDay = 0 Then 'it's Midnight, so set flags to set instrument clocks at beginning of scan
-        'StoreVariablesFlag = True 'Set flag to store critical variables to USR drive
-        Rec24HrFlag = True
-        #If HasVM = True Then 'if we have VM
-          SetVMTimeFlg = True
-        #EndIf 'if we have VM
-        #If WqSonde <> "NONE" Then 'if serial sonde
-          SetEXOTimeFlg = True 'set flag to set the flag at midnight
-        #EndIf 'if sonde present
-      Else 'not Midnight keep 24hr flag false
-        Rec24HrFlag = False
-      EndIf 'if it's midnight
-      If Mod15Minutes = 0 Then 'at top of 15min interval ( hh:00, hh:15, hh:30, hh:45)
-        FTimeIn = 1 'set Select Case value for FTime function
-        TimeStamp15Min = FTime(Public.Timestamp) 'store timestamp to allow for centering vel/stage data in sample period
-        #If WqSonde = "WQ_SERIAL_BURST" Then
-          GetBurst = True
-        #EndIf
-      EndIf 'top of 15min interval
-      #If WqSonde <> "NONE" Then
-        If Mod15Minutes = 840 Then 'If 14th minute for EXO wipe
-          WipeFlag = True
-        Else
-          WipeFlag = False
-        EndIf
-      #EndIf 'Make "WipeFlag" variable available for either Suna or Sonde. Both being wiped in 14min, just at different times.
-      If NewAvg = True Then
+    EndIf 'top of 15min interval
+    #If WqSonde <> "NONE" Then
+      If Mod15Minutes = 840 Then 'If 14th minute for EXO wipe
+        WipeFlag = True
+      Else
+        WipeFlag = False
+      EndIf
+    #EndIf 'Make "WipeFlag" variable available for either Suna or Sonde. Both being wiped in 14min, just at different times.
+    If NewAvg = True Then
       If Mod15Minutes = 420 Then 'at the 7th minute into a 15min interval. Use this to center vel and stage over sample period
         Rec15MinFlag = True 'set trigger for storage to 15min tables
       Else 'if not 7min in
         Rec15MinFlag = False
       EndIf 'determine time into 15min interval
+    Else
+      If Mod15Minutes = 0 Then
+        Rec15MinFlag = True
       Else
-        If Mod15Minutes = 0 Then
-          Rec15MinFlag = True
-          Else
-            Rec15MinFlag = False
-        EndIf
+        Rec15MinFlag = False
       EndIf
-      If RecCalibData = True Then 'if we want 1 min data
-        Rec1MinFlag = True
-      Else 'if the user set it back to false
-        Rec1MinFlag = False 'stop recording 1min data
-        OneMinCount = 0 'reset the counter
-      EndIf 'we don't want 1min data
-      If OneMinCounterReset = True Then 'user wants to force a reset to the counter
-        RecCalibData = True 'Verify RecCalibData gets turned back on in case we reset directly at 24hr
-        Rec1MinFlag = True 'we want 1min data
-        OneMinCount = 0 'reset the counter
-      EndIf
-      If Rec1MinFlag = True Then 'if 1min flag is set to true
-        OneMinCount = OneMinCount + 1 'increase counter
-        If OneMinCount > 1439 Then 'If 24hours has been recorded
-          RecCalibData = False 'set to false
-          Rec1MinFlag = False  'set to false
-          OneMinCount = 0 'reset counter
-        EndIf 'if we got 24hr of data
-      EndIf 'if 1min flag is true
+    EndIf
+    If RecCalibData = True Then 'if we want 1 min data
+      Rec1MinFlag = True
+    Else 'if the user set it back to false
+      Rec1MinFlag = False 'stop recording 1min data
+      OneMinCount = 0 'reset the counter
+    EndIf 'we don't want 1min data
+    If OneMinCounterReset = True Then 'user wants to force a reset to the counter
+      RecCalibData = True 'Verify RecCalibData gets turned back on in case we reset directly at 24hr
+      Rec1MinFlag = True 'we want 1min data
+      OneMinCount = 0 'reset the counter
+    EndIf
+    If Rec1MinFlag = True Then 'if 1min flag is set to true
+      OneMinCount = OneMinCount + 1 'increase counter
+      If OneMinCount > 1439 Then 'If 24hours has been recorded
+        RecCalibData = False 'set to false
+        Rec1MinFlag = False  'set to false
+        OneMinCount = 0 'reset counter
+      EndIf 'if we got 24hr of data
+    EndIf 'if 1min flag is true
 
-      '========================================================================
-      '-------------------- CALL VM SUBS HERE --------------------------------
-      '========================================================================
+    '========================================================================
+    '-------------------- CALL VM SUBS HERE --------------------------------
+    '========================================================================
 
-      #If HasVM = True Then 'if we have a VM
-        VMTimeStart = Timer(DebugTimer,mSec,4)
-        VMTimeStart = VMTimeStart/1000
-        Call GetVMData 'Perform loops to pull data from buffer
-        If ADCPDone = True Then 'only run checksum/decoders if loop got all data
-          Call CheckSumCheck
-          If CalcCheckSum <> EnsCheckSum OR CalcCheckSum = 0 Then 'if we had a bad checksum, no checksum, or 0 bytes
-            VMdataIn = False
-            BadEnsemble = BadEnsemble + 1
-            BadCheckSum = BadCheckSum + 1
-            VMDeadCount = VMDeadCount + 1
-            #If HasHMS = True Then
-              HMS_VMcount = HMS_VMcount + 1
-              If HMS_VMcount >= HMS_BadThresh Then
-                HMS_VMFlag = True
-              EndIf
-            #EndIf
-            If VMDeadCount >= VMDeadCntMax Then 'if reached "dead" threshold
-              WakeUpVM = True 'set flag to try to reset VM
-            EndIf ' "dead" threshold check
-            SerialFlush (AdcpPort) 'flush the port
-          Else 'if we have good data based on check sum
-            VMdataIn = True 'set flag to true
-            VMDeadCount = 0 'set counter to 0
-            #If HasHMS = True Then
-              HMS_VMcount = 0
-              HMS_VMFlag = False
-            #EndIf
-            Call MainDecode 'call the main decoder
-            #If UseAutoRange = True Then 'if uplooker with autorange set
-              Call CalcRangeBin 'calculate our ranged bin
-            #EndIf 'autorange
-            Call OneMinuteCalcs 'perform 1min vel calcs
-          EndIf 'If good checksum
-        EndIf 'If ADCP Loop is "Done"
-        Call GetStage 'get/true our stage outside of good checksums because we sample Pressure sensors here too
-        Call CalculateQ 'calculate discharge
-        Call GetSN 'get serial numbers either way. If no VM, then SN = 0
-        Call VMCenter 'get center of ADCP time after new ensemble comes in
-        If SetVMTimeFlg = True OR SendTF = True Then 'if we want to set the time/set TF
-          Call SetVMTime
-        EndIf 'set time/TF
-        #If GetNoiseFloor = True Then 'if we want noisefloor
-          If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) AND OneMinConsistent = False AND RecCalibData = False Then 'at X min after midnight. Skip this if recording 1min data
-            CMD = "PT3"
-            SendCMD = True
-          EndIf 'if automatic time for PT3
-        #EndIf 'if we want noise floor
-        If SendCMD = True Then Call SendSetup 'if we want to send a command via CMD variable
-        Call GetVMFreeMem 'check workhorse memory
-        #If StoreAllToCard = True Then 'if we want to store all 1min spikes to card
-          If ScanNum >= 20 Then 'make sure buffer is full before checking spikes
-            Call CheckSpikes 'check for spikes using rolling 15min data
-            Call StoreAllData 'store the spikes to the card
-          EndIf 'if we have 20 scans
-          Call AddSpikes 'remove oldest data from buffer, fill with new value
-        #EndIf 'if we want to store to card
-        #If ReadExtPwr = True Then
-          If IsWorkHorse = True Then
-            VMVolts = WHConvertVolt
-          EndIf
-        #EndIf
-        If WakeUpVM = True Then Call WakeVM 'Either user established or auto based on "VM Dead"
-        VMTimeEnd = Timer(DebugTimer,mSec,4)
-        VMTimeEnd = VMTimeEnd/1000
-        VMTotTime = VMTimeEnd - VMTimeStart
-      #EndIf 'If we have a velocity meter present
-      '==================================================================================
-      '------------------END OF VM SPECIFIC SUB CALLS -----------------------------------
-      '==================================================================================
-
-      '==================================================================================
-      '------------------ START OF WQ SPECIFIC SUB CALLS --------------------------------
-      '==================================================================================
-      #If WqSonde <> "NONE" Then
-        Call RedeploySonde 'Call the redeploy routine if Flag is set, need to get parameter order before pulling any data
-        Call GetWqData
-        Delay(1,2500,mSec) 'delay to give time for WQ data to show up in buffer from misbehaving sonde
-        Call PullWqData
-        #If WqSonde = "WQ_SERIAL_BURST" Then
-          If GetBurst = True Then 'It's 15th minute, time to get the burst data
-            Call SetBurst
-          EndIf
-        #EndIf 'has burst
-        Call ParseWqData
-      #EndIf
-      #If WqSonde <> "NONE" OR HasSuna = True Then 'use same timers for WQ and SUNA for consistency
-        If Mod15Minutes = 840 OR Mod15Minutes = 0 Then
-          Do ' Start loop
-            SampleTime = Timer(DebugTimer,mSec,4)
-            SampleTime = SampleTime/1000
-            Delay(1,250,mSec)
-          Loop Until SampleTime > 15 'wait until we get to 15sec into minute, then proceed to wipe/flushing ports/sampling suna
-        EndIf
-      #EndIf
-      #If WqSonde <> "NONE" Then 'if we have a sonde, in 14th minute, wipe, starting at 15s into minute. (Sondes wipe for 45s, will be ready for 15th min)
-        If WipeFlag = True Then
-          Call WipeWq
-        EndIf
-      #EndIf
-      #If WqSonde = "WQ_SERIAL_BURST" Then
-        SerialFlush(WqSerialPort) 'flush ports for WQ sondes so they can start filling buffer
-        #If TopBottom = True
-          SerialFlush(BtmWqSerialPort)
-        #EndIf
-      #EndIf
-      '==================================================================================
-      '----------------------- START SUNA SAMPLING HERE   -------------------------------
-      '==================================================================================
-      #If HasSuna = True Then
-        If SampleSuna = True Then 'we're in 15th min
-          ManSunaWiper = False 'turn off wiper, just in case user had it on
-          PortSet(SunaWipeSwitch,0)
-          Do 'start loop to check warm up time
-            SunaTimer =Timer(SunaSampleTimer,mSec,4)
-            SunaTimer = SunaTimer/1000
-            If SunaTimer >= 15 Then 'if it's been 15s since power up
-              SunaReady = True 'we're ready to sample
-              ExitDo
-            Else
-              SunaReady = False
+    #If HasVM = True Then 'if we have a VM
+      VMTimeStart = Timer(DebugTimer,mSec,4)
+      VMTimeStart = VMTimeStart/1000
+      Call GetVMData 'Perform loops to pull data from buffer
+      If ADCPDone = True Then 'only run checksum/decoders if loop got all data
+        Call CheckSumCheck
+        If CalcCheckSum <> EnsCheckSum OR CalcCheckSum = 0 Then 'if we had a bad checksum, no checksum, or 0 bytes
+          VMdataIn = False
+          BadEnsemble = BadEnsemble + 1
+          BadCheckSum = BadCheckSum + 1
+          VMDeadCount = VMDeadCount + 1
+          #If HasHMS = True Then
+            HMS_VMcount = HMS_VMcount + 1
+            If HMS_VMcount >= HMS_BadThresh Then
+              HMS_VMFlag = True
             EndIf
-            Delay(1,100,mSec) 'delay 0.1s before checking again
-          Loop
-          If SunaReady = True Then
-            SerialOpen(SunaPort,115200,0,0,6000) 'open the serial port with enough buffer to hold 3 full strings
-            oCount = 0 'start a counter at 0
-            SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
-            SunaSampleStart = SunaSampleStart/1000
-            LFrameCnt = 0 'Reset good values counter to 0
-            DFrameCnt = 0
-            BadSunaVals = 0 'Reset bad values counter to 0
-            'For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
-            Do 'Start loop to collect Suna Data. Loop until LFrameThreshold is met OR timer >= 55sec
-              SunaMissedCnt = 0 'set the missed count to 0
-              SunaTimer = Timer(DebugTimer,Sec,4) 'read the timer started at the beginning of the scan
-              If SunaTimer >= 53 Then 'if we didn't complete all samples by 53 seconds, exit the loop to avoid skipping scans. SerialIn below has a timeout of 2s per attempt, totalling 6s until flagged as bad
-                ExitDo
-              EndIf 'Check Timer
-              oCount = oCount + 1 'if we've proceeded into data acquisition and didn't time out, increase the count.
-              Do 'start Do/Loop
-                LFrame = False 'Force all trigger flags to false to make sure we stay in the loop appropriately
-                DFrame = False
-                SunaMissed = False
-                LampWarn = False
-                MemWarn = False
-                SunaWarning = ""
-                SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
-                SunaStringLen(oCount) = Len(SunaBurstIn) 'get the length of the string
-                If SunaStringLen(oCount) > 1000 Then 'if the string is longer than 1000 bytes, DarkFrames are around 1100, Light frames around 1600+
-                  LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (to store LightFrames and do calculations)
-                  LocDF = InStr (1,SunaBurstIn,"D",2) 'search the string for a D (to store raw dark frames)
-                  Delay (1,50,mSec) 'delay 50 millisec
-                  If LocLF = 5 Then 'if the L is found at byte 5
-                    If InStr(1,SunaBurstIn,"-1",2) <> 0 AND InStr(1,SunaBurstIn,"-1",2) < 40 Then 'if a -1 occurs early in the light frame, it's bad
-                      LFrame = True 'we know it's a LightFrame
-                      DFrame = False
-                      LampWarn = False
-                      MemWarn = False
-                      SunaWarning = "-1 found at byte " + InStr(1,SunaBurstIn,"-1",2) + ". Assume lamp problem."
-                    Else
-                      LFrame = True
-                      DFrame = False
-                      LampWarn = False
-                      MemWarn = False
-                      SunaWarning = ""
-                    EndIf
-                  ElseIf LocDF = 5 Then 'if D is found at byte 5
-                    LFrame = False 'not a light frame
-                    DFrame = True 'it is a dark frame
+          #EndIf
+          If VMDeadCount >= VMDeadCntMax Then 'if reached "dead" threshold
+            WakeUpVM = True 'set flag to try to reset VM
+          EndIf ' "dead" threshold check
+          SerialFlush (AdcpPort) 'flush the port
+        Else 'if we have good data based on check sum
+          VMdataIn = True 'set flag to true
+          VMDeadCount = 0 'set counter to 0
+          #If HasHMS = True Then
+            HMS_VMcount = 0
+            HMS_VMFlag = False
+          #EndIf
+          Call MainDecode 'call the main decoder
+          #If UseAutoRange = True Then 'if uplooker with autorange set
+            Call CalcRangeBin 'calculate our ranged bin
+          #EndIf 'autorange
+          Call OneMinuteCalcs 'perform 1min vel calcs
+        EndIf 'If good checksum
+      EndIf 'If ADCP Loop is "Done"
+      Call GetStage 'get/true our stage outside of good checksums because we sample Pressure sensors here too
+      Call CalculateQ 'calculate discharge
+      Call GetSN 'get serial numbers either way. If no VM, then SN = 0
+      Call VMCenter 'get center of ADCP time after new ensemble comes in
+      If SetVMTimeFlg = True OR SendTF = True Then 'if we want to set the time/set TF
+        Call SetVMTime
+      EndIf 'set time/TF
+      #If GetNoiseFloor = True Then 'if we want noisefloor
+        If SendPT3 = True AND TimeIntoInterval(PT3Time,1440,Min) AND OneMinConsistent = False AND RecCalibData = False Then 'at X min after midnight. Skip this if recording 1min data
+          CMD = "PT3"
+          SendCMD = True
+        EndIf 'if automatic time for PT3
+      #EndIf 'if we want noise floor
+      If SendCMD = True Then Call SendSetup 'if we want to send a command via CMD variable
+      Call GetVMFreeMem 'check workhorse memory
+      #If StoreAllToCard = True Then 'if we want to store all 1min spikes to card
+        If ScanNum >= 20 Then 'make sure buffer is full before checking spikes
+          Call CheckSpikes 'check for spikes using rolling 15min data
+          Call StoreAllData 'store the spikes to the card
+        EndIf 'if we have 20 scans
+        Call AddSpikes 'remove oldest data from buffer, fill with new value
+      #EndIf 'if we want to store to card
+      #If ReadExtPwr = True Then
+        If IsWorkHorse = True Then
+          VMVolts = WHConvertVolt
+        EndIf
+      #EndIf
+      If WakeUpVM = True Then Call WakeVM 'Either user established or auto based on "VM Dead"
+      VMTimeEnd = Timer(DebugTimer,mSec,4)
+      VMTimeEnd = VMTimeEnd/1000
+      VMTotTime = VMTimeEnd - VMTimeStart
+    #EndIf 'If we have a velocity meter present
+    '==================================================================================
+    '------------------END OF VM SPECIFIC SUB CALLS -----------------------------------
+    '==================================================================================
+
+    '==================================================================================
+    '------------------ START OF WQ SPECIFIC SUB CALLS --------------------------------
+    '==================================================================================
+    #If WqSonde <> "NONE" Then
+      Call RedeploySonde 'Call the redeploy routine if Flag is set, need to get parameter order before pulling any data
+      Call GetWqData
+      Delay(1,2500,mSec) 'delay to give time for WQ data to show up in buffer from misbehaving sonde
+      Call PullWqData
+      #If WqSonde = "WQ_SERIAL_BURST" Then
+        If GetBurst = True Then 'It's 15th minute, time to get the burst data
+          Call SetBurst
+        EndIf
+      #EndIf 'has burst
+      Call ParseWqData
+    #EndIf
+    #If WqSonde <> "NONE" OR HasSuna = True Then 'use same timers for WQ and SUNA for consistency
+      If Mod15Minutes = 840 OR Mod15Minutes = 0 Then
+        Do ' Start loop
+          SampleTime = Timer(DebugTimer,mSec,4)
+          SampleTime = SampleTime/1000
+          Delay(1,250,mSec)
+        Loop Until SampleTime > 15 'wait until we get to 15sec into minute, then proceed to wipe/flushing ports/sampling suna
+      EndIf
+    #EndIf
+    #If WqSonde <> "NONE" Then 'if we have a sonde, in 14th minute, wipe, starting at 15s into minute. (Sondes wipe for 45s, will be ready for 15th min)
+      If WipeFlag = True Then
+        Call WipeWq
+      EndIf
+    #EndIf
+    #If WqSonde = "WQ_SERIAL_BURST" Then
+      SerialFlush(WqSerialPort) 'flush ports for WQ sondes so they can start filling buffer
+      #If TopBottom = True
+        SerialFlush(BtmWqSerialPort)
+      #EndIf
+    #EndIf
+    '==================================================================================
+    '----------------------- START SUNA SAMPLING HERE   -------------------------------
+    '==================================================================================
+    #If HasSuna = True Then
+      If SampleSuna = True Then 'we're in 15th min
+        ManSunaWiper = False 'turn off wiper, just in case user had it on
+        PortSet(SunaWipeSwitch,0)
+        Do 'start loop to check warm up time
+          SunaTimer =Timer(SunaSampleTimer,mSec,4)
+          SunaTimer = SunaTimer/1000
+          If SunaTimer >= 15 Then 'if it's been 15s since power up
+            SunaReady = True 'we're ready to sample
+            ExitDo
+          Else
+            SunaReady = False
+          EndIf
+          Delay(1,100,mSec) 'delay 0.1s before checking again
+        Loop
+        If SunaReady = True Then
+          SerialOpen(SunaPort,115200,0,0,6000) 'open the serial port with enough buffer to hold 3 full strings
+          oCount = 0 'start a counter at 0
+          SunaSampleStart = Timer (SunaSampleTimer,mSec,4)
+          SunaSampleStart = SunaSampleStart/1000
+          LFrameCnt = 0 'Reset good values counter to 0
+          DFrameCnt = 0
+          BadSunaVals = 0 'Reset bad values counter to 0
+          'For Lcount = 1 To MaxSunaBurst 'start For/Next loop to continue for "MaxSunaBurst" times
+          Do 'Start loop to collect Suna Data. Loop until LFrameThreshold is met OR timer >= 55sec
+            SunaMissedCnt = 0 'set the missed count to 0
+            SunaTimer = Timer(DebugTimer,Sec,4) 'read the timer started at the beginning of the scan
+            If SunaTimer >= 53 Then 'if we didn't complete all samples by 53 seconds, exit the loop to avoid skipping scans. SerialIn below has a timeout of 2s per attempt, totalling 6s until flagged as bad
+              ExitDo
+            EndIf 'Check Timer
+            oCount = oCount + 1 'if we've proceeded into data acquisition and didn't time out, increase the count.
+            Do 'start Do/Loop
+              LFrame = False 'Force all trigger flags to false to make sure we stay in the loop appropriately
+              DFrame = False
+              SunaMissed = False
+              LampWarn = False
+              MemWarn = False
+              SunaWarning = ""
+              SerialIn(SunaBurstIn,SunaPort,200,CHR(13)+CHR(10),2000) 'read data into SunaBurstIn string - 20191022, TV increased timeout from 50 to 200 to account for differences in integration times
+              SunaStringLen(oCount) = Len(SunaBurstIn) 'get the length of the string
+              If SunaStringLen(oCount) > 1000 Then 'if the string is longer than 1000 bytes, DarkFrames are around 1100, Light frames around 1600+
+                LocLF = InStr (1,SunaBurstIn,"L",2) 'search the string for an L (to store LightFrames and do calculations)
+                LocDF = InStr (1,SunaBurstIn,"D",2) 'search the string for a D (to store raw dark frames)
+                Delay (1,50,mSec) 'delay 50 millisec
+                If LocLF = 5 Then 'if the L is found at byte 5
+                  If InStr(1,SunaBurstIn,"-1",2) <> 0 AND InStr(1,SunaBurstIn,"-1",2) < 40 Then 'if a -1 occurs early in the light frame, it's bad
+                    LFrame = True 'we know it's a LightFrame
+                    DFrame = False
+                    LampWarn = False
+                    MemWarn = False
+                    SunaWarning = "-1 found at byte " + InStr(1,SunaBurstIn,"-1",2) + ". Assume lamp problem."
+                  Else
+                    LFrame = True
+                    DFrame = False
                     LampWarn = False
                     MemWarn = False
                     SunaWarning = ""
-                  ElseIf LocLF <> 5 AND LocDF <> 5 Then 'other wise, if D or L is not found at byte 5 but we have >1000 bytes
-                    LFrame = False 'not light or dark frame
-                    DFrame = False
-                    LampWarn = False
-                    MemWarn = False
-                    SunaWarning = ""
-                    SunaMissedCnt = SunaMissedCnt + 1 'something went wrong, data didn't populate appropriately
-                  EndIf 'if > 1000 bytes checks
-                Else 'if less than 1000 bytes came through
-                  LocSunaProb = InStr (1,SunaBurstIn,CHR(91),2) 'Search for a "[" (ASCII Decimal Code 91), All errors contain bracketed timestamp at beginning of string
-                  If LocSunaProb <> 0 Then 'A "[" was found, indicating SUNA issue
-                    LocSunaProb = InStr(1,SunaBurstIn,"Cannot process to few",2)
-                    If LocSunaProb <> 0 Then
-                      LampWarn = True 'Set a flag
-                      LFrame = False
-                      DFrame = False
-                      MemWarn = False
-                      SunaWarning = SunaBurstIn 'Record the String's Text in a warning variable
-                    EndIf
-                    LocSunaProb = InStr (1,SunaBurstIn,"Frame not written to file",2)
-                    LampWarn = False
-                    LFrame = False
-                    DFrame = False
-                    MemWarn = True
-                    SunaWarning = SunaBurstIn 'Record string's text into warning variable
-                  Else
-                    LampWarn = False 'No Lamp failure warning
+                  EndIf
+                ElseIf LocDF = 5 Then 'if D is found at byte 5
+                  LFrame = False 'not a light frame
+                  DFrame = True 'it is a dark frame
+                  LampWarn = False
+                  MemWarn = False
+                  SunaWarning = ""
+                ElseIf LocLF <> 5 AND LocDF <> 5 Then 'other wise, if D or L is not found at byte 5 but we have >1000 bytes
+                  LFrame = False 'not light or dark frame
+                  DFrame = False
+                  LampWarn = False
+                  MemWarn = False
+                  SunaWarning = ""
+                  SunaMissedCnt = SunaMissedCnt + 1 'something went wrong, data didn't populate appropriately
+                EndIf 'if > 1000 bytes checks
+              Else 'if less than 1000 bytes came through
+                LocSunaProb = InStr (1,SunaBurstIn,CHR(91),2) 'Search for a "[" (ASCII Decimal Code 91), All errors contain bracketed timestamp at beginning of string
+                If LocSunaProb <> 0 Then 'A "[" was found, indicating SUNA issue
+                  LocSunaProb = InStr(1,SunaBurstIn,"Cannot process to few",2)
+                  If LocSunaProb <> 0 Then
+                    LampWarn = True 'Set a flag
                     LFrame = False
                     DFrame = False
                     MemWarn = False
-                    SunaWarning = "" 'Leave "SunaWarning" blank
+                    SunaWarning = SunaBurstIn 'Record the String's Text in a warning variable
                   EndIf
-                  SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
-                EndIf 'if < 1000 bytes came through
-                If SunaMissedCnt >= 3 OR LampWarn = True OR MemWarn = True Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut)
-                  SunaMissed = True 'set a flag
+                  LocSunaProb = InStr (1,SunaBurstIn,"Frame not written to file",2)
+                  LampWarn = False
+                  LFrame = False
+                  DFrame = False
+                  MemWarn = True
+                  SunaWarning = SunaBurstIn 'Record string's text into warning variable
                 Else
-                  SunaMissed = False 'otherwise, don't set flag
-                EndIf 'if suna missed = true
-              Loop Until LFrame = True OR DFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
-              Delay (1,200,mSec) 'delay 0.2 sec
-              If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 of the string
-                If LFrame = True AND LampWarn = True Then 'if it's a "light frame" but had a -1 appear, the lamp is bad
-                  SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'split raw data into raw array
-                  SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1) 'record header
-                  If RawSunaArray(oCount,1) < 1000 Then
-                    RawHeader(oCount) = RawHeader(oCount) + "0" 'add leading 0 to serial numbers  less than 1000
-                  Else
-                    RawHeader(oCount) = RawHeader(oCount)
-                  EndIf
-                  BadSunaVals = BadSunaVals + 1 'increase bad value counter
-                Else
-                  RawSunaArray(oCount,-1)() = BadDataIndicator 'if it wasn't a "light frame", force all values to NANs
-                  RawHeader(oCount) = BadDataIndicator 'force header to NAN
-                  BadSunaVals = BadSunaVals + 1 'increase bad value counter
+                  LampWarn = False 'No Lamp failure warning
+                  LFrame = False
+                  DFrame = False
+                  MemWarn = False
+                  SunaWarning = "" 'Leave "SunaWarning" blank
                 EndIf
-              ElseIf LFrame = True AND LampWarn = False Then 'if its a good light frame and we didn't find a -1
-                LFrameCnt = LFrameCnt + 1
-                SplitStr(GoodSunaArray(LFrameCnt,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the good data multi-dimensioned array based on the counter
-                'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
-                SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'parse the good data into the raw array
-                SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1)
-                SplitStr(LFHeader(LFrameCnt),SunaBurstIn,"",1,1)
-                If GoodSunaArray(LFrameCnt,1) < 1000 Then 'if serial number is <1000
-                  LFHeader(LFrameCnt) = LFHeader(LFrameCnt) + "0" 'add leading 0
-                  RawHeader(oCount) = RawHeader(oCount) + "0"
-                Else
-                  LFHeader(oCount) = LFHeader(oCount)
-                  RawHeader(oCount) = RawHeader(oCount)
-                EndIf 'serial number check
-              ElseIf DFrame = True 'if it's a dark frame
-                DFrameCnt = DFrameCnt + 1
-                SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0)
-                SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1)
+                SunaMissedCnt = SunaMissedCnt + 1 'we missed data <- this gets reset every loop attempt to get a new string
+              EndIf 'if < 1000 bytes came through
+              If SunaMissedCnt >= 3 OR LampWarn = True OR MemWarn = True Then 'if we miss data for 6 consecutive seconds (based on SerialIn TimeOut)
+                SunaMissed = True 'set a flag
+              Else
+                SunaMissed = False 'otherwise, don't set flag
+              EndIf 'if suna missed = true
+            Loop Until LFrame = True OR DFrame = True OR SunaMissed = True 'OR TestMiss = True 'continue looping until we find a LightFrame or we've missed the data/no data are coming in
+            Delay (1,200,mSec) 'delay 0.2 sec
+            If SunaMissed = True Then 'if we actually didn't get data (less than 1000 bytes OR "D" or "L" are not in byte 5 of the string
+              If LFrame = True AND LampWarn = True Then 'if it's a "light frame" but had a -1 appear, the lamp is bad
+                SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'split raw data into raw array
+                SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1) 'record header
                 If RawSunaArray(oCount,1) < 1000 Then
-                  RawHeader(oCount) = RawHeader(oCount) + "0"
+                  RawHeader(oCount) = RawHeader(oCount) + "0" 'add leading 0 to serial numbers  less than 1000
                 Else
                   RawHeader(oCount) = RawHeader(oCount)
-                EndIf 'serial number check
-              EndIf 'if suna wasn't missed
-              Erase(SunaBurstIn) 'erase the string
-              SerialFlush(SunaPort) 'flush the port
-              Delay (1,200,mSec) 'delay another 0.2sec
-            Loop Until LFrameCnt >= LFrameThreshold
-            Delay (1,100,mSec) 'delay 0.1sec
-            SerialClose(SunaPort) 'close the port
-            PortSet (SunaSwitch,0) 'turn off the Suna
-            SunaTimer = Timer(SunaSampleTimer,mSec,4) 'read the timer for how long the Suna was powered
-            SunaOnTime = SunaTimer/1000 'convert timer from mSec to Sec
-            SunaProcessStart = Timer(DebugTimer,mSec,4) 'read a timer for the start of the processing
-            SunaProcessStart = SunaProcessStart/1000 'convert from mSec to Sec
-            If LFrameCnt >= 10 Then 'if we have at least 10 good values
-              For mCount = 1 To LFrameCnt 'start For/Next loop to parse data, mCount loop is for number of values
-                For nCount = 1 To 282 'start loop for number of columns
-                  SunaBurstData(nCount) = GoodSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
-                Next nCount
-                If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
-                  If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
-                    SSN = 1 'set locations for parameters
-                    SST = 2
-                    SNuM = 3
-                    SNmgL = 4
-                    SFR = 5
-                    STL = 6
-                    STS = 7
-                    SLT = 8
-                    SH = 9
-                    SSA = 13
-                    SDA = 14
-                    SVL = 10
-                    SVM = 12
-                    SA254 = BadDataIndicator 'leave these as NAN, Current versions of BGC's V1 SUNAs don't output A254 or A350
-                    SA350 = BadDataIndicator
-                  Else  'otherwise, it's a SUNAV2
-                    SSN = 1 'set locations for parameters
-                    SST = 3
-                    SNuM = 4
-                    SNmgL = 5
-                    SFR = 281
-                    STL = 270
-                    STS = 269
-                    SLT = 271
-                    SH = 272 'Check this- value is 0.137 and doesnt look right!
-                    SSA = 9
-                    SDA = 10
-                    SVL = 274
-                    SVM = 273
-                    SA254 = 6
-                    SA350 = 7
-                  EndIf 'parse based on Suna Serial Number
-                EndIf 'if first value isn't NAN
-                SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
-                SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
-                SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
-                SunaNitratemgL = SunaBurstData(SNmgL)'AF 6..11
-                SunaFittingResult = SunaBurstData(SFR)
-                TLamp = SunaBurstData(STL)
-                TSpec = SunaBurstData(STS)
-                SunaLampTime = SunaBurstData(SLT)
-                SunaHumid = SunaBurstData(SH)'AF 3..5 Case Is
-                SunaSpecAve = SunaBurstData(SSA) 'AI 1..5
-                SunaDarkAve = SunaBurstData(SDA)'ASCII INTEGER 1.3
-                SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
-                SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
-                A254 = SunaBurstData(SA254)
-                A350 = SunaBurstData(SA350)
-                If mCount >= LFrameCnt Then 'if we've reached our total number of Light Frames
-                  RecSunaData = True 'set the table trigger flag to true
-                Else
-                  RecSunaData = False 'otherwise, we aren't ready to record the table
-                EndIf 'check to see if we're ready to calculate stats
-                SunaHeader = LFHeader(mCount)
-                Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
-                CallTable SunaLFData 'store raw Light Frame Data
-                CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
-              Next mCount
-            EndIf 'if we had at least 10 light frames
-            For mCount = 1 To oCount  'start For/Next loop to parse all RAW data, oCount is total number of times the Do...Loop occured
+                EndIf
+                BadSunaVals = BadSunaVals + 1 'increase bad value counter
+              Else
+                RawSunaArray(oCount,-1)() = BadDataIndicator 'if it wasn't a "light frame", force all values to NANs
+                RawHeader(oCount) = BadDataIndicator 'force header to NAN
+                BadSunaVals = BadSunaVals + 1 'increase bad value counter
+              EndIf
+            ElseIf LFrame = True AND LampWarn = False Then 'if its a good light frame and we didn't find a -1
+              LFrameCnt = LFrameCnt + 1
+              SplitStr(GoodSunaArray(LFrameCnt,1),SunaBurstIn,&H0D0A,282,0) 'we have data, let's split the string into the good data multi-dimensioned array based on the counter
+              'Start at oCount (seconds), at the first parameter. continue to parse for 282 repetitions
+              SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0) 'parse the good data into the raw array
+              SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1)
+              SplitStr(LFHeader(LFrameCnt),SunaBurstIn,"",1,1)
+              If GoodSunaArray(LFrameCnt,1) < 1000 Then 'if serial number is <1000
+                LFHeader(LFrameCnt) = LFHeader(LFrameCnt) + "0" 'add leading 0
+                RawHeader(oCount) = RawHeader(oCount) + "0"
+              Else
+                LFHeader(oCount) = LFHeader(oCount)
+                RawHeader(oCount) = RawHeader(oCount)
+              EndIf 'serial number check
+            ElseIf DFrame = True 'if it's a dark frame
+              DFrameCnt = DFrameCnt + 1
+              SplitStr(RawSunaArray(oCount,1),SunaBurstIn,&H0D0A,282,0)
+              SplitStr(RawHeader(oCount),SunaBurstIn,"",1,1)
+              If RawSunaArray(oCount,1) < 1000 Then
+                RawHeader(oCount) = RawHeader(oCount) + "0"
+              Else
+                RawHeader(oCount) = RawHeader(oCount)
+              EndIf 'serial number check
+            EndIf 'if suna wasn't missed
+            Erase(SunaBurstIn) 'erase the string
+            SerialFlush(SunaPort) 'flush the port
+            Delay (1,200,mSec) 'delay another 0.2sec
+          Loop Until LFrameCnt >= LFrameThreshold
+          Delay (1,100,mSec) 'delay 0.1sec
+          SerialClose(SunaPort) 'close the port
+          PortSet (SunaSwitch,0) 'turn off the Suna
+          SunaTimer = Timer(SunaSampleTimer,mSec,4) 'read the timer for how long the Suna was powered
+          SunaOnTime = SunaTimer/1000 'convert timer from mSec to Sec
+          SunaProcessStart = Timer(DebugTimer,mSec,4) 'read a timer for the start of the processing
+          SunaProcessStart = SunaProcessStart/1000 'convert from mSec to Sec
+          If LFrameCnt >= 10 Then 'if we have at least 10 good values
+            For mCount = 1 To LFrameCnt 'start For/Next loop to parse data, mCount loop is for number of values
               For nCount = 1 To 282 'start loop for number of columns
-                SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
+                SunaBurstData(nCount) = GoodSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
               Next nCount
-              If mCount >= oCount AND LFrameCnt < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
+              If SunaBurstData(1) <> "NAN" Then 'if first value in array isn't NAN, we have data
+                If SunaBurstData(1) < 255 Then 'if SUNA SN is less than 255
+                  SSN = 1 'set locations for parameters
+                  SST = 2
+                  SNuM = 3
+                  SNmgL = 4
+                  SFR = 5
+                  STL = 6
+                  STS = 7
+                  SLT = 8
+                  SH = 9
+                  SSA = 13
+                  SDA = 14
+                  SVL = 10
+                  SVM = 12
+                  SA254 = BadDataIndicator 'leave these as NAN, Current versions of BGC's V1 SUNAs don't output A254 or A350
+                  SA350 = BadDataIndicator
+                Else  'otherwise, it's a SUNAV2
+                  SSN = 1 'set locations for parameters
+                  SST = 3
+                  SNuM = 4
+                  SNmgL = 5
+                  SFR = 281
+                  STL = 270
+                  STS = 269
+                  SLT = 271
+                  SH = 272 'Check this- value is 0.137 and doesnt look right!
+                  SSA = 9
+                  SDA = 10
+                  SVL = 274
+                  SVM = 273
+                  SA254 = 6
+                  SA350 = 7
+                EndIf 'parse based on Suna Serial Number
+              EndIf 'if first value isn't NAN
+              SunaSN = SunaBurstData(SSN) 'parse data into appropriate columns
+              SunaSampleTime = SunaBurstData(SST)'ASCII FLOAT 5..11
+              SunaNitrateuM = SunaBurstData(SNuM)'AF 4..9
+              SunaNitratemgL = SunaBurstData(SNmgL)'AF 6..11
+              SunaFittingResult = SunaBurstData(SFR)
+              TLamp = SunaBurstData(STL)
+              TSpec = SunaBurstData(STS)
+              SunaLampTime = SunaBurstData(SLT)
+              SunaHumid = SunaBurstData(SH)'AF 3..5 Case Is
+              SunaSpecAve = SunaBurstData(SSA) 'AI 1..5
+              SunaDarkAve = SunaBurstData(SDA)'ASCII INTEGER 1.3
+              SunaVoltLamp = SunaBurstData(SVL) 'AI 1..5
+              SunaVoltMain = SunaBurstData(SVM)'ASCII INTEGER 1.3ta(),256,SunaBurstData(12),256)
+              A254 = SunaBurstData(SA254)
+              A350 = SunaBurstData(SA350)
+              If mCount >= LFrameCnt Then 'if we've reached our total number of Light Frames
                 RecSunaData = True 'set the table trigger flag to true
               Else
                 RecSunaData = False 'otherwise, we aren't ready to record the table
-              EndIf 'check whether we completed the total number of samples, and if light count was less than 10
-              SunaHeader = RawHeader(mCount)
-              CallTable RawSunaData 'store raw 1 second data
-              If LFrameCnt < 10 Then 'we want to store something in the stats table so we don't skip a record
-                Call ResetSunaStats 'If LightFrame threshold wasn't met, Force all values to NANs
-                CallTable SunaStats 'store NAN values into stats table, then record them when we've reached our count threshold so we don't skip records if LightFrame threshold isn't met
-              EndIf 'store in stats table if Lframecnt < 10
+              EndIf 'check to see if we're ready to calculate stats
+              SunaHeader = LFHeader(mCount)
+              Move (SpectrumData(),256,SunaBurstData(12),256) 'parse Spectrum data from burst array
+              CallTable SunaLFData 'store raw Light Frame Data
+              CallTable SunaStats 'store values into stats table, then record them when we've reached our count threshold
             Next mCount
-          EndIf 'if Suna is ready based on warmup timer
-          CallTable SunaLength
-          SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
-          RawSunaArray() = BadDataIndicator
-          GoodSunaArray() = BadDataIndicator
-          SpectrumData() = BadDataIndicator
-          Call CopySunaStats 'copy the stats from the "SunaStats" table to new variables to be sampled by the AQ table
-          SunaProcessEnd = Timer(DebugTimer,mSec,4) 'store the end time
-          SunaProcessEnd = SunaProcessEnd/1000 'convert from mSec to Sec
-          SunaProcessTotTime = SunaProcessEnd-SunaProcessStart 'calculate total time it took to process data
-        EndIf
-      #EndIf 'has suna
-      #If WqSonde = "WQ_SERIAL_BURST" Then
-        If Mod15Minutes = 0 Then 'only do the loop if 15th minute
-          Do 'start Do...Loop
-            SampleTime = Timer(DebugTimer,mSec,4)
-            SampleTime = SampleTime/1000
-            Delay(1,250,mSec)
-          Loop Until SampleTime > 50 'Allow for at least 35s of sampling for Sondes to ensure we have 30 data points in buffer
-        EndIf
-      #EndIf
-      #If WqSonde <> "NONE" Then
-        #If WqSonde = "WQ_SERIAL_BURST" Then
-          If GetBurst = True Then
-            Call FillWqBurstArray
-            Call SortBurst
-            Call CopyMedBurstVals
-          EndIf
-          GetBurst = False
-        #EndIf
-        If SetEXOTimeFlg = True Then
-          Call SetEXOTime
-          SetEXOTimeFlg = False
-        EndIf
-        Call CycleWqPower
-      #EndIf
-      #If HasSuna = True Then
-        If WipeSuna = True Then
-          Do
-            WipeStart = Timer(SunaWipeTimer,mSec,4)
-            WipeStart = WipeStart/1000
-            If WipeStart >= 55 Then
-              StartWipe = True
-              ExitDo
+          EndIf 'if we had at least 10 light frames
+          For mCount = 1 To oCount  'start For/Next loop to parse all RAW data, oCount is total number of times the Do...Loop occured
+            For nCount = 1 To 282 'start loop for number of columns
+              SunaBurstData(nCount) = RawSunaArray(mCount,nCount) 'parse columns into the Burst Data array from the multi-dimensioned array built above
+            Next nCount
+            If mCount >= oCount AND LFrameCnt < 10 Then 'if we've reached our sampling total time and we didn't trigger the table earlier
+              RecSunaData = True 'set the table trigger flag to true
             Else
-              StartWipe = False
-            EndIf
-            Delay(1,100,mSec) 'delay 0.1s between loops
-          Loop
-          If StartWipe = True Then
-            PortSet(SunaWipeSwitch,1) 'send signal to wiper relay
-            Delay(1,250,mSec) 'delay 0.25s
-            PortSet(SunaWipeSwitch,0) 'turn wiper signal off (relay only needs 0.1s signal to trigger)
-            StartWipe = False
-            WipeEnd = Timer(SunaWipeTimer,mSec,4)
-            WipeEnd = WipeEnd/1000
-            SunaWipeTotTime = WipeEnd - WipeStart
-            SunaWipeTime = Status.Timestamp(1,0)
-          EndIf 'start wipe = true
-        EndIf 'wipe suna = true
-      #EndIf 'has suna
-      DataTabsStart = Timer(DebugTimer,mSec,4)
-      DataTabsStart = DataTabsStart/1000
-      AQTabStart = Timer(DebugTimer,msec,4) 'read timer for start time of the AQ table
-      AQTabStart = AQTabStart/1000 'convert
-      CallTable Aquarius
-      AQTabEnd = Timer (DebugTimer,msec,4) 'end time of AQ table
-      AQTabEnd = AQTabEnd/1000 'convert
-      AQTabTotTime = AQTabEnd - AQTabStart   'total time to write to AQ
-      CallTable DataOut
-      #If HasVM = True Then
-        CallBmChkStart = Timer(DebugTimer,msec,4)
-        CallBmChkStart = CallBmChkStart/1000
-        CallTable BeamCheck
-        CallBmChkEnd = Timer(DebugTimer,msec,4)
-        CallBmChkEnd = CallBmChkEnd/1000
-        CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
-        #If IsSpecStudy = True Then
-          CallTable VelData
-        #EndIf
-        #If VMHasVertical = True Then
-          CallTable VerticalVelocities
-          CallTable Vertical1MinVel
-        #EndIf
-        #If VMHasBottomTrack = True Then
-          CallTable BottomTrack
-          CallTable BtmTrack1Min
-        #EndIf
-      #EndIf 'If we have VM
-      CallTable QAQCInfo
-      CallTable Data1m
-      CallTable SVMaq
-      If Tech <> "" OR VisitReason <> "" Then SiteVisTrig = True
-      #If HasVM = True Then
-        If TrueUpBeamStg <> NAN OR TrueVMPressStg <> NAN OR TruePS1Stg <> NAN OR TruePS2Stg <> NAN Then
-          ErrorEvent = "Tech Visit"
-          SiteVisTrig = True
+              RecSunaData = False 'otherwise, we aren't ready to record the table
+            EndIf 'check whether we completed the total number of samples, and if light count was less than 10
+            SunaHeader = RawHeader(mCount)
+            CallTable RawSunaData 'store raw 1 second data
+            If LFrameCnt < 10 Then 'we want to store something in the stats table so we don't skip a record
+              Call ResetSunaStats 'If LightFrame threshold wasn't met, Force all values to NANs
+              CallTable SunaStats 'store NAN values into stats table, then record them when we've reached our count threshold so we don't skip records if LightFrame threshold isn't met
+            EndIf 'store in stats table if Lframecnt < 10
+          Next mCount
+        EndIf 'if Suna is ready based on warmup timer
+        CallTable SunaLength
+        SunaBurstData() = BadDataIndicator 'reset all arrays to NANs, so they don't populate duplicate values if no data are present next time
+        RawSunaArray() = BadDataIndicator
+        GoodSunaArray() = BadDataIndicator
+        SpectrumData() = BadDataIndicator
+        Call CopySunaStats 'copy the stats from the "SunaStats" table to new variables to be sampled by the AQ table
+        SunaProcessEnd = Timer(DebugTimer,mSec,4) 'store the end time
+        SunaProcessEnd = SunaProcessEnd/1000 'convert from mSec to Sec
+        SunaProcessTotTime = SunaProcessEnd-SunaProcessStart 'calculate total time it took to process data
+      EndIf
+    #EndIf 'has suna
+    #If WqSonde = "WQ_SERIAL_BURST" Then
+      If Mod15Minutes = 0 Then 'only do the loop if 15th minute
+        Do 'start Do...Loop
+          SampleTime = Timer(DebugTimer,mSec,4)
+          SampleTime = SampleTime/1000
+          Delay(1,250,mSec)
+        Loop Until SampleTime > 50 'Allow for at least 35s of sampling for Sondes to ensure we have 30 data points in buffer
+      EndIf
+    #EndIf
+    #If WqSonde <> "NONE" Then
+      #If WqSonde = "WQ_SERIAL_BURST" Then
+        If GetBurst = True Then
+          Call FillWqBurstArray
+          Call SortBurst
+          Call CopyMedBurstVals
         EndIf
+        GetBurst = False
       #EndIf
-      #If WqSonde <> "NONE" Then 'if sonde is present, need to check if SondeStg = NAN
-        #If HasVM = True Then
+      If SetEXOTimeFlg = True Then
+        Call SetEXOTime
+        SetEXOTimeFlg = False
+      EndIf
+      Call CycleWqPower
+    #EndIf
+    #If HasSuna = True Then
+      If WipeSuna = True Then
+        Do
+          WipeStart = Timer(SunaWipeTimer,mSec,4)
+          WipeStart = WipeStart/1000
+          If WipeStart >= 55 Then
+            StartWipe = True
+            ExitDo
+          Else
+            StartWipe = False
+          EndIf
+          Delay(1,100,mSec) 'delay 0.1s between loops
+        Loop
+        If StartWipe = True Then
+          PortSet(SunaWipeSwitch,1) 'send signal to wiper relay
+          Delay(1,250,mSec) 'delay 0.25s
+          PortSet(SunaWipeSwitch,0) 'turn wiper signal off (relay only needs 0.1s signal to trigger)
+          StartWipe = False
+          WipeEnd = Timer(SunaWipeTimer,mSec,4)
+          WipeEnd = WipeEnd/1000
+          SunaWipeTotTime = WipeEnd - WipeStart
+          SunaWipeTime = Status.Timestamp(1,0)
+        EndIf 'start wipe = true
+      EndIf 'wipe suna = true
+    #EndIf 'has suna
+    DataTabsStart = Timer(DebugTimer,mSec,4)
+    DataTabsStart = DataTabsStart/1000
+    AQTabStart = Timer(DebugTimer,msec,4) 'read timer for start time of the AQ table
+    AQTabStart = AQTabStart/1000 'convert
+    CallTable Aquarius
+    AQTabEnd = Timer (DebugTimer,msec,4) 'end time of AQ table
+    AQTabEnd = AQTabEnd/1000 'convert
+    AQTabTotTime = AQTabEnd - AQTabStart   'total time to write to AQ
+    CallTable DataOut
+    #If HasVM = True Then
+      CallBmChkStart = Timer(DebugTimer,msec,4)
+      CallBmChkStart = CallBmChkStart/1000
+      CallTable BeamCheck
+      CallBmChkEnd = Timer(DebugTimer,msec,4)
+      CallBmChkEnd = CallBmChkEnd/1000
+      CallBmChkTotTime = CallBmChkEnd-CallBmChkStart
+      #If IsSpecStudy = True Then
+        CallTable VelData
+      #EndIf
+      #If VMHasVertical = True Then
+        CallTable VerticalVelocities
+        CallTable Vertical1MinVel
+      #EndIf
+      #If VMHasBottomTrack = True Then
+        CallTable BottomTrack
+        CallTable BtmTrack1Min
+      #EndIf
+    #EndIf 'If we have VM
+    CallTable QAQCInfo
+    CallTable Data1m
+    CallTable SVMaq
+    If Tech <> "" OR VisitReason <> "" Then SiteVisTrig = True
+    #If HasVM = True Then
+      If TrueUpBeamStg <> NAN OR TrueVMPressStg <> NAN OR TruePS1Stg <> NAN OR TruePS2Stg <> NAN Then
+        ErrorEvent = "Tech Visit"
+        SiteVisTrig = True
+      EndIf
+    #EndIf
+    #If WqSonde <> "NONE" Then 'if sonde is present, need to check if SondeStg = NAN
+      #If HasVM = True Then
         If TrueSondeStg <> NAN Then 'if it's not NAN
           ErrorEvent = "Tech Visit"
           SiteVisTrig = True
         EndIf 'end sonde stg check
-        #EndIf
       #EndIf
-      CallTable SiteVisit 'Call sitevisit
-      Tech = "" 'set tech back to null value
-      VisitReason = ""
-      SiteVisTrig = False
+    #EndIf
+    CallTable SiteVisit 'Call sitevisit
+    Tech = "" 'set tech back to null value
+    VisitReason = ""
+    SiteVisTrig = False
+    #If HasVM = True Then
+      'now set TrueStg values back to BadDataIndicator
+      TrueUpBeamStg = BadDataIndicator
+      TrueVMPressStg = BadDataIndicator
+      TruePS1Stg = BadDataIndicator
+      TruePS2Stg = BadDataIndicator
+    #EndIf
+    #If WqSonde <> "NONE" Then
       #If HasVM = True Then
-        'now set TrueStg values back to BadDataIndicator
-        TrueUpBeamStg = BadDataIndicator
-        TrueVMPressStg = BadDataIndicator
-        TruePS1Stg = BadDataIndicator
-        TruePS2Stg = BadDataIndicator
-      #EndIf
-      #If WqSonde <> "NONE" Then
-        #If HasVM = True Then
         TrueSondeStg = BadDataIndicator
-        #EndIf
-      #EndIf 'if sonde present
-      'Now set Visit Variables back to False
-      DataTabsEnd = Timer(DebugTimer,mSec,4)
-      DataTabsEnd = DataTabsEnd/1000
-      DataTabsTotTime = DataTabsEnd - DataTabsStart
-      #If WqSonde = "WQ_SERIAL_BURST" Then
-        If Rec15MinFlag = True Then
-          Call ResetMedBurstVars
-        EndIf
       #EndIf
-      #If HasSuna = True Then
-        If Rec15MinFlag = True Then
-          Call ResetSunaStats 'reset suna variables after they've been recorded
-        EndIf
-      #EndIf
-      If Rec24HrFlag = True Then
-        Call ZeroErrCounters 'Zero our counters after we call QAQC table at midnight
+    #EndIf 'if sonde present
+    'Now set Visit Variables back to False
+    DataTabsEnd = Timer(DebugTimer,mSec,4)
+    DataTabsEnd = DataTabsEnd/1000
+    DataTabsTotTime = DataTabsEnd - DataTabsStart
+    #If WqSonde = "WQ_SERIAL_BURST" Then
+      If Rec15MinFlag = True Then
+        Call ResetMedBurstVars
       EndIf
-     #If HasVM = True Then
+    #EndIf
+    #If HasSuna = True Then
+      If Rec15MinFlag = True Then
+        Call ResetSunaStats 'reset suna variables after they've been recorded
+      EndIf
+    #EndIf
+    If Rec24HrFlag = True Then
+      Call ZeroErrCounters 'Zero our counters after we call QAQC table at midnight
+    EndIf
+    #If HasVM = True Then
       If Rec15MinFlag = True Then
         StgOutOfBndCnt = 0
         Stg2OutOfBndCnt = 0
@@ -7886,101 +7885,101 @@ EndSub
         BadUpbeamCnt = 0
         BadVMPressCnt = 0
       EndIf
-      #EndIf
-      Call GetLastScan 'produce timestamp of last completed scan
-      ScanNum = ScanNum + 1 'Keep at end of scan, so we know X scans have been completed
-      ScanEnd = Timer(DebugTimer,mSec,4) 'read timer for end of scan
-      ScanEnd = ScanEnd/1000 'convert
-      ProcessTime = ScanEnd - ScanStart 'calculate total time
-      #If HasModem = True Then
-      Call ModemCheck
-      #EndIf
-      #If RadioNetwork = True Then 'only compile if it's in a radio network
-        If ReadRadSettings = True Then 'if user wants to store radio settings
-          Call ReadRF 'read in settings
-          Call StoreRadSettings 'store in USR drive
-        EndIf
-        #If IsMaster = True Then 'if it's the master
-          Call CheckLinks 'call the subroutine that checks multiple links
-          If SetRadSettings = True OR ResetMaster = True AND ResetTryOK = True Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
-            Call ResetRadDefault 'first, let's set radio back to factory defaults
-            Call ReadRF 'read in the settings after setting to default to make sure it did what it's supposed to
-            Delay (1,1,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
-            Call SetRadSetting 'set radio settings to the what's stored on USR
-            Call ReadRF 'read in the new settings
-            Call StoreRadSettings 'store the new settings
-            ResetTried = True 'flag to indicate a reset was tried
-            NextTryCnt = 0 'reset the counter to zero so we can wait X amount of time before retrying
-            RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
-          EndIf
-          If ResetMaster = True AND ResetTried = False Then 'if the reset master flag is still set and we didn't try to reset on this scan
-            NextTryCnt = NextTryCnt + 1 'increase NextTryCnt
-          EndIf
-          If NextTryCnt >= MaxNextTryCnt Then 'If NextTryCnt is greater that threshold
-            ResetTryOK = True 'it's ok to try the reset
-          Else
-            ResetTryOK = False 'otherwise, not enough time has passed since previous attempt
-          EndIf
-        #Else 'if it's a slave
-          Call CheckSlaveLink 'only check the single link to the master
-          If SetRadSettings = True OR ResetSlave = True AND ResetTryOK = True Then 'if link failed and enough time has passed to try again or user wants manual reset
-            Call ResetRadDefault 'reset radio to defaults
-            Call ReadRF 'read in settings to verify it did it correctly
-            Delay (1,1,Sec) 'delay, so user has opportunity to see that it worked
-            Call SetRadSetting 'set radio to settings stored in USR
-            Call ReadRF 'read in the new settings
-            Call StoreRadSettings 'store the new radio settings
-            ResetTried = True 'a reset was attempted
-            NextTryCnt = 0 'reset counter to 0
-            RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
-          EndIf
-          If ResetSlave = True AND ResetTried = False Then 'if the ResetSlave flag is still set and we didn't try a reset on this scan
-            NextTryCnt = NextTryCnt + 1 'increase counter
-          EndIf
-          If NextTryCnt >= MaxNextTryCnt Then 'if counter is greater than threshold
-            ResetTryOK = True 'then enough time has passed since previous attempt, it is ok to try the reset again
-          Else
-            ResetTryOK = False 'not enough time has passed, let's wait to try again.
-          EndIf
-        #EndIf
-        If SetRadToDefault = True Then 'if user wants to set radio to defaults/turn off radio
-          Call ResetRadDefault 'reset to default
-          Call ReadRF 'read in new settings, but don't store settings to USR because these settings are established as Constants and don't need to be stored.
-          SetRadToDefault = False 'reset flag to false
-        EndIf
-        ResetTried = False 'set flag to false to start counter (if necessary)
-        CallTable RadioStatus
-      #EndIf
-      #If HasVM = True OR WqSonde <> "NONE" Then
-        If StoreVariablesFlg = True OR ModDay = 0 Then
-          Call StoreVariables
-        EndIf
-      #EndIf
-      #If HasIridium Then
-        Call IridiumDataOut
-        If IridiumManualCycle = False Then
-          PortSet(IridiumSwitchPort,0)'this assume normally closed setting for relay
-        ElseIf IridiumManualCycle = True Then
-          Call CycleIridiumPower
-        EndIf
-      #EndIf
-      #If HasHMS = True Then
-        HMS_24hrcount = HMS_24hrcount + 1
-        Call HMS
-      #EndIf
-      PBRoutes = Status.PakBusRoutes
-      CallTable Debugger
-      Call ZeroTimers
-    NextScan
-
-    #If HasIridium = True Then
-      'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio
-      SlowSequence
-      Do
-        SDI12SensorSetup (IridiumVars,IridiumCom,0,5)'turns selected port into an SDI12 port. Use setting to adjust port and address. Number of repetions should match IridiumOutArray count. Test on address 1 and had issues. Address 0 seems to work fine.
-        Delay (1,5,sec) 'delay to make sure value are present
-        SDI12SensorResponse(IridiumOutArray)'sensor will respond with entire array when Iridium Radio queries DCP
-      Loop
     #EndIf
+    Call GetLastScan 'produce timestamp of last completed scan
+    ScanNum = ScanNum + 1 'Keep at end of scan, so we know X scans have been completed
+    ScanEnd = Timer(DebugTimer,mSec,4) 'read timer for end of scan
+    ScanEnd = ScanEnd/1000 'convert
+    ProcessTime = ScanEnd - ScanStart 'calculate total time
+    #If HasModem = True Then
+      Call ModemCheck
+    #EndIf
+    #If RadioNetwork = True Then 'only compile if it's in a radio network
+      If ReadRadSettings = True Then 'if user wants to store radio settings
+        Call ReadRF 'read in settings
+        Call StoreRadSettings 'store in USR drive
+      EndIf
+      #If IsMaster = True Then 'if it's the master
+        Call CheckLinks 'call the subroutine that checks multiple links
+        If SetRadSettings = True OR ResetMaster = True AND ResetTryOK = True Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
+          Call ResetRadDefault 'first, let's set radio back to factory defaults
+          Call ReadRF 'read in the settings after setting to default to make sure it did what it's supposed to
+          Delay (1,1,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
+          Call SetRadSetting 'set radio settings to the what's stored on USR
+          Call ReadRF 'read in the new settings
+          Call StoreRadSettings 'store the new settings
+          ResetTried = True 'flag to indicate a reset was tried
+          NextTryCnt = 0 'reset the counter to zero so we can wait X amount of time before retrying
+          RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
+        EndIf
+        If ResetMaster = True AND ResetTried = False Then 'if the reset master flag is still set and we didn't try to reset on this scan
+          NextTryCnt = NextTryCnt + 1 'increase NextTryCnt
+        EndIf
+        If NextTryCnt >= MaxNextTryCnt Then 'If NextTryCnt is greater that threshold
+          ResetTryOK = True 'it's ok to try the reset
+        Else
+          ResetTryOK = False 'otherwise, not enough time has passed since previous attempt
+        EndIf
+      #Else 'if it's a slave
+        Call CheckSlaveLink 'only check the single link to the master
+        If SetRadSettings = True OR ResetSlave = True AND ResetTryOK = True Then 'if link failed and enough time has passed to try again or user wants manual reset
+          Call ResetRadDefault 'reset radio to defaults
+          Call ReadRF 'read in settings to verify it did it correctly
+          Delay (1,1,Sec) 'delay, so user has opportunity to see that it worked
+          Call SetRadSetting 'set radio to settings stored in USR
+          Call ReadRF 'read in the new settings
+          Call StoreRadSettings 'store the new radio settings
+          ResetTried = True 'a reset was attempted
+          NextTryCnt = 0 'reset counter to 0
+          RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
+        EndIf
+        If ResetSlave = True AND ResetTried = False Then 'if the ResetSlave flag is still set and we didn't try a reset on this scan
+          NextTryCnt = NextTryCnt + 1 'increase counter
+        EndIf
+        If NextTryCnt >= MaxNextTryCnt Then 'if counter is greater than threshold
+          ResetTryOK = True 'then enough time has passed since previous attempt, it is ok to try the reset again
+        Else
+          ResetTryOK = False 'not enough time has passed, let's wait to try again.
+        EndIf
+      #EndIf
+      If SetRadToDefault = True Then 'if user wants to set radio to defaults/turn off radio
+        Call ResetRadDefault 'reset to default
+        Call ReadRF 'read in new settings, but don't store settings to USR because these settings are established as Constants and don't need to be stored.
+        SetRadToDefault = False 'reset flag to false
+      EndIf
+      ResetTried = False 'set flag to false to start counter (if necessary)
+      CallTable RadioStatus
+    #EndIf
+    #If HasVM = True OR WqSonde <> "NONE" Then
+      If StoreVariablesFlg = True OR ModDay = 0 Then
+        Call StoreVariables
+      EndIf
+    #EndIf
+    #If HasIridium Then
+      Call IridiumDataOut
+      If IridiumManualCycle = False Then
+        PortSet(IridiumSwitchPort,0)'this assume normally closed setting for relay
+      ElseIf IridiumManualCycle = True Then
+        Call CycleIridiumPower
+      EndIf
+    #EndIf
+    #If HasHMS = True Then
+      HMS_24hrcount = HMS_24hrcount + 1
+      Call HMS
+    #EndIf
+    PBRoutes = Status.PakBusRoutes
+    CallTable Debugger
+    Call ZeroTimers
+  NextScan
 
-  EndProg
+  #If HasIridium = True Then
+    'slow sequence will run in the background and allow the DCP to act as an SDI12 sensor. To be used to send Aquarius table data to the Iridium Radio
+    SlowSequence
+    Do
+      SDI12SensorSetup (IridiumVars,IridiumCom,0,5)'turns selected port into an SDI12 port. Use setting to adjust port and address. Number of repetions should match IridiumOutArray count. Test on address 1 and had issues. Address 0 seems to work fine.
+      Delay (1,5,sec) 'delay to make sure value are present
+      SDI12SensorResponse(IridiumOutArray)'sensor will respond with entire array when Iridium Radio queries DCP
+    Loop
+  #EndIf
+
+EndProg
