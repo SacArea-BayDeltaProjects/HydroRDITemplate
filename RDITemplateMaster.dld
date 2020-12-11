@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20201116
-Const ProgramVersion = "5.14"
+Const ProgramVersionDate = 20201211
+Const ProgramVersion = "5.20"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -41,6 +41,7 @@ Const ProgramVersion = "5.14"
 ' 20201102 - TAV 5.12 Changed "CardOut" instruction to "TableFile" instruction. This allows use of more than 2GB of card memory. Adjusted SunaWarning string to be larger. (Was 30 characters, increased to 200. Noticed we were cutting the string off at CM72.)
 ' 20201110 - TAV 5.13 Fixed "IsWorkhorse" recognition; adjusting timing necessary for WH to respond to a "+++"; added "PBRoutes" to Debugger to help identify excess connectivity with servers/computers.
 ' 20201116 - TAV 5.14 Added external voltage check for uses with WorkHorses. ReadExtPwr must be true. 10:1 voltage divider is used to read voltage from the 12 to 48V converter and output as VMVolts. (Workhorses don't output voltage in PD0).
+' 20201211 - TAV 5.20 Sentinel V working. Added code to store Raw PD0 ensemble to card. Can then use file in native RDI software. Tested SerialOut for flow data for Freeport.
 
 SequentialMode 'We need to use Sequential mode
 
@@ -91,7 +92,7 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = True
+Const IsSpecStudy = False
 'value = True
 'value = False
 Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
@@ -103,13 +104,13 @@ Const HasModem = True
 Const GetNoiseFloor = False
 'value = True
 'value = False
-Const HasSlave = False
+Const SendFlowData = False
 'value = True
 'value = False
 Const HasVM = True
 'value = True
 'value = False
-Const StorePD0 = True
+Const StorePD0 = False
 'value = True
 'value = False
 Const MaxBins = 30
@@ -120,7 +121,7 @@ Const MaxBins = 30
 ''Min = 0
 ''Max = 59
 ''Inc = 1
-Const UseAutoRange = True
+Const UseAutoRange = False
 'value = True
 'value = False
 Const WQDeadCntMax = 20
@@ -140,7 +141,7 @@ Const IsMaster = False 'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = True 'set to true if you want VM spike data
 'value = True
 'value = False
-Const VMHasVertical = True
+Const VMHasVertical = False
 'value = True
 'value = False
 Const VMHasBottomTrack = False
@@ -194,8 +195,8 @@ EndConstTable
       Const BtmWqSwitchPort = 6
     #EndIf
   #EndIf 'If we have a sonde
-  #If HasSlave = True Then 'If needing to send data to second logger
-    Const SlaveCom = Com4
+  #If SendFlowData = True Then 'If needing to send data to second logger
+    Const FlowDataCom = Com4
   #EndIf 'if sending data to second logger
   #If ReadExtPwr = True Then 'if using 10:1 voltage reducer to measure high voltage
     Const ExtPwrCom = 1
@@ -227,8 +228,8 @@ EndConstTable
     Const SunaWipeSwitch = U9
     Const SunaSwitch = U10
   #EndIf 'if suna present
-  #If HasSlave = True Then 'if sending data to another logger
-    Const SlaveCom = ComU7 'can't use ComU7 if TopBottom, maybe RS232?
+  #If SendFlowData = True Then 'if sending data to another logger
+    Const FlowDataCom = ComU7 'can't use ComU7 if TopBottom, maybe RS232?
   #EndIf 'if sending data to another logger
   #If HasIridium = True Then 'If using iridium as backup to cell
     Const IridiumSwitchPort = U10 'set power cycle port
@@ -446,13 +447,20 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public VMPower As Boolean 'Manually turn VM on or off
   Public IsVMNClosed As Boolean 'Is VM powered on Normally Closed Relay
   Public CalcQ As Boolean
-  Public SendFlowData As Boolean 'Used to trigger Flow related data to be sent out a serial port, mainly for FPT/SWWTP, Conditional?
+  #If SendFlowData = True Then
+  Public SendRunAvg As Boolean 'Used to trigger if Flow data should be 15min running avg. or instantaneous
+  #EndIf
+  #If StorePD0 = True Then
+    Public StoreRawPD0 As Boolean
+    Public PD0Days 'Number of days to store consecutive file
+  #EndIf
   Public UseV2 As Boolean
   Public RecordAll As Boolean 'ONLY PUT THIS IN FOR EASE OF SUBS, LOOK INTO, CAN BE REMOVED BY USING CONDITIONAL AROUND VELDATA TABLE
   Public VMdataIn As Boolean
   Public IsCM As Boolean 'System IDs, sensed by number of beams/if vertical beam. These are autoset, decodes adjusted accordingly
   Public IsVADCP As Boolean
   Public IsWorkHorse As Boolean
+  Public IsSentinelV As Boolean 'This is not set automatically, only used for voltage conversion
   Public VMTime As String * 25 'Timestamp from VM clock
   Public SetVMTimeFlg As Boolean 'Used to set VM clock from logger clock. Automatic at midnight, but user can set as well
   Public SendTF As Boolean 'Used to set the exact start time for ensemble
@@ -551,10 +559,25 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Public CardError As String * 25
   #EndIf
   #If StorePD0 = True Then
-    Public VM_Binary As String * 2000
-    Public PD0Handle As Long
-    Public PD0_StartDate As String * 30
-    Public PD0_Timestamp As String * 30
+    Dim VM_Binary As String * 2000
+    Dim PD0Handle As Long
+    Dim PD0_StartDate As String * 30
+    Dim PD0_Timestamp As String * 30
+    Dim FileListDest(100) As String * 50 'gives room for 52PD0 and 48 other files total
+    Dim PD0File(52) As String * 50 'for 52 weeks in year
+    Dim PD0_SS1990(52) As Long
+    Dim NewestPD0(2)
+    Dim NumCRDFiles
+    Dim PD0_InStr
+    Dim PD0Cnt
+    Dim PD0_SecsSince1990 As Long
+    Dim PD0FileAge As Long
+    Dim PD0SizeThresh
+    Dim FileStartTime As Long
+    Dim OldPD0_StartDate As String * 50
+    Dim FileNum
+    Dim FileNumStr As String * 22
+    Dim FileNumChk(2)
   #EndIf
 
   '=============RATING VALUES, MEAN CHANNEL/AREA RATINGS===============================
@@ -650,6 +673,10 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public VMroll As Float
   Public VMupBeam As Float
   Public VMElevation As Float
+  #If SendFlowData = True Then
+    Public RunAvg_Qcfs, RunAvg_iVel, RunAvg_StgPrime, RunAvg_VMTempF, RunAvg_VMVolts, RunAvg_StationV, RunAvg_PTempF
+    Public FlowOutStr As String * 200
+  #EndIf
   Dim VMHeading As Float
   Dim VMpressure As Float
   Dim WHpressure As Float
@@ -2561,6 +2588,10 @@ Sub UserDefaults
         VertCutOffBins = 1
       #EndIf
     #EndIf 'If use auto range for uplookers
+    #If StorePD0 = True Then
+      StoreRawPD0 = True
+      PD0Days = 7 'how many days to keep in single file before splitting
+    #EndIf
   #EndIf 'If has VM
   #If WqSonde <> "NONE" Then
     IsWqNClosed = True 'Is there a normally closed relay powering Sonde
@@ -2601,14 +2632,17 @@ Sub Initialize
     AvgRSSIEndBin  = EndBin
     VMPower = True
     IsSubmersed = False
-    IsCM = False 'These are auto set if ensembles are actively coming in.
+    IsCM = True 'These are auto set if ensembles are actively coming in.
     IsVADCP = False
-    IsWorkHorse = True
+    IsWorkHorse = False
+    IsSentinelV = False
     TrueUpBeamStg = BadDataIndicator
     TrueVMPressStg = BadDataIndicator
     TruePS1Stg = BadDataIndicator
     TruePS2Stg = BadDataIndicator
-    SendFlowData = False
+    #If SendFlowData = True Then
+    SendRunAvg = True
+    #EndIf
     RecordAll = False
     StageFlags() = True
     BadVelFlag = True
@@ -3655,7 +3689,9 @@ EndSub
     '====================================================================================
     'After calling all the decoders, Zero out the LongArray
     #If StorePD0 = True Then
+      If StoreRawPD0 = True Then
       Call StorePD0File
+      EndIf
     #EndIf
     Erase (LongArray())
     MainDecodeEnd = Timer(DebugTimer,msec,4)
@@ -3727,8 +3763,11 @@ EndSub
     EndIf
     VMtempC = Temp * 0.01 'Temperature scale factor
     VMtempF = VMtempC * 9/5 + 32
-    'get WHvolts
+    'get VMvolts
     VMVolts = LongArray(VarLeadOffset + 36)
+    If IsSentinelV = True Then
+      VMVolts = VMVolts * 0.1 '0.1V precision
+    EndIf
 
     'get pressure from Workhorse
     WHpressure = 0
@@ -5008,19 +5047,6 @@ EndSub
   #EndIf 'If StoreAllToCard = True
   #If StorePD0 = True Then
     Sub StorePD0File
-      Public FileListDest(50) As String * 50
-      Public PD0File(15) As String * 50
-      Public PD0_SS1990(15) As Long
-      Public NewestPD0(2)
-      Public NumCRDFiles
-      Public PD0_InStr
-      Public PD0Cnt
-      Public PD0_SecsSince1990 As Long
-      Public PD0FileAge As Long
-      Public PD0SizeThresh
-      Public FileStartTime As Long
-      Public OldPD0_StartDate As String * 50
-      Public FileNum
       Dim i
       StorePD0Start = Timer(DebugTimer,mSec,4)
       StorePD0Start = StorePD0Start/1000
@@ -5029,6 +5055,7 @@ EndSub
       PD0_SS1990() = BadDataIndicator
       PD0Cnt = 0
       VM_Binary = ""
+      PD0SizeThresh = PD0Days * 84600 'convert user input to number of secs per day
       For i = 1 To NumBytes
         MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2)
       Next i
@@ -5046,6 +5073,9 @@ EndSub
         Next i
         MaxSpa(NewestPD0(),PD0Cnt,PD0_SS1990()) 'get max of "FileTime" outputs
         PD0_SecsSince1990 = FileTime(PD0File(NewestPD0(2))) 'use Max value's array index for newest file
+        FileNumStr = Right(PD0File(NewestPD0(2)),22)
+        SplitStr(FileNumChk(),FileNumStr,0,2,0)
+        FileNum = FileNumChk(2)
         PD0FileAge = PD0_SecsSince1990 - FileStartTime 'check the age of the file, in seconds
         If PD0FileAge >= PD0SizeThresh Then 'number of seconds. if we're above threshold, make new file
           PD0_Timestamp = Status.TimeStamp(1,1) 'check time
@@ -7968,6 +7998,25 @@ BeginProg
       Call HMS
     #EndIf
     PBRoutes = Status.PakBusRoutes
+    #If HasVM = True Then
+    #If SendFlowData = True Then
+      AvgRun(RunAvg_Qcfs,1,Qcfs,15) 'could make this a for...loop to clean it up.
+      AvgRun(RunAvg_iVel,1,IndexVel,15)
+      AvgRun(RunAvg_StgPrime,1,StagePrime,15)
+      AvgRun(RunAvg_VMTempF,1,VMtempF,15)
+      AvgRun(RunAvg_VMVolts,1,VMVolts,15)
+      AvgRun(RunAvg_StationV,1,StationVolts,15)
+      AvgRun(RunAvg_PTempF,1,PTempF,15)
+      If SendRunAvg = True Then
+        FlowOutStr = RunAvg_Qcfs+","+RunAvg_iVel+","+RunAvg_StgPrime+","+RunAvg_VMTempF+","+RunAvg_VMVolts+","+RunAvg_StationV+","+RunAvg_PTempF
+      Else
+        FlowOutStr = Qcfs+","+IndexVel+","+StagePrime+","+VMtempF+","+VMVolts+","+StationVolts+","+PTempF
+      EndIf
+      SerialOpen(FlowDataCom,19200,0,0,200)
+      SerialOut(FlowDataCom,FlowOutStr,"",0,0)
+      SerialFlush(FlowDataCom)
+    #EndIf
+    #EndIf
     CallTable Debugger
     Call ZeroTimers
   NextScan
