@@ -46,7 +46,7 @@ Const ProgramVersion = "5.20"
 SequentialMode 'We need to use Sequential mode
 
 'Start of Constants Customization Section
-Const WqSonde = "WQ_SERIAL_BURST"
+Const WqSonde = "NONE"
 'Value = "WQ_SERIAL"
 'Value = "WQ_SERIAL_BURST"
 'Value = "NONE"
@@ -95,10 +95,10 @@ Const IsVmMax232 = False
 Const IsSpecStudy = False
 'value = True
 'value = False
-Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
-Const HasModem = True
+Const HasModem = False
 'value = True
 'value = False
 Const GetNoiseFloor = False
@@ -107,7 +107,7 @@ Const GetNoiseFloor = False
 Const SendFlowData = False
 'value = True
 'value = False
-Const HasVM = True
+Const HasVM = False
 'value = True
 'value = False
 Const StorePD0 = False
@@ -132,13 +132,13 @@ Const VMDeadCntMax = 20
 'Min = 5
 'Max = 120
 'Inc = 5
-Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF TRUE THIS WILL ONLY COMPILE ON CR6-RF451!!
+Const RadioNetwork = True 'Is the datalogger part of a radio network NOTE: IF TRUE THIS WILL ONLY COMPILE ON CR6-RF451!!
 'value = True
 'value = False
 Const IsMaster = False 'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
-Const StoreAllToCard = True 'set to true if you want VM spike data
+Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
 Const VMHasVertical = False
@@ -156,7 +156,7 @@ Const SeeAllVel = False
 Const SeeRawWQ = False
 'Value = True
 'Value = False
-Const HasHMS = True 'ONLY COMPILES ON CR6!
+Const HasHMS = False 'ONLY COMPILES ON CR6!
 'Value = True
 'Value = False
 Const ReadExtPwr = False
@@ -264,7 +264,7 @@ EndConstTable
 #EndIf 'Logger type determination
 
 'Constants for selecting different scan rates, if wanted. Standard is 1min scans
-Const ScanRate = 60
+Const ScanRate = 10
 Const ScanUnit = 2
 Const FastScanRate = 15 'used in modem check, but should be done a different way
 Const FastScanUnit = 2
@@ -7934,7 +7934,7 @@ BeginProg
         If SetRadSettings = True OR ResetMaster = True AND ResetTryOK = True Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
           Call ResetRadDefault 'first, let's set radio back to factory defaults
           Call ReadRF 'read in the settings after setting to default to make sure it did what it's supposed to
-          Delay (1,1,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
+          Delay (1,5,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
           Call SetRadSetting 'set radio settings to the what's stored on USR
           Call ReadRF 'read in the new settings
           Call StoreRadSettings 'store the new settings
@@ -7952,13 +7952,13 @@ BeginProg
         EndIf
       #Else 'if it's a slave
         Call CheckSlaveLink 'only check the single link to the master
-        If SetRadSettings = True OR ResetSlave = True AND ResetTryOK = True Then 'if link failed and enough time has passed to try again or user wants manual reset
+        If SetRadSettings = True OR (ResetSlave = True AND ResetTryOK = True) Then 'if link failed and enough time has passed to try again or user wants manual reset
           Call ResetRadDefault 'reset radio to defaults
           Call ReadRF 'read in settings to verify it did it correctly
-          Delay (1,1,Sec) 'delay, so user has opportunity to see that it worked
+          Delay (1,5,Sec) 'delay, so user has opportunity to see that it worked
           Call SetRadSetting 'set radio to settings stored in USR
           Call ReadRF 'read in the new settings
-          Call StoreRadSettings 'store the new radio settings
+         ' Call StoreRadSettings 'store the new radio settings
           ResetTried = True 'a reset was attempted
           NextTryCnt = 0 'reset counter to 0
           RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
