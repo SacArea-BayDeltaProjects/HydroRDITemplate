@@ -138,7 +138,7 @@ Const RadioNetwork = False 'Is the datalogger part of a radio network NOTE: IF T
 Const IsMaster = False 'Is the datalogger the Master in a radio network?
 'value = True
 'value = False
-Const StoreAllToCard = True 'set to true if you want VM spike data
+Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
 Const VMHasVertical = False
@@ -236,23 +236,7 @@ EndConstTable
     Const IridiumCom = U7 'set SDI port
   #EndIf 'if has iridium
   #If RadioNetwork Then 'Only used if using CR6-RF451
-    Const DefRadOn = 0
-    Const DefOpMode = 2
-    Const DefFreqKey = 0
-    Const DefMaxPacket = 8
-    Const DefMinPacket = 9
-    Const DefDataRate = 3 'Normal
-    Const DefTxPwr = 10 'Max
-    Const DefRetryTO = 255 'Max
-    Const DefLowPwr = 2
-    Const DefRepeaters = 0 'No repeaters
-    Const DefPacketRepeat = 2
-    Const DefSlaveRetry = 9
-    Const DefFreqRepeat = 0
-    Const DefSlaveRepeat = 0
-    Const DefTxSubID = 15
-    Const DefRxSubID = 15
-    Const DefNetID = 1234
+    Const DefRadVars As String = "0,2,0,8,9,3,10,255,2,0,2,9,0,0,15,15,1234"
   #EndIf 'if radio network
   #If HasHMS = True Then
     Const HMS_ErrPort = U11
@@ -264,7 +248,7 @@ EndConstTable
 #EndIf 'Logger type determination
 
 'Constants for selecting different scan rates, if wanted. Standard is 1min scans
-Const ScanRate = 60
+Const ScanRate = 10
 Const ScanUnit = 2
 Const FastScanRate = 15 'used in modem check, but should be done a different way
 Const FastScanUnit = 2
@@ -1156,26 +1140,46 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
 #EndIf 'radio network declaration
 ' Declare placeholders for all RF451 Settings
 #If RadioNetwork = True Then
-  Public ReadRadSettings As Boolean 'Trigger to read in radio settings
-  Public SetRadSettings As Boolean 'Trigger to reset radio settings
-  Public SetRadToDefault As Boolean 'Trigger to Reset radio to factory defaults
-  Public RadOn As Long 'Radio Enabled (0= False, 1 = True)
-  Public RadOpMode As Long 'Operation mode (Point to Multipoint Master = 2, Point to Multipoint Slave = 3, Point to Multipoint Repeater = 7)
-  Public RadFreqKey As Long  'Frequency Key (Min = 0, Max = 14)
-  Public RadMaxPacket As Long '(Min = 0, Max = 9)
-  Public RadMinPacket As Long '(Min = 0, Max = 9)
-  Public RadDataRate As Long '(3 = Normal 115Kbps, 2 = High 153Kbps)
-  Public RadTxPwr As Long 'Transmit power, 0=min, 10=max)
-  Public RadRetryTO As Long 'Retry timeout, sets delay the radio will wait before dropping the connection to a master or repeater (factory=255 (if 1 in 255 packets is successful, link is maintained, Min = 8, Max = 255)
-  Public RadLowPwr As Long 'Sets how many "slots" the transceiver sleeps (min = 2, max = 31)
-  Public RadRepeaters As Long 'Are repeaters used in system (0 = no repeaters, 1 = repeaters used)
-  Public RadPacketRepeat As Long 'hOw many times is the packet transmitted? (min= 0 (1 transmission), max = 9 (10 transmissions))
-  Public RadSlaveRetry As Long 'How many times should the slave retrasmit a packet to master? (min = 0, max =9)
-  Public RadFreqRepeat As Long '0 = Use Master Freq Key, 1= Use Repeater Freq Key
-  Public RadSlaveRepeat As Long '0 = Normal, 1 = Enable Slave/Repeater
-  Public RadRxSubID As Long 'Min = 0, Max = 15
-  Public RadTxSubID As Long 'Min = 0, Max = 15
-  Public RadNetID As Long 'Network ID, Min= 0, Max = 4095
+Public StoreRadToUSR As Boolean 'flag to store settings to USR drive
+Public SetRadToUSR As Boolean 'flag to set RF settings based on USR drive
+Public SetRadToDef As Boolean 'flag to set radio to default settings
+Public RadFileExist As Long
+Public CurrentRadVars(17) 'current RF settings on logger
+Alias CurrentRadVars(1) = CurrentRadOn
+Alias CurrentRadVars(2) = CurrentRadOpMode
+Alias CurrentRadVars(3) = CurrentRadFreqKey
+Alias CurrentRadVars(4) = CurrentRadMaxPacket
+Alias CurrentRadVars(5) = CurrentRadMinPacket
+Alias CurrentRadVars(6) = CurrentRadDataRate
+Alias CurrentRadVars(7) = CurrentRadTxPwr
+Alias CurrentRadVars(8) = CurrentRadRetryTO
+Alias CurrentRadVars(9) = CurrentRadLowPwr
+Alias CurrentRadVars(10) = CurrentRadRepeaters
+Alias CurrentRadVars(11) = CurrentRadPacketRepeat
+Alias CurrentRadVars(12) = CurrentRadSlaveRetry
+Alias CurrentRadVars(13) = CurrentRadFreqRepeat
+Alias CurrentRadVars(14) = CurrentRadSlaveRepeat
+Alias CurrentRadVars(15) = CurrentRadRxSubID
+Alias CurrentRadVars(16) = CurrentRadTxSubID
+Alias CurrentRadVars(17) = CurrentRadNetID
+Public SendRadVars(17) 'settings to send to logger
+Alias SendRadVars(1) = SendRadOn
+Alias SendRadVars(2) = SendRadOpMode
+Alias SendRadVars(3) = SendRadFreqKey
+Alias SendRadVars(4) = SendRadMaxPacket
+Alias SendRadVars(5) = SendRadMinPacket
+Alias SendRadVars(6) = SendRadDataRate
+Alias SendRadVars(7) = SendRadTxPwr
+Alias SendRadVars(8) = SendRadRetryTO
+Alias SendRadVars(9) = SendRadLowPwr
+Alias SendRadVars(10) = SendRadRepeaters
+Alias SendRadVars(11) = SendRadPacketRepeat
+Alias SendRadVars(12) = SendRadSlaveRetry
+Alias SendRadVars(13) = SendRadFreqRepeat
+Alias SendRadVars(14) = SendRadSlaveRepeat
+Alias SendRadVars(15) = SendRadRxSubID
+Alias SendRadVars(16) = SendRadTxSubID
+Alias SendRadVars(17) = SendRadNetID
 
   #If IsMaster = False Then 'If Not master then define Reset Slave
     Public ResetSlave As Boolean 'Set to true (automatically or manually) to reset the slave radio
@@ -2407,6 +2411,8 @@ EndTable
       Sample (1,ResetTried,Boolean)
       Sample (1,RadResetAttempts,FP2)
     #EndIf 'Not master
+    Sample (17,CurrentRadVars,FP2)
+    Sample (17,SendRadVars,FP2)
   EndTable
 #EndIf 'If radio network
 
@@ -6766,143 +6772,92 @@ EndSub
 '=========================================================================
 #If RadioNetwork = True Then
   '__________________________READ IN CURRENT SETTINGS OF RADIO_______________________
-  Sub ReadRF
-    RadOn = Settings.RadioEnable
-    RadOpMode = Settings.RadioOpMode
-    RadFreqKey = Settings.RadioFreqKey
-    RadMaxPacket = Settings.RadioMaxPacket
-    RadMinPacket = Settings.RadioMinPacket
-    RadDataRate = Settings.RadioDataRate
-    RadTxPwr = Settings.RadioTxPwr
-    RadRetryTO = Settings.RadioRetryTimeout
-    RadLowPwr = Settings.RadioLowPwr
-    RadRepeaters = Settings.RadioRepeaters
-    RadPacketRepeat = Settings.RadioPacketRepeat
-    RadSlaveRetry = Settings.RadioSlaveRetry
-    RadFreqRepeat = Settings.RadioFreqRepeat
-    RadSlaveRepeat = Settings.RadioSlaveRepeat
-    RadRxSubID = Settings.RadioRxSubID
-    RadTxSubID = Settings.RadioTxSubID
-    RadNetID = Settings.RadioNetID
-    ReadRadSettings = False
-  EndSub
+  Sub ReadCurrentRF
+  CurrentRadOn = Settings.RadioEnable
+  CurrentRadOpMode = Settings.RadioOpMode
+  CurrentRadFreqKey = Settings.RadioFreqKey
+  CurrentRadMaxPacket = Settings.RadioMaxPacket
+  CurrentRadMinPacket = Settings.RadioMinPacket
+  CurrentRadDataRate = Settings.RadioDataRate
+  CurrentRadTxPwr = Settings.RadioTxPwr
+  CurrentRadRetryTO = Settings.RadioRetryTimeout
+  CurrentRadLowPwr = Settings.RadioLowPwr
+  CurrentRadRepeaters = Settings.RadioRepeaters
+  CurrentRadPacketRepeat = Settings.RadioPacketRepeat
+  CurrentRadSlaveRetry = Settings.RadioSlaveRetry
+  CurrentRadFreqRepeat = Settings.RadioFreqRepeat
+  CurrentRadSlaveRepeat = Settings.RadioSlaveRepeat
+  CurrentRadRxSubID = Settings.RadioRxSubID
+  CurrentRadTxSubID = Settings.RadioTxSubID
+  CurrentRadNetID = Settings.RadioNetID
+EndSub
+
+Sub SetRadSettings
+      SetSetting("RadioEnable",SendRadOn) 'SetSetting for the settings in quotes based on the Const values establish in variable declarations, Ex: DefRadOn = 0, DefOpMode = 2, etc.)
+    SetSetting("RadioOpMode",SendRadOpMode)
+    SetSetting("RadioFreqKey",SendRadFreqKey)
+    SetSetting("RadioMaxPacket",SendRadMaxPacket)
+    SetSetting("RadioMinPacket",SendRadMinPacket)
+    SetSetting("RadioDataRate",SendRadDataRate)
+    SetSetting("RadioTxPwr",SendRadTxPwr)
+    SetSetting("RadioRetryTimeout",SendRadRetryTO)
+    SetSetting("RadioLowPwr",SendRadLowPwr)
+    SetSetting("RadioRepeaters",SendRadRepeaters)
+    SetSetting("RadioPacketRepeat",SendRadPacketRepeat)
+    SetSetting("RadioSlaveRetry",SendRadSlaveRetry)
+    SetSetting("RadioFreqRepeat",SendRadFreqRepeat)
+    SetSetting("RadioSlaveRepeat",SendRadSlaveRepeat)
+    SetSetting("RadioRxSubID",SendRadRxSubID)
+    SetSetting("RadioTxSubID",SendRadTxSubID)
+    SetSetting("RadioNetID",SendRadNetID)
+EndSub
 
   '_________________________STORE THE SETTINGS TO USR DRIVE BASED ON THE ABOVE SUBROUTINE VARIABLES___________________
-  Sub StoreRadSettings
-    Public RadVar(17) As String 'establish a placeholder array
-    Public SendRadSetString As String * 256 'create a string that will be used to send to the USR drive
-    Public RadStringLen As Long 'length of string being stored
-    Public RadVarHandle As Long 'short name to be used in opening/reading/writing the User Radio Settings
-    Public RadVarBytes As Long 'number of bytes successfully written to file
-    Public StoreRadCloseErr 'variable to store whether file closure was a success or not. 0 = success, -1 = FileHandle referenced is not valid or if file was not previously opened/is already closed.
-    Public RadVarCnt As Long 'counter to establish number of times For To loop needs to continue
-    RadVar(1) = RadOn 'assign each value in RadVar() to a variable previously read in in the ReadRF subroutine
-    RadVar(2) = RadOpMode
-    RadVar(3) = RadFreqKey
-    RadVar(4) = RadMaxPacket
-    RadVar(5) = RadMinPacket
-    RadVar(6) = RadDataRate
-    RadVar(7) = RadTxPwr
-    RadVar(8) = RadRetryTO
-    RadVar(9) = RadLowPwr
-    RadVar(10) = RadRepeaters
-    RadVar(11) = RadPacketRepeat
-    RadVar(12) = RadSlaveRetry
-    RadVar(13) = RadFreqRepeat
-    RadVar(14) = RadSlaveRepeat
-    RadVar(15) = RadRxSubID
-    RadVar(16) = RadTxSubID
-    RadVar(17) = RadNetID
-    SendRadSetString = RadVar(1) 'start writing the string out starting with the first value in the array
-    For RadVarCnt = 2 To 17 'from RadVar(2) through RadVar(n) build the string using For To Next Loop
-      SendRadSetString = SendRadSetString + "," + RadVar(RadVarCnt) 'SendRadSetString gets built using a comma for a delimiter for the entire length of the array
-    Next RadVarCnt 'move to next variable in array until string is complete
-    RadStringLen = Len(SendRadSetString) 'Len returns the length of the string in bytes
-    RadVarHandle = FileOpen("USR:UserRadSettings.txt","w",-1) 'Establish the "FileHandle" by opening (or creating if first open call) the file "UserRadSettings.txt" in the USR drive.
-    Delay (1,100,msec) 'delay processing to make sure file was opened
-    RadVarBytes = FileWrite (RadVarHandle,SendRadSetString,RadStringLen + 15) 'record how many bytes were written to file. Added 15 bytes to the expected length to make sure nothing gets missed
-    StoreRadCloseErr = FileClose(RadVarHandle) 'close the file, return whether closure was successful
+  Sub StoreRadToUser
+  Public StoreUSRRadSettings As String * 50
+  Public StoreRadHandle As Long
+  Public StoreRadFileLen As Long
+  Public StoreRadCloseErr
+  Public USRRadFileStatus As String * 30
+  Public RadUSRStrLen
+  Public RadUSRBytes
+  Dim i
+  Call ReadCurrentRF
+  StoreUSRRadSettings = CurrentRadVars(1)
+  For i = 2 To 17
+    StoreUSRRadSettings = StoreUSRRadSettings + "," + CurrentRadVars(i)
+  Next i
+  RadUSRStrLen = Len(StoreUSRRadSettings)
+  StoreRadHandle = FileOpen("USR:UserRadSettings.txt","w",-1)
+  RadUSRBytes = FileWrite(StoreRadHandle,StoreUSRRadSettings,RadUSRStrLen + 1)
+  StoreRadCloseErr = FileClose(StoreRadHandle)
+  StoreRadToUSR = False
   EndSub
   'EndSub
 
   '_______________________RESET RADIO TO FACTORY DEFAULT SETTINGS_______________________
   '__________Factory setting for RadioEnabled is True (On). I turn it off, as the purpose of this is to essentially reboot the radio system
-  Sub ResetRadDefault
-    SetSetting("RadioEnable",DefRadOn) 'SetSetting for the settings in quotes based on the Const values establish in variable declarations, Ex: DefRadOn = 0, DefOpMode = 2, etc.)
-    SetSetting("RadioOpMode",DefOpMode)
-    SetSetting("RadioFreqKey",DefFreqKey)
-    SetSetting("RadioMaxPacket",DefMaxPacket)
-    SetSetting("RadioMinPacket",DefMinPacket)
-    SetSetting("RadioDataRate",DefDataRate)
-    SetSetting("RadioTxPwr",DefTxPwr)
-    SetSetting("RadioRetryTimeout",DefRetryTO)
-    SetSetting("RadioLowPwr",DefLowPwr)
-    SetSetting("RadioRepeaters",DefRepeaters)
-    SetSetting("RadioPacketRepeat",DefPacketRepeat)
-    SetSetting("RadioSlaveRetry",DefSlaveRetry)
-    SetSetting("RadioFreqRepeat",DefFreqRepeat)
-    SetSetting("RadioSlaveRepeat",DefSlaveRepeat)
-    SetSetting("RadioRxSubID",DefRxSubID)
-    SetSetting("RadioTxSubID",DefTxSubID)
-    SetSetting("RadioNetID",DefNetID)
-  EndSub
+Sub SetRadtoDefault
+    SplitStr(SendRadVars(),DefRadVars,",",17,0)
+    Call SetRadSettings  
+    SetRadToDef = False
+EndSub
 
   '_________________________RESET RADIO BACK TO USER SETTINGS PREVIOUSLY STORED IN USR______________________
   '
-  Sub SetRadSetting
-    'Set Radio Settings to User settings from USR Drive
-    Public UserRadSettings As String * 60 'Variable to store settings string from USR
-    Public SetRadHandle As Long 'FileHandle of the "UserRadSettings.txt"
-    Public SetRadFileLen As Long 'Length of the user settings file in bytes
-    Public SetCloseErr 'If the file was closed successfully or not. 0 = successful, -1 = FileHandle not valid or handle was not opened
-    Public RadFileClosure As String * 26 'Text to let User know whether reading settings was successful or not (based on number of bytes)
-    SetRadHandle = FileOpen("USR:UserRadSettings.txt","r",-1) 'open saved user settings for radio
-    Delay (1,30,mSec) 'delay processing
-    SetRadFileLen = FileRead(SetRadHandle,UserRadSettings,500) 'read in the file, store it to the variable "UserRadSettings"
-    SetCloseErr = FileClose(SetRadHandle) 'indicate whether the closure was successful
-    If SetRadFileLen = 0 Then 'if FileLength = 0
-      RadFileClosure = "Error: Settings not found!" 'Show text to user
-      SetRadSettings = False 'Don't set radio settings
-      ExitSub 'exit the subroutine
-    EndIf
-    Public InRadVar(17) As String 'create array to store the values from string once it's split
-    SplitStr(InRadVar,UserRadSettings,",",17,0) 'split the "UserRadSettings" string into InRadVar(), comma delimited, n array size
-    RadOn = InRadVar(1) 'fill each variable with appropriate value from array
-    RadOpMode = InRadVar(2)
-    RadFreqKey = InRadVar(3)
-    RadMaxPacket = InRadVar(4)
-    RadMinPacket = InRadVar(5)
-    RadDataRate = InRadVar(6)
-    RadTxPwr = InRadVar(7)
-    RadRetryTO = InRadVar(8)
-    RadLowPwr = InRadVar(9)
-    RadRepeaters = InRadVar(10)
-    RadPacketRepeat = InRadVar(11)
-    RadSlaveRetry = InRadVar(12)
-    RadFreqRepeat = InRadVar(13)
-    RadSlaveRepeat = InRadVar(14)
-    RadRxSubID = InRadVar(15)
-    RadTxSubID = InRadVar(16)
-    RadNetID = InRadVar(17)
-    SetSetting("RadioEnable",RadOn) 'now, SetSetting to set the radio to the settings read in from USR
-    SetSetting("RadioOpMode",RadOpMode)
-    SetSetting("RadioFreqKey",RadFreqKey)
-    SetSetting("RadioMaxPacket",RadMaxPacket)
-    SetSetting("RadioMinPacket",RadMinPacket)
-    SetSetting("RadioDataRate",RadDataRate)
-    SetSetting("RadioTxPwr",RadTxPwr)
-    SetSetting("RadioRetryTimeout",RadRetryTO)
-    SetSetting("RadioLowPwr",RadLowPwr)
-    SetSetting("RadioRepeaters",RadRepeaters)
-    SetSetting("RadioPacketRepeat",RadPacketRepeat)
-    SetSetting("RadioSlaveRetry",RadSlaveRetry)
-    SetSetting("RadioFreqRepeat",RadFreqRepeat)
-    SetSetting("RadioSlaveRepeat",RadSlaveRepeat)
-    SetSetting("RadioRxSubID",RadRxSubID)
-    SetSetting("RadioTxSubID",RadTxSubID)
-    SetSetting("RadioNetID",RadNetID)
-    SetRadSettings = False 'turn off flag
-  EndSub
+  Sub SetRadToUser 'Will not work if no settings found in USR drive
+  Public UserRadSettings As String * 50
+  Public SetRadHandle
+  Public SetRadFileLen
+  Public SetCloseErr
+  Public RadFileClosure As String * 30
+  SetRadHandle = FileOpen("USR:UserRadSettings.txt","r",-1)
+  SetRadFileLen = FileRead(SetRadHandle,UserRadSettings,50)
+  SetCloseErr = FileClose(SetRadHandle)
+  SplitStr(SendRadVars(),UserRadSettings,",",17,0)
+  Call SetRadSettings
+  SetRadToUSR = False
+EndSub
 
   '_____________________________Establish means of verifying successful communication
 
@@ -7286,9 +7241,10 @@ BeginProg
     SerialClose(SunaPort)
   #EndIf
   #If RadioNetwork = True Then
-    Call SetRadSetting
+    Call ReadCurrentRF
     ResetTryOK = True 'It's ok to try a reset once initial dead thresholds have been met, no need to wait.
     NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio without waiting the first time.
+    CallTable RadioStatus
   #EndIf
 
   '=========================================================================
@@ -7925,19 +7881,18 @@ BeginProg
       Call ModemCheck
     #EndIf
     #If RadioNetwork = True Then 'only compile if it's in a radio network
-      If ReadRadSettings = True Then 'if user wants to store radio settings
-        Call ReadRF 'read in settings
-        Call StoreRadSettings 'store in USR drive
+      If StoreRadToUSR = True Then 'if user wants to store radio settings
+        Call StoreRadToUser 'store in USR drive
       EndIf
       #If IsMaster = True Then 'if it's the master
         Call CheckLinks 'call the subroutine that checks multiple links
-        If SetRadSettings = True OR ResetMaster = True AND ResetTryOK = True Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
-          Call ResetRadDefault 'first, let's set radio back to factory defaults
-          Call ReadRF 'read in the settings after setting to default to make sure it did what it's supposed to
-          Delay (1,1,Sec) 'delay, so user can see the change (maybe call/store a 1 record table here to minimize processing delay?)
-          Call SetRadSetting 'set radio settings to the what's stored on USR
-          Call ReadRF 'read in the new settings
-          Call StoreRadSettings 'store the new settings
+        RadFileExist = FileOpen("USR:UserRadSettings.txt","r",-1) 'check if file exists
+        FileClose(RadFileExist) 'close file
+        If RadFileExist <> 0 Then 'There's a USR file containing radio settings
+        Call SetRadToUser
+        EndIf 'if it doesn't exist don't do anything to radio settings
+        If SetRadToUSR = True OR (ResetMaster = True AND ResetTryOK = True) Then 'If link failed and enough time has passed to try reset again or user wants a manual reset
+          Call SetRadToDefault 'first, let's set radio back to factory defaults
           ResetTried = True 'flag to indicate a reset was tried
           NextTryCnt = 0 'reset the counter to zero so we can wait X amount of time before retrying
           RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
@@ -7952,13 +7907,14 @@ BeginProg
         EndIf
       #Else 'if it's a slave
         Call CheckSlaveLink 'only check the single link to the master
-        If SetRadSettings = True OR ResetSlave = True AND ResetTryOK = True Then 'if link failed and enough time has passed to try again or user wants manual reset
-          Call ResetRadDefault 'reset radio to defaults
-          Call ReadRF 'read in settings to verify it did it correctly
-          Delay (1,1,Sec) 'delay, so user has opportunity to see that it worked
-          Call SetRadSetting 'set radio to settings stored in USR
-          Call ReadRF 'read in the new settings
-          Call StoreRadSettings 'store the new radio settings
+        RadFileExist = FileOpen("USR:UserRadSettings.txt","r",-1)
+        FileClose(RadFileExist)
+        If RadFileExist <> 0 Then 'There's a USR file containing radio settings
+        Call SetRadToUser
+        EndIf 'if it doesn't exist don't do anything to radio settings
+        If SetRadToUSR = True OR (ResetSlave = True AND ResetTryOK = True) Then 'if link failed and enough time has passed to try again or user wants manual reset
+          Call SetRadToDefault 'first, let's set radio back to factory defaults
+         ' Call StoreRadSettings 'store the new radio settings
           ResetTried = True 'a reset was attempted
           NextTryCnt = 0 'reset counter to 0
           RadResetAttempts = RadResetAttempts + 1 'count how many attempts has been made (will reset if a link is re-established)
@@ -7972,13 +7928,15 @@ BeginProg
           ResetTryOK = False 'not enough time has passed, let's wait to try again.
         EndIf
       #EndIf
-      If SetRadToDefault = True Then 'if user wants to set radio to defaults/turn off radio
-        Call ResetRadDefault 'reset to default
-        Call ReadRF 'read in new settings, but don't store settings to USR because these settings are established as Constants and don't need to be stored.
-        SetRadToDefault = False 'reset flag to false
+      If SetRadToDef = True Then 'if user wants to set radio to defaults/turn off radio
+        Call SetRadToDefault 'reset to default
+        Delay(1,50,mSec)
+        Call ReadCurrentRF 'read in new settings, but don't store settings to USR because these settings are established as Constants and don't need to be stored.
       EndIf
-      ResetTried = False 'set flag to false to start counter (if necessary)
+      Delay(1,50,mSec)
+      Call ReadCurrentRF
       CallTable RadioStatus
+      ResetTried = False 'set flag to false to start counter (if necessary)
     #EndIf
     #If HasVM = True OR WqSonde <> "NONE" Then
       If StoreVariablesFlg = True OR ModDay = 0 Then
