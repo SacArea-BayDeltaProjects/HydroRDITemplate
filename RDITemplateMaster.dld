@@ -248,7 +248,7 @@ EndConstTable
 #EndIf 'Logger type determination
 
 'Constants for selecting different scan rates, if wanted. Standard is 1min scans
-Const ScanRate = 10
+Const ScanRate = 60
 Const ScanUnit = 2
 Const FastScanRate = 15 'used in modem check, but should be done a different way
 Const FastScanUnit = 2
