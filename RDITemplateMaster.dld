@@ -435,8 +435,8 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public SendRunAvg As Boolean 'Used to trigger if Flow data should be 15min running avg. or instantaneous
   #EndIf
   #If StorePD0 = True Then
-    Public StoreRawPD0 As Boolean
-    Public PD0Days 'Number of days to store consecutive file
+    Public StoreRawPD0 As Boolean = True 'set manual flag to true on startup, assume user wants .pd0 until manually set to off
+    Public PD0Days = 7 'Number of days to store consecutive file
   #EndIf
   Public UseV2 As Boolean
   Public RecordAll As Boolean 'ONLY PUT THIS IN FOR EASE OF SUBS, LOOK INTO, CAN BE REMOVED BY USING CONDITIONAL AROUND VELDATA TABLE
@@ -545,23 +545,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #If StorePD0 = True Then
     Dim VM_Binary As String * 2000
     Dim PD0Handle As Long
-    Dim PD0_StartDate As String * 30
-    Dim PD0_Timestamp As String * 30
-    Dim FileListDest(100) As String * 50 'gives room for 52PD0 and 48 other files total
-    Dim PD0File(52) As String * 50 'for 52 weeks in year
-    Dim PD0_SS1990(52) As Long
-    Dim NewestPD0(2)
-    Dim NumCRDFiles
-    Dim PD0_InStr
-    Dim PD0Cnt
-    Dim PD0_SecsSince1990 As Long
-    Dim PD0FileAge As Long
-    Dim PD0SizeThresh
-    Dim FileStartTime As Long
-    Dim OldPD0_StartDate As String * 50
-    Dim FileNum
-    Dim FileNumStr As String * 22
-    Dim FileNumChk(2)
+
   #EndIf
 
   '=============RATING VALUES, MEAN CHANNEL/AREA RATINGS===============================
@@ -656,6 +640,9 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public VMpitch As Float
   Public VMroll As Float
   Public VMupBeam As Float
+  Public VM_PSRawDepth As Float
+  Public VM_PSDepthM As Float
+  Public VM_PSDepthFt As Float
   Public VMElevation As Float
   #If SendFlowData = True Then
     Public RunAvg_Qcfs, RunAvg_iVel, RunAvg_StgPrime, RunAvg_VMTempF, RunAvg_VMVolts, RunAvg_StationV, RunAvg_PTempF
@@ -703,7 +690,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Dim LongArray(2000) As Long 'Array to hold raw ensemble bytes
   Dim Nums(2) As Long
   Dim DataTypes As Long
-  Dim IDWords(14) As Long
+  Dim IDWords(15) As Long 'Array to hold DataType IDs to calculate offsets
   Dim Offsets(40) As Long 'Offsets for start of each data type location
   Dim NumbytesZero As Long
   Dim TempL As Long
@@ -1329,10 +1316,7 @@ Alias SendRadVars(17) = SendRadNetID
 #EndIf
 
 Public UsrCase
-Public CurrentDateTime As Long
-Public CheckDateTime As Long
-Public AvgChangeTime As String * 25 = "12/31/2020 23:46:00"
-Public NewAvg As Boolean
+
 
 '============================================================================================================
 '--------------------------------------- DATA TABLES SECTION ------------------------------------------------
@@ -1349,6 +1333,9 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     Average (1,PS2Stg,IEEE4,BadPS2Flg)
     Average (1,UpBeamStg,IEEE4,BadUpbeamFlg)
     Average (1,IndexVel,IEEE4,BadVelFlag)
+    #If VMHasVertical = True Then
+    Average (1,VertIndexVel,IEEE4,False)
+    #EndIf
     Minimum (1,VMVolts,FP2,False,False)
     Average (1,VMtempC,FP2,False)
     Average (1,VMpitch,FP2,False)
@@ -1474,6 +1461,7 @@ DataTable(DataOut,Rec15MinFlag,-1)
     Sample (1,StgSelect,String)
     Minimum (1,VMVolts,FP2,False,False)
     Average (1,VMtempC,FP2,False)
+    Average (1,VMpressure,FP2,False)
     Average (1,VMpitch,FP2,False)
     Average (1,VMroll,FP2,False)
     Average (1,VMHeading,FP2,False)
@@ -3735,6 +3723,12 @@ EndSub
     LSB = LongArray(VarLeadOffset + 15)
     MSB = LongArray(VarLeadOffset + 16)
     SpeedOfSound = (256 * MSB) + LSB
+    'get Depth from VM Pressure Sensor
+    LSB = LongArray(VarLeadOffset + 17)
+    MSB = LongArray(VarLeadOffset + 18)
+    VM_PSRawDepth = (256 * MSB) + LSB 'Get raw depth in Decimeters
+    VM_PSDepthM = VM_PSRawDepth * 0.1 'Convert Decimeters to Meters
+    VM_PSDepthFt = VM_PSDepthM * Meters_to_Feet 'convert meters to feet
     'get Heading
     LSB = LongArray(VarLeadOffset + 19)
     MSB = LongArray(VarLeadOffset + 20)
@@ -5054,66 +5048,35 @@ EndSub
   #If StorePD0 = True Then
     Sub StorePD0File
       Dim i
-      StorePD0Start = Timer(DebugTimer,mSec,4)
-      StorePD0Start = StorePD0Start/1000
-      FileListDest() = "No File Present"
-      PD0File() = "No File Present"
-      PD0_SS1990() = BadDataIndicator
-      PD0Cnt = 0
-      VM_Binary = ""
-      PD0SizeThresh = PD0Days * 84600 'convert user input to number of secs per day
-      For i = 1 To NumBytes
-        MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2)
-      Next i
-      NumCRDFiles = FileList("CRD",FileListDest())
-      For i = 1 To NumCRDFiles
-        PD0_InStr = InStr(1,FileListDest(i),".PD0",2)
-        If PD0_InStr <> 0 Then
-          PD0Cnt = PD0Cnt + 1
-          PD0File(PD0Cnt) = FileListDest(i)
-        EndIf
-      Next i
-      If PD0Cnt <> 0 Then 'We found a file
-        For i = 1 To PD0Cnt
-          PD0_SS1990(i) = FileTime(PD0File(i)) 'get file time in SecsSince1990 for each file
-        Next i
-        MaxSpa(NewestPD0(),PD0Cnt,PD0_SS1990()) 'get max of "FileTime" outputs
-        PD0_SecsSince1990 = FileTime(PD0File(NewestPD0(2))) 'use Max value's array index for newest file
-        FileNumStr = Right(PD0File(NewestPD0(2)),22)
-        SplitStr(FileNumChk(),FileNumStr,0,2,0)
-        FileNum = FileNumChk(2)
-        PD0FileAge = PD0_SecsSince1990 - FileStartTime 'check the age of the file, in seconds
-        If PD0FileAge >= PD0SizeThresh Then 'number of seconds. if we're above threshold, make new file
-          PD0_Timestamp = Status.TimeStamp(1,1) 'check time
-          PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-          If PD0_StartDate = OldPD0_StartDate Then 'if it's the same date as previous file (short files < 1 day)
-            FileNum = FileNum + 1 'increase file number
-          Else
-            FileNum = 0 'otherwise, it's a new day, start with file #0
-          EndIf
-          PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open file
-          FileWrite(PD0Handle,VM_Binary,NumBytes)'write the binary to card
-          FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-          FileClose(PD0Handle) 'close the file
-          OldPD0_StartDate = PD0_StartDate 'set comparison date to new file date
-        Else 'if less than threshold continue to write to same file
-          PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1)
-          FileWrite(PD0Handle,VM_Binary,NumBytes)
-          FileClose(PD0Handle)
-        EndIf
-      Else 'We didn't find a PD0 on the card
-        PD0_Timestamp = Status.TimeStamp(1,1) 'check time
-        PD0_StartDate = Mid(PD0_Timestamp,7,4) + Left(PD0_Timestamp,2) + Mid(PD0_Timestamp,4,2) 'create new file name using yyyymmdd
-        FileNum = 0 'ensure starting at file #0
-        PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0_StartDate+"_"+FileNum+"_VMData.PD0","ab",-1) 'open new file
-        FileWrite(PD0Handle,VM_Binary,NumBytes) 'write ensemble to file
-        FileStartTime = Status.TimeStamp(1,1) 'record start time of file in seconds
-        FileClose(PD0Handle) 'close file
-        OldPD0_StartDate = PD0_StartDate 'comparison start date = current file date.
-      EndIf
-      StorePD0End = Timer(DebugTimer,mSec,4)
-      StorePD0End = StorePD0End/1000
-      StorePD0TotTime = StorePD0End - StorePD0Start
+      Public PD0TimeStamp As String * 25
+    Public PD0DateTime As String * 50
+    Public CreatePD0 As Boolean
+    Public PD0MinCnt
+    Public PD0Thresh
+'    Public PD0Days
+    
+   PD0Thresh = PD0Days * 1440 '1440 minutes per day
+   If PD0MinCnt >= PD0Thresh Then
+     CreatePD0 = True
+   EndIf
+   For i = 1 To NumBytes
+     MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2) 'move the CHR code (based on LongArray() decimal (ex. &H7F = 127) to VM_Binary string
+   Next i
+   If CreatePD0 = True Then
+     PD0TimeStamp = Status.TimeStamp(1,1)
+     PD0DateTime = Mid(PD0TimeStamp,7,4) + Left(PD0TimeStamp,2) + Mid(PD0TimeStamp,4,2) + "-" + Mid(PD0TimeStamp,12,2) + Mid(PD0TimeStamp,15,2) + Mid(PD0TimeStamp,18,2)
+     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData.PD0","ab",-1) 'Open file in name format "SID_yyyymmdd-hhmmss_VMData.PD0", start time of file
+     FileWrite(PD0Handle,VM_Binary,NumBytes)
+     FileClose(PD0Handle)
+     PD0MinCnt = 1 'make counter = 1 as there is 1 ensemble stored in the new file.
+     CreatePD0 = False
+   Else
+     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData.PD0","ab",-1)
+     FileWrite(PD0Handle,VM_Binary,NumBytes)
+     FileClose(PD0Handle)
+     PD0MinCnt = PD0MinCnt + 1
+     CreatePD0 = False
+   EndIf
     EndSub
   #EndIf 'If StorePD0
 #EndIf 'If HasVM or Pressure Sensors
@@ -7231,6 +7194,9 @@ BeginProg
   Call SetPorts
   #If HasVM = True Then
     Call OpenADCPPort
+    #If StorePD0 = True Then
+      CreatePD0 = True 'force storage of .pd0 before scan.
+    #EndIf
   #EndIf
   #If WqSonde <> "NONE" Then
     Call OpenWQPort
@@ -7255,13 +7221,6 @@ BeginProg
     #If ReadExtPwr = True Then
       Call ReadExtVolt
     #EndIf
-    CurrentDateTime = SecsSince1990(Status.Timestamp,1)
-    CheckDateTime = SecsSince1990(AvgChangeTime,1)
-    If CurrentDateTime >= CheckDateTime Then
-      NewAvg = True
-    Else
-      NewAvg = False
-    EndIf
     #If HasVM = True OR WqSonde <> "NONE" Then
       If GetVariablesFlg = True Then
         Call ReadVariables
@@ -7337,19 +7296,11 @@ BeginProg
         WipeFlag = False
       EndIf
     #EndIf 'Make "WipeFlag" variable available for either Suna or Sonde. Both being wiped in 14min, just at different times.
-    If NewAvg = True Then
       If Mod15Minutes = 420 Then 'at the 7th minute into a 15min interval. Use this to center vel and stage over sample period
         Rec15MinFlag = True 'set trigger for storage to 15min tables
       Else 'if not 7min in
         Rec15MinFlag = False
       EndIf 'determine time into 15min interval
-    Else
-      If Mod15Minutes = 0 Then
-        Rec15MinFlag = True
-      Else
-        Rec15MinFlag = False
-      EndIf
-    EndIf
     If RecCalibData = True Then 'if we want 1 min data
       Rec1MinFlag = True
     Else 'if the user set it back to false
