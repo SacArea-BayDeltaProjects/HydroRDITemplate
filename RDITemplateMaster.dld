@@ -92,13 +92,13 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = False
+Const IsSpecStudy = True
 'value = True
 'value = False
-Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
-Const HasModem = False
+Const HasModem = True
 'value = True
 'value = False
 Const GetNoiseFloor = False
@@ -207,7 +207,7 @@ EndConstTable
   #EndIf 'if using iridium
 #ElseIf LoggerType = CR6 Then
   #If HasVM = True Then 'if we have a VM or Pressure sensors
-    Const AdcpPort = ComC3
+    Const AdcpPort = ComC1
     Const VMSwitchPort = U4
     Const PS1Com3 = U3
     Const PS1Com5 = U5
@@ -215,7 +215,7 @@ EndConstTable
     Const PS2Com5 = U5
   #EndIf 'if VM or pressure sensors present
   #If WqSonde <> "NONE" Then 'If sonde present
-    Const WqSerialPort = ComC1 'WQ must use a C port
+    Const WqSerialPort = ComC3 'WQ must use a C port
     Const WqSwitchPort = U6 'establish switch ports
     Const UseSW12_2_forWQ = False
     #If TopBottom = True Then 'if redundant, top/bottom setup
@@ -492,11 +492,11 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public NumBytes As Float 'Datalogger calculated number of bytes in ensemble
   Public CalcCheckSum As Float
   Public EnsCheckSum As Float
-  Public BadCheckSum As Long
+  Public BadCheckSum As Float
+  Public BadCheckSumTot As Float
   Public HeaderMismatch
-  Public BadEnsemble
-  Public MissedEns 'Number of missed ensembles
-  Public BadEnsCount As Float
+  Public BadEnsemble As Float
+  Public BadEnsembleTot As Float
   Public BadQCount As Long 'how many times has the datalogger been unable to calculate discharge? (either bad stage value or bad velocity value)
   Public MinExpVel As Long 'minimum velocity expected at site
   Public MaxExpVel As Long 'maximum velocity expected at site
@@ -520,7 +520,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #EndIf
   Public FlowSign As Long 'Multiplier for velocity depending on which side of the channel instrument is on
   Public UseDir As Boolean 'should user use compass flow direction to indicate flood vs. ebb
-  Public PosFlowDir As Float 'compass direction of positive flow (outgoing/ebb)
+  Public PosFlowDir As Float'compass direction of positive flow (outgoing/ebb)
   #If VMHasVertical = False Then
     Public BinDist(6) As Float: Alias BinDist = StartBin, EndBin, StartEbbBin, EndEbbBin, StartFldBin, EndFldBin 'Bin Distribution
   #Else
@@ -634,7 +634,9 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #EndIf
   Public MeanVel As Float 'average channel velocity based on user bin distribution and rating equation
   Public Qcfs As Float 'total discharge
-  Public VMVolts As Float
+  Public VMVolts As String * 5 'final product
+  Public VMVoltsTemp As Float 'temporary placeholder
+  Public VMVoltsDec As Float 'decimal place holder for CM voltages
   Public VMtempC As Float
   Public VMtempF As Float
   Public VMpitch As Float
@@ -649,8 +651,8 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Public FlowOutStr As String * 200
   #EndIf
   Dim VMHeading As Float
-  Dim VMpressure As Float
-  Dim WHpressure As Float
+'  Dim VMpressure As Float
+'  Dim WHpressure As Float
   Dim V1Avg As Float
   Dim V2Avg As Float
   Dim V3Avg As Float
@@ -797,10 +799,10 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Dim M1SB As Long
   Dim TempM As Float
   Dim VMTemp As Long 'temporary debugging variable
-  Dim VMPSTemp As Long 'temporary debugging variable
-  Dim WHPSTemp As Float 'for workhorse pressure
-  Dim WHTempM As Float
-  Dim WHTempK As Float
+'  Dim VMPSTemp As Long 'temporary debugging variable
+'  Dim WHPSTemp As Float 'for workhorse pressure
+'  Dim WHTempM As Float
+'  Dim WHTempK As Float
 
   '==================== VM/PS SERIAL NUMBER VARIABLES =========================
   Dim ADCPSN01 As Long
@@ -953,8 +955,10 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Public BtmRedeploy As Boolean
   #EndIf
   Public NoSondeTrig As Float 'variable to hold value when looking for "No Sonde"
+  Public NoSondeFlag As Boolean
   #If TopBottom = True Then
     Public BtmNoSondeTrig As Float 'Need separate value to check second sonde independently
+    Public BtmNoSondeFlag As Boolean
   #EndIf
   #If LoggerType = CR6 Then
     Public WqUseCPort As Boolean
@@ -1336,7 +1340,7 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     #If VMHasVertical = True Then
     Average (1,VertIndexVel,IEEE4,False)
     #EndIf
-    Minimum (1,VMVolts,FP2,False,False)
+    Minimum (1,VMVolts,String,False,False)
     Average (1,VMtempC,FP2,False)
     Average (1,VMpitch,FP2,False)
     Average (1,VMroll,FP2,False)
@@ -1459,12 +1463,14 @@ DataTable(DataOut,Rec15MinFlag,-1)
       Average(1,SondeStg,IEEE4,False)
     #EndIf 'If we have WQ
     Sample (1,StgSelect,String)
-    Minimum (1,VMVolts,FP2,False,False)
+    Minimum (1,VMVolts,String,False,False)
     Average (1,VMtempC,FP2,False)
-    Average (1,VMpressure,FP2,False)
+    Average (1,VM_PSDepthFt,IEEE4,BadVMPressFlg)
+    Average (1,VM_PSDepthM,IEEE4,BadVMPressFlg)
     Average (1,VMpitch,FP2,False)
     Average (1,VMroll,FP2,False)
     Average (1,VMHeading,FP2,False)
+    Sample (1,BadEnsemble,FP2)
     Sample (6,BadStageCounters,FP2)
     Sample (1,StgOutOfBndCnt,FP2)
     Sample (1,Stg2OutOfBndCnt,FP2)
@@ -1587,8 +1593,8 @@ DataTable(QAQCInfo,Rec24HrFlag,-1)
       Sample (1,SondeOffset,IEEE4)
     #EndIf
     Sample (1,StgSelect,String)
-    Maximum(1,VMVolts,FP2,False,False)
-    Minimum(1,VMVolts,FP2,False,False)
+    Maximum(1,VMVolts,String,False,False)
+    Minimum(1,VMVolts,String,False,False)
     Maximum(1,VMtempC,FP2,False,False)
     Minimum(1,VMtempC,FP2,False,False)
     Maximum(1,VMpitch,FP2,False,False)
@@ -1600,7 +1606,8 @@ DataTable(QAQCInfo,Rec24HrFlag,-1)
     Sample (1,BadQCount,Long)
     Sample (1,BadVelCount,Long)
     Sample (1,BadBinCnt,Long)
-    Sample (1,BadEnsCount,FP2)
+    Sample (1,BadEnsemble,FP2)
+    Sample (1,BadEnsembleTot,FP2)
     Sample (1,StgOutOfBndCnt,FP2)
     Sample (1,StgOutOfBndCntTot,FP2)
     Sample (1,Stg2OutOfBndCnt,FP2)
@@ -1670,7 +1677,7 @@ DataTable(SiteVisit,SiteVisTrig,50)
     Sample (1,BadQCount,Long)
     Sample (1,BadVelCount,Long)
     Sample (1,BadBinCnt,Long)
-    Sample (1,BadEnsCount,FP2)
+    Sample (1,BadEnsemble,FP2)
     Sample (1,BadStgCount,Long)
     Sample (1,VMRestartAttempts,FP2)
     Sample (1,VMLowMemCount,FP2)
@@ -1767,9 +1774,9 @@ DataTable(SVMaq,True,1)
   Sample (1,ProgVersion, String)
   Sample (1,StationVolts,FP2)
   #If HasVM = True Then
-    Sample (1,StagePrime,FP2)
-    Sample (1,StageSecnd,FP2)
-    Sample (1,PS1Stg,FP2)
+    Sample (1,StagePrime,IEEE4)
+    Sample (1,StageSecnd,IEEE4)
+    Sample (1,PS1Stg,IEEE4)
     Sample (1,PS2Stg,IEEE4)
     Sample (1,UpBeamStg,IEEE4)
     Sample (1,VMPressStg,IEEE4)
@@ -1777,10 +1784,13 @@ DataTable(SVMaq,True,1)
       Sample (1,SondeStg,IEEE4)
     #EndIf 'if WqSonde <> NONE
     Sample (1,IndexVel,FP2)
+    #If VMHasVertical Then
+      Sample (1,VertIndexVel,FP2)
+    #EndIf
     Sample (1,VMpitch,FP2)
     Sample (1,VMroll,FP2)
     Sample (1,VMtempC,FP2)
-    Sample (1,VMVolts,FP2)
+    Sample (1,VMVolts,String)
     Sample (4,StgOffsets(),IEEE4)
     #If WqSonde <> "NONE" Then
       Sample (1,SondeOffset,IEEE4)
@@ -1892,8 +1902,8 @@ EndTable
     Average (1,VMupBeam,IEEE4,BadUpbeamFlg)
     Sample (1,VMtempC,IEEE4)
     Average (1,VMtempC,IEEE4,False)
-    Sample (1,VMVolts,IEEE4)
-    Average (1,VMVolts,IEEE4,False)
+    Sample (1,VMVolts,String)
+    Average (1,VMVolts,String,False)
     'Sample (1,ExtWHConvertVolt,IEEE4)    Commented for now, do we think these are necessary? Maybe could read the higher voltage into Arduino, then sample that?
     'Average (1,ExtWHConvertVolt,IEEE4,False)
   EndTable
@@ -1980,16 +1990,29 @@ EndTable
       Sample (1,SiteNum,String)
       Sample(1,Coord,String)
       Sample(1,Decode,String)
+      Sample (1,Numbins,FP2)
+      Sample (1,BadEnsemble,FP2)
+      #If VMHasVertical Then
+        Sample (1,VertNumBins,FP2)
+      #EndIf
       Average(MaxBins,V1(),FP2,V1Disable())
       Average(MaxBins,V2(),FP2,V2Disable())
       Average(MaxBins,V3(),FP2,V3Disable())
       Average(MaxBins,V4(),FP2,V4Disable())
-      Average (108,ensRSSI(),UINT2,False)
-      Average (108,ensCorr(),UINT2,False)
-      Sample (1,VMHeading,FP2)
+      #If VMHasVertical Then
+      Average(MaxBins,VerticalVelocity(),IEEE4,VerticalBinDisable())
+      #EndIf
+      Average (MaxBins*4,ensRSSI(),UINT2,False)
+      Average (MaxBins*4,ensCorr(),UINT2,False)
+      #If VMHasVertical Then
+      Average(MaxBins,VerticalRSSI(),Uint2,False)
+      Average(MaxBins,VerticalCorr(),Uint2,False)
+      #EndIf
+      Average (1,VMHeading,FP2,False)
       Average (1,VMpitch,FP2,False)
       Average (1,VMroll,FP2,False)
       Average (1,VMtempC,FP2,False)
+      Average (1,VM_PSDepthM,FP2,BadVMPressFlg)
       'store other... x, y, think about this... what do we really want in here
     EndTable
   #EndIf 'if "special study"
@@ -2009,7 +2032,7 @@ EndTable
       Sample (4,NoiseLGainN(),FP2)
       'Sample (1,NoiseLGainN(2),FP2)
       Sample (1,VMtempC,IEEE4)
-      Sample (1,VMVolts,IEEE4)
+      Sample (1,VMVolts,String)
       'Sample (1,ExtWHConvertVolt,IEEE4) commented out for now, discuss if we need it
     EndTable
   #EndIf 'if we want noise floor
@@ -2573,7 +2596,7 @@ Sub UserDefaults
     UseDir = False
     IsVMNClosed = True 'Default setting for the existance of a normally Closed VM power Relay
     #If UseAutoRange Then
-      RangeSource = PSpress 'sensor to use for water depth over VM transducer faces
+      RangeSource = VMpress 'sensor to use for water depth over VM transducer faces
       DucerDepthOffset = 0 'difference between water depth sensor and VM transducer face
       RangedBin = 0 'starting point for range calculation
       CutOffBins = 1 'Starting point for number of bins to discard when using AutoRange feature
@@ -2620,16 +2643,15 @@ Sub Initialize
     SendCMD = False 'don't send command at start up
     SetVMTimeFlg = False 'Don't try to set the time on start up
     UseCommsZeroForADCP = False 'Set to false, then allow logger to set appropriately
-    MissedEns = 0
     Erase(LongArray()) 'Make sure array that holds ADCP PD0 is empty
     AvgRSSIStartBin = StartBin
     AvgRSSIEndBin  = EndBin
     VMPower = True
     IsSubmersed = False
-    IsCM = True 'These are auto set if ensembles are actively coming in.
+    IsCM = False 'These are auto set if ensembles are actively coming in.
     IsVADCP = False
     IsWorkHorse = False
-    IsSentinelV = False
+    IsSentinelV = True
     TrueUpBeamStg = BadDataIndicator
     TrueVMPressStg = BadDataIndicator
     TruePS1Stg = BadDataIndicator
@@ -2831,8 +2853,8 @@ EndSub
 Sub ZeroErrCounters
   #If HasVM Then
     BadBinCnt = 0
-    BadEnsemble = 0
-    BadEnsCount = 0
+    BadEnsembleTot = 0
+    BadCheckSumTot = 0
     VMRestartAttempts = 0
     BadStgCountTot = 0 'initialize bad stage counter
     BadStg2CntTot = 0
@@ -3170,7 +3192,11 @@ EndSub
       SentBreak = False
       VMRestartAttempts = VMRestartAttempts + 1
     Else
+      If IsSentinelV = False Then
       Call SetVMTime 'By calling this sub, we send a software break (+++), if necessary, set TS, SetTF, then issue CS
+      Else
+        SetVMTimeFlg = True 'don't try to set the time immediately after power cycle, the delay for wake up is too long. set flag to send break in next minute
+      EndIf
       VMRestartAttempts = VMRestartAttempts + 1
     EndIf
     WakeUpVM = False 'Set flag back to false so it doesn't continuously cycle power
@@ -3410,6 +3436,7 @@ EndSub
     If VMdataIn = False Then 'if we didn't find right header, no bytes, or double bytes then it's "dead"
       VMDeadCount = VMDeadCount + 1
       BadEnsemble = BadEnsemble + 1
+      BadEnsembleTot = BadEnsembleTot + 1
       #If HasHMS = True Then
         HMS_VMcount = HMS_VMcount + 1
         If HMS_VMcount >= HMS_BadThresh Then
@@ -3728,7 +3755,16 @@ EndSub
     MSB = LongArray(VarLeadOffset + 18)
     VM_PSRawDepth = (256 * MSB) + LSB 'Get raw depth in Decimeters
     VM_PSDepthM = VM_PSRawDepth * 0.1 'Convert Decimeters to Meters
-    VM_PSDepthFt = VM_PSDepthM * Meters_to_Feet 'convert meters to feet
+    VM_PSDepthFt = VM_PSDepthM * Meters_to_Feet 'convert meters to feet for use with gage height
+    If VM_PSRawDepth = BadDataIndicator Then
+      BadVMPressFlg = True
+      BadVMPressCnt = BadVMPressCnt + 1
+      BadVMPressCntTot = BadVMPressCntTot + 1
+    Else
+      BadVMPressFlg = False
+      BadVMPressCnt = BadVMPressCnt
+      BadVMPressCntTot = BadVMPressCntTot
+    EndIf
     'get Heading
     LSB = LongArray(VarLeadOffset + 19)
     MSB = LongArray(VarLeadOffset + 20)
@@ -3764,33 +3800,38 @@ EndSub
     VMtempC = Temp * 0.01 'Temperature scale factor
     VMtempF = VMtempC * 9/5 + 32
     'get VMvolts
-    VMVolts = LongArray(VarLeadOffset + 36)
+    VMVoltsTemp = LongArray(VarLeadOffset + 36)
+    If IsCM Then
+    VMVoltsDec = LongArray(VarLeadOffset + 35) 'tenths and hundreds place for CM
+    VMVoltsDec = VMVoltsDec + 0.6 'Per manual, reported value is 0.6V less than battery voltage
+    VMVolts = VMVoltsTemp + "." + VMVoltsDec 'concatenate voltage to produce higher resolution
+    EndIf
     If IsSentinelV = True Then
-      VMVolts = VMVolts * 0.1 '0.1V precision
+      VMVolts = VMVoltsTemp * 0.1 '0.1V precision
     EndIf
 
     'get pressure from Workhorse
-    WHpressure = 0
-    WHTempM = 0
-    WHTempK = 0
-    WHPSTemp = 0
-    DepthLSB = 0
-    DepthLSB1 = 0
-    DepthMSB = 0
-    DepthMSB1 = 0
-    'Get corrected Max pressure (depth) from ensemble
-    DepthLSB = LongArray(VarLeadOffset + 49)
-    DepthLSB1 = LongArray(VarLeadOffset + 50)
-    DepthMSB = LongArray(VarLeadOffset + 51)
-    DepthMSB1 = LongArray(VarLeadOffset + 52)
-    WHPSTemp = (16777216 * DepthMSB1) + (65536 * DepthMSB) + (256 * DepthLSB1) + DepthLSB 'this seems quite large, Better call RDI
-    If WHPSTemp <> 0 Then
-      WHTempK = WHPSTemp/100 'convert from decapascals to kpa
-      WHTempM = (WHTempK * (1.02-0.00069*ES))/10
-      WHpressure = WHTempM * Meters_to_Feet 'convert to feet
-    Else
-      WHpressure = BadDataIndicator
-    EndIf
+'    WHpressure = 0
+'    WHTempM = 0
+'    WHTempK = 0
+'    WHPSTemp = 0
+'    DepthLSB = 0
+'    DepthLSB1 = 0
+'    DepthMSB = 0
+'    DepthMSB1 = 0
+'    'Get corrected Max pressure (depth) from ensemble
+'    DepthLSB = LongArray(VarLeadOffset + 49)
+'    DepthLSB1 = LongArray(VarLeadOffset + 50)
+'    DepthMSB = LongArray(VarLeadOffset + 51)
+'    DepthMSB1 = LongArray(VarLeadOffset + 52)
+'    WHPSTemp = (16777216 * DepthMSB1) + (65536 * DepthMSB) + (256 * DepthLSB1) + DepthLSB 'this seems quite large, Better call RDI
+'    If WHPSTemp <> 0 Then
+'      WHTempK = WHPSTemp/100 'convert from decapascals to kpa
+'      WHTempM = (WHTempK * (1.02-0.00069*ES))/10
+'      WHpressure = WHTempM * Meters_to_Feet 'convert to feet
+'    Else
+'      WHpressure = BadDataIndicator
+'    EndIf
   EndSub
 
   '======================== CORRELATION DECODER ========================
@@ -3876,9 +3917,8 @@ EndSub
   EndSub
 
   '================== VM STAGE DECODER =======================
-  Sub VMStageDecode
-    If IsWorkHorse Then
-      VMpressure = BadDataIndicator
+  Sub VMStageDecode 'upbeam only
+    If IsWorkHorse OR IsSentinelV Then
       VMupBeam = BadDataIndicator
       Exit Sub
     EndIf
@@ -3928,19 +3968,20 @@ EndSub
     Temp = 0
     TempM = 0
     'Get corrected Max pressure (depth) from ensemble
-    LSB = LongArray(VMStageDatOffset + 43)
-    L1SB = LongArray(VMStageDatOffset + 44)
-    MSB = LongArray(VMStageDatOffset + 45)
-    M1SB = LongArray(VMStageDatOffset + 46)
-    VMPSTemp = (16777216 * M1SB) + (65536 * MSB) + (256 * L1SB) + LSB 'this seems quite large, Better call RDI
-    If VMPSTemp <> 0 Then
-      TempM = VMPSTemp/10000
-    Else
-      TempM = BadDataIndicator
-    EndIf
-    VMpressure = TempM
+    ' SHOULD WE REMOVE THIS DECODING? BYTES 17 & 18 ARE FROM "ED" COMMAND, IF "ED" IS NOT SET, IT'S FROM PRESSURE SENSOR, OUTPUT IN DECIMETERS
+'    LSB = LongArray(VMStageDatOffset + 43)
+'    L1SB = LongArray(VMStageDatOffset + 44)
+'    MSB = LongArray(VMStageDatOffset + 45)
+'    M1SB = LongArray(VMStageDatOffset + 46)
+'    VMPSTemp = (16777216 * M1SB) + (65536 * MSB) + (256 * L1SB) + LSB 'this seems quite large, Better call RDI
+'    If VMPSTemp <> 0 Then
+'      TempM = VMPSTemp/10000
+'    Else
+'      TempM = BadDataIndicator
+'    EndIf
+'    VMpressure = TempM
     VMupBeam = VMupBeam * Meters_to_Feet 'convert to Feet
-    VMpressure = VMpressure * Meters_to_Feet 'convert to Feet
+'    VMpressure = VMpressure * Meters_to_Feet 'convert to Feet
     If VMupBeam = BadDataIndicator Then
       BadUpbeamFlg = True
       BadUpbeamCnt = BadUpbeamCnt + 1
@@ -3950,15 +3991,15 @@ EndSub
       BadUpbeamCnt = BadUpbeamCnt
       BadUpbeamCntTot = BadUpbeamCntTot
     EndIf
-    If VMpressure = BadDataIndicator Then
-      BadVMPressFlg = True
-      BadVMPressCnt = BadVMPressCnt + 1
-      BadVMPressCntTot = BadVMPressCntTot + 1
-    Else
-      BadVMPressFlg = False
-      BadVMPressCnt = BadVMPressCnt
-      BadVMPressCntTot = BadVMPressCntTot
-    EndIf
+'    If VMpressure = BadDataIndicator Then
+'      BadVMPressFlg = True
+'      BadVMPressCnt = BadVMPressCnt + 1
+'      BadVMPressCntTot = BadVMPressCntTot + 1
+'    Else
+'      BadVMPressFlg = False
+'      BadVMPressCnt = BadVMPressCnt
+'      BadVMPressCntTot = BadVMPressCntTot
+'    EndIf
   EndSub
 
   '================== VELOCITY DECODER ==============================
@@ -4534,14 +4575,14 @@ EndSub
   Sub GetStage
     GetStgStart = Timer(DebugTimer,mSec,4)
     GetStgStart = GetStgStart/1000
-    If IsWorkHorse Then
-      VMpressure = WHpressure 'It's a workhorse and there is no "VMPress" from CM
-    EndIf
+'    If IsWorkHorse Then
+'      VMpressure = WHpressure 'It's a workhorse and there is no "VMPress" from CM
+'    EndIf
     Call GetPressureSensors 'Call both sensors to get most recent value
     Call TrueStage 'If user entered a "TrueStage" value, calculate the offset based on current reading
     'then apply it to the data
     UpBeamStg = VMupBeam + UpBeamOffset
-    VMPressStg = VMpressure + VMPressOffset
+    VMPressStg = VM_PSDepthFt + VMPressOffset
     PS1Stg = PsPress1Stg(1) + PS1Offset
     PS2Stg = PSpress2Stg(1) + PS2Offset
     #If WqSonde <> "NONE" Then
@@ -4557,7 +4598,7 @@ EndSub
         StagePrime = BadDataIndicator
       EndIf
     Case VMpress 'User Selected VM Pressure sensor to be used as Primary stage
-      If VMdataIn = True AND VMpressure <> NAN Then 'If there are data coming in and they are valid
+      If VMdataIn = True AND VM_PSDepthFt <> NAN Then 'If there are data coming in and they are valid
         StagePrime = VMPressStg
         BadStgFlag = False
       Else ' Otherwise flag data as bad
@@ -4604,7 +4645,7 @@ EndSub
         BadStg2Flag = True
       EndIf
     Case VMpress 'User Selected VM Pressure sensor to be used as stage
-      If (VMdataIn = True AND VMpressure <> NAN) Then 'If there are data coming in and they are valid
+      If (VMdataIn = True AND VM_PSDepthFt <> NAN) Then 'If there are data coming in and they are valid
         StageSecnd = VMPressStg
         BadStg2Flag = False
       Else ' Otherwise flag data as bad
@@ -4665,7 +4706,11 @@ EndSub
     StgDiff = StagePrime - StageSecnd
     'which stage insturment type being used will be stored in the output files
     StgSelect = SelStgPrime + ":" + SelStgSecnd 'indicates stage type being used
+    If IsCM Then
     VMElevation = StagePrime - VMupBeam 'get instrument elevation to datum using primary stage sensor and raw upbeam value
+    Else
+      VMElevation = StagePrime - VM_PSDepthFt 'no upbeam on WH or Sentinel, use the Pressure sensor
+    EndIf
     GetStgEnd = Timer(DebugTimer,mSec,4)
     GetStgEnd = GetStgEnd/1000
     GetStgTotTime = GetStgEnd - GetStgStart
@@ -4683,8 +4728,8 @@ EndSub
     If ((TrueUpBeamStg <> BadDataIndicator) AND (VMupBeam <> BadDataIndicator)) Then ' if user types in a reference stage for Upbeam then
       UpBeamOffset = TrueUpBeamStg-VMupBeam ' get offset for UpBeam
     EndIf 'Otherwise do nothing
-    If ((TrueVMPressStg <> BadDataIndicator) AND (VMpressure <> BadDataIndicator)) Then 'if user types in a reference stage VM Pressure sensor then
-      VMPressOffset = TrueVMPressStg-VMpressure 'get offset for VM pressure sensor
+    If ((TrueVMPressStg <> BadDataIndicator) AND (VM_PSDepthFt <> BadDataIndicator)) Then 'if user types in a reference stage VM Pressure sensor then
+      VMPressOffset = TrueVMPressStg-VM_PSDepthFt 'get offset for VM pressure sensor
     EndIf 'otherwise do nothing
     If ((TruePS1Stg <> BadDataIndicator) AND (PsPress1Stg(1) <> BadDataIndicator)) Then 'if user types in a reference stage for Pressure sensor1 then
       PS1Offset = TruePS1Stg-PsPress1Stg(1) 'Get offset for pressure sensor 1
@@ -5184,7 +5229,7 @@ EndSub
   Sub RedeploySonde 'checks parameters/sets delimiter and defines parameter orders
     Dim i
 
-    If Redeploy = True OR WqParamOrder(1) = BadDataIndicator Then 'If standard sonde needs to be set up
+    If Redeploy = True OR WqParamOrder(1) = BadDataIndicator OR NoSondeFlag = True Then 'If standard sonde needs to be set up
       RedeployStart = Timer(DebugTimer,mSec,4)
       RedeployStart = RedeployStart/1000
       SerialFlush(WqSerialPort)
@@ -5195,7 +5240,13 @@ EndSub
       SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
       WqIn = Trim(WqIn)
       SplitStr (WqParamOrder,WqIn,CHR(32),WqNParams,0)
-      NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+      NoSondeTrig = InStr(1,WqIn,"No",2)
+      WqBytes = Len(WqIn)
+      If NoSondeTrig <> 0 OR WqBytes < 5 Then
+        NoSondeFlag = True
+        Else
+        NoSondeFlag = False
+      EndIf
       Delay (1,20,mSec)
       SerialFlush(WqSerialPort)
       '---------------------------------Set Delimiter------------------------------
@@ -5204,12 +5255,18 @@ EndSub
       SerialOut (WqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50) 'set to comma delimited
       Delay (1,300,mSec)
       SerialIn (WqIn,WqSerialPort,100,&H0D0A,200)
-      NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+      NoSondeTrig = InStr(1,WqIn,"No",2)
+      WqBytes = Len(WqIn)
+      If NoSondeTrig <> 0 OR WqBytes < 5 Then
+        NoSondeFlag = True
+        Else
+        NoSondeFlag = False
+      EndIf
       Delay (1,20,mSec)
       SerialFlush(WqSerialPort)
       '------------------------------- Set "Locs" based on Parameter check -----------------------
       For i = 1 To WqNParams
-        If WqParamOrder(i) = 52 Then WqLocDate = i 'Date,MMDDYY
+        If WqParamOrder(i) = 51 OR WqParamOrder(i) = 52 OR WqParamOrder(i) = 53 Then WqLocDate = i 'Date,DDMMYY or MMDDYY or YYMMDD
         If WqParamOrder(i) = 54 Then WqLocTime = i 'Time,HHMMSS
         If WqParamOrder(i) = 1 Then WqLocTempC = i 'Temp C
         If WqParamOrder(i) = 2 Then WqLocTempF = i 'Temp F
@@ -5240,7 +5297,7 @@ EndSub
       RedeployTot = RedeployEnd - RedeployStart
     EndIf
     #If TopBottom = True Then
-      If BtmRedeploy = True OR BtmWqParamOrder(1) = BadDataIndicator Then
+      If BtmRedeploy = True OR BtmWqParamOrder(1) = BadDataIndicator OR BtmNoSondeFlag = True Then
         BtmRedeployStart = Timer(DebugTimer,mSec,4)
         BtmRedeployStart = BtmRedeployStart/1000
         SerialFlush(BtmWqSerialPort)
@@ -5251,7 +5308,13 @@ EndSub
         SerialIn (BtmWqIn,BtmWqSerialPort,100,&H0D0A,200)
         BtmWqIn = Trim(BtmWqIn)
         SplitStr (BtmWqParamOrder,BtmWqIn,CHR(32),WqNParams,0)
-        BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
+        BtmNoSondeTrig = InStr(1,BtmWqIn,"No",2)
+        BtmWqBytes = Len(BtmWqIn)
+        If BtmNoSondeTrig <> 0 OR BtmWqBytes < 5 Then
+        BtmNoSondeFlag = True
+        Else
+        BtmNoSondeFlag = False
+      EndIf
         Delay (1,200,mSec)
         SerialFlush(BtmWqSerialPort)
         '---------------------------------Set Delimiter------------------------------
@@ -5260,12 +5323,18 @@ EndSub
         SerialOut (BtmWqSerialPort,"setdelim 2" + CHR(13) + CHR(10),"OK",3,50) 'set to comma delimited
         Delay (1,300,mSec)
         SerialIn (BtmWqIn,BtmWqSerialPort,100,&H0D0A,200)
-        BtmNoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
+        BtmNoSondeTrig = InStr(1,BtmWqIn,"No",2)
+                BtmWqBytes = Len(BtmWqIn)
+        If BtmNoSondeTrig <> 0 OR BtmWqBytes < 5 Then
+        BtmNoSondeFlag = True
+        Else
+        BtmNoSondeFlag = False
+      EndIf
         Delay (1,20,mSec)
         SerialFlush(BtmWqSerialPort)
         '------------------------------- Set "Locs" based on Parameter check -----------------------
         For i = 1 To WqNParams
-          If BtmWqParamOrder(i) = 52 Then BtmWqLocDate = i 'Date,MMDDYY
+          If BtmWqParamOrder(i) = 51 OR BtmWqParamOrder(i) = 52 OR BtmWqParamOrder(i) = 53 Then BtmWqLocDate = i 'Date,MMDDYY
           If BtmWqParamOrder(i) = 54 Then BtmWqLocTime = i 'Time,HHMMSS
           If BtmWqParamOrder(i) = 1 Then BtmWqLocTempC = i 'Temp C
           If BtmWqParamOrder(i) = 2 Then BtmWqLocTempF = i 'Temp F
@@ -5322,14 +5391,24 @@ EndSub
     SerialInRecord(WqSerialPort,WqIn,0,0,&H0023,WqBytes,10)
     WqIn = Trim(WqIn)
     SplitStr (WqData,WqIn,",",WqNParams,0)
-    NoSondeTrig = InStr(1,WqIn,"Sonde",2)
+    NoSondeTrig = InStr(1,WqIn,"No",2)
+        If NoSondeTrig <> 0 OR WqBytes < 5 Then
+        NoSondeFlag = True
+        Else
+        NoSondeFlag = False
+      EndIf
     Delay (1,10,mSec)
     SerialFlush(WqSerialPort)
     #If TopBottom = True Then
       SerialInRecord(BtmWqSerialPort,BtmWqIn,0,0,&H0023,BtmWqBytes,10)
       BtmWqIn = Trim(BtmWqIn)
       SplitStr (BtmWqData,BtmWqIn,",",WqNParams,0)
-      NoSondeTrig = InStr(1,BtmWqIn,"Sonde",2)
+      BtmNoSondeTrig = InStr(1,BtmWqIn,"No",2)
+        If BtmNoSondeTrig <> 0 OR BtmWqBytes < 5 Then
+        BtmNoSondeFlag = True
+        Else
+        BtmNoSondeFlag = False
+      EndIf
       Delay (1,10,mSec)
       SerialFlush(BtmWqSerialPort)
     #EndIf
@@ -5364,13 +5443,10 @@ EndSub
         WqLocs() = BadDataIndicator
       EndIf
       #If DWRSonde = False Then
-        GetWqEnd = Timer(DebugTimer,mSec,4)
-        GetWqEnd = GetWqEnd/1000
-        GetWqTot = GetWqEnd - GetWqStart
         Call WQ_Mark_Bad
-        Exit Sub
       #EndIf
     EndIf
+    If WqError = False Then
     If WqLocDate > 0 Then WqDate = WqData(WqLocDate)
     If WqLocTime > 0 Then WqTime = WqData(WqLocTime)
     If WqLocTempC > 0 Then WqTempC = WqData(WqLocTempC)
@@ -5395,6 +5471,7 @@ EndSub
     If WqLocNO3mgL > 0 Then WqNO3mgL = WqData(WqLocNO3mgL)
     If WqLocCLmgL > 0 Then WqCLmgL = WqData(WqLocCLmgL)
     If WqLocWiperPos > 0 Then WqWiperPos = WqData(WqLocWiperPos)
+    EndIf
     GetWqEnd = Timer(DebugTimer,mSec,4)
     GetWqEnd = GetWqEnd/1000
     GetWqTot = GetWqEnd - GetWqStart
@@ -5427,12 +5504,9 @@ EndSub
         EndIf
         #If DWRSonde = False Then
           Call Btm_WQ_Mark_Bad
-          BtmGetWqEnd = Timer(DebugTimer,mSec,4)
-          BtmGetWqEnd = BtmGetWqEnd/1000
-          BtmGetWqTot = BtmGetWqEnd - BtmGetWqStart
-          Exit Sub
         #EndIf ' if DWR sonde
       EndIf
+      If BtmWqError = False Then
       If BtmWqLocDate > 0 Then BtmWqDate = BtmWqData(BtmWqLocDate)
       If BtmWqLocTime > 0 Then BtmWqTime = BtmWqData(BtmWqLocTime)
       If BtmWqLocTempC > 0 Then BtmWqTempC = BtmWqData(BtmWqLocTempC)
@@ -5457,21 +5531,26 @@ EndSub
       If BtmWqLocNO3mgL > 0 Then BtmWqNO3mgL = BtmWqData(BtmWqLocNO3mgL)
       If BtmWqLocCLmgL > 0 Then BtmWqCLmgL = BtmWqData(BtmWqLocCLmgL)
       If BtmWqLocWiperPos > 0 Then BtmWqWiperPos = BtmWqData(BtmWqLocWiperPos)
+      EndIf
       BtmGetWqEnd = Timer(DebugTimer,mSec,4)
       BtmGetWqEnd = BtmGetWqEnd/1000
       BtmGetWqTot = BtmGetWqEnd - BtmGetWqStart
     #EndIf 'if top/bottom
     #If HasVM = True Then 'we have stage being populated
-      If WqLocDepthFt <> 0 Then
+      If WqLocDepthFt <> 0 AND WqLocDepthFt <> BadDataIndicator Then
         WqElevation = StagePrime - WqDepthFt
-      ElseIf WqLocDepthM <> 0 Then
+      ElseIf WqLocDepthM <> 0 AND WqLocDepthM <> BadDataIndicator Then
         WqElevation = StagePrime - (WqDepthM*3.281)
+      Else
+        WqElevation = BadDataIndicator
       EndIf
       #If TopBottom = True Then
-        If BtmWqLocDepthFt <> 0 Then
+        If BtmWqLocDepthFt <> 0 AND BtmWqLocDepthFt <> BadDataIndicator Then
           BtmWqElevation = StagePrime - BtmWqDepthFt
-        ElseIf BtmWqLocDepthM <> 0 Then
+        ElseIf BtmWqLocDepthM <> 0 AND BtmWqLocDepthM <> BadDataIndicator Then
           BtmWqElevation = StagePrime - (BtmWqDepthM*3.281)
+        Else
+          BtmWqElevation = BadDataIndicator
         EndIf
       #EndIf
     #EndIf
@@ -5491,7 +5570,7 @@ EndSub
       Delay (1,10,mSec)
       SerialOut (BtmWqSerialPort,"twipeb" + CHR(13) + CHR(10),"",1,0)
       SerialIn (WqIn,BtmWqSerialPort,100,&H0D0A,200)
-      SplitStr (BtmWqDelay,WqIn,"",1,0)
+      SplitStr (BtmWqDelay,BtmWqIn,"",1,0)
       SerialFlush (BtmWqSerialPort)
       BtmWipeTime = Status.TimeStamp(0,1)
     #EndIf
@@ -7334,7 +7413,9 @@ BeginProg
         If CalcCheckSum <> EnsCheckSum OR CalcCheckSum = 0 Then 'if we had a bad checksum, no checksum, or 0 bytes
           VMdataIn = False
           BadEnsemble = BadEnsemble + 1
+          BadEnsembleTot = BadEnsembleTot + 1
           BadCheckSum = BadCheckSum + 1
+          BadCheckSumTot = BadCheckSumTot + 1
           VMDeadCount = VMDeadCount + 1
           #If HasHMS = True Then
             HMS_VMcount = HMS_VMcount + 1
@@ -7821,6 +7902,8 @@ BeginProg
         BadPS2Cnt = 0
         BadUpbeamCnt = 0
         BadVMPressCnt = 0
+        BadCheckSum = 0
+        BadEnsemble = 0
       EndIf
     #EndIf
     Call GetLastScan 'produce timestamp of last completed scan
