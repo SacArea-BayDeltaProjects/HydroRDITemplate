@@ -121,7 +121,7 @@ Const MaxBins = 50
 ''Min = 0
 ''Max = 59
 ''Inc = 1
-Const UseAutoRange = True
+Const UseAutoRange = False
 'value = True
 'value = False
 Const WQDeadCntMax = 20
@@ -456,6 +456,8 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public PS2SN As String * 40 'used to get pressure sensor brand, model, and serial number
   Public NewPS2 As Boolean 'is it a new pressure sensor?
   Public BinSize As Long 'Bin size in cm
+  Public Bin1Center As Long 'Center of bin 1
+  Public Bin1CenterChk As Long 'Calculated center = WF + 1/2(WS + XmitPulseLen + LagLen)
 
   '------------------------------
   Public BlankDist As Long
@@ -467,9 +469,12 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #If VMHasVertical Then
     Public VertBinSize As Long 'Bin Size of 5th beam bins
     Public VerticalBin1Center As Float 'Center of 1st vertical bin
+    Public VerticalBin1CenterChk As Float
     Public VertBlankDist As Float
     Public VertNumBins As Long 'Number of bins for 5th beam
     Public VerticalPings As Long 'Number of pings per ensemble for 5th beam
+    Public VertXmitPulseLen As Float
+    Public VertLagLen As Float
   #EndIf
   '------------------------------
   '---------Bottom Track Conditional ---------
@@ -482,6 +487,8 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public EX As Long 'Coordinate transformation
   Public ES As Long 'salinity setting in ADCP
   Public BIT As Long 'Built in tests, see manual. if 0, no tests failures
+  Public LagLen As Float 'Lag Length (time between sound pulses)
+  Public XmitPulseLen As Long 'Length of pulse in centimeters
   Public SpeedOfSound As Long 'ADCP's calculated speed of sound from ensemble
   Public EnsembleNo As Long 'ADCP's internal Ensemble count
   Public EnsembleLen As Long 'ADCP's ensemble length, (LongArray(3) + (LongArray(4)*256))
@@ -510,11 +517,15 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public VMRestartAttempts As Long 'how many times has the ADCP tried to restart
   #If UseAutoRange = True Then
     Public RangedBin As Long = 0 'Start point for last bin before surface
+    Public Bin1Start As Float 'Distance from transducer of actual start of bin 1 (Bin1Start = Bin1Center - (BinSize/2))
     Public DucerDepthOffset As Float 'Difference between depth sensor and transducer face. (Pos/Neg) + if Sensor is higher than ducer, - if lower than ducer
     Public RangeSource As Long 'Sensor Source for ducer depth calculation
+    Public BeamAngle 'User set (unless Sentinel) to calculate useable range. Useable Range = Depth * COS(BeamAngle) (assuming level instrument
+    Public UseableRange As Long 'calculated range to account for sidelobe interference
     Public CutOffBins As Float 'Number of bins to cut off. Ex. If large bins, may only need to cut off 1, if small bins, may need to cut of multiple
     #If VMHasVertical = True Then
       Public VertRangedBin As Float = 0
+      Public VertBin1Start As Float
       Public VertCutOffBins As Float
     #EndIf
   #EndIf
@@ -661,6 +672,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Dim AvgRSSIEndBin As Long
   Dim AvgSwathRSSI As Float
 
+
   '=================== VM TIME RELATED ============================
   Dim ADCPCenterTime As String * 20 'Create timestamp for center of ADCP sample period
   Dim VMTimeString As String * 25 'Used in FTime function to set times for TS and TF as well as spike data
@@ -779,6 +791,11 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Dim AvgRSSI(MaxBins) As Long 'average of all beams for that bin per ensemble
   Dim AvgRSSIcounter As Long
   Dim AvgRSSIAccum As Long
+        #If VMHasVertical = True Then
+    Public VertRSSIAccum As Float 'accumulator to perform average with
+    Public VertRSSICnt As Float 'number of bins to average
+    Public VertAvgSwathRSSI As Float 'average RSSI of all bins in range
+  #EndIf
 
   '======================== Correlation Data Variables =========================
   Dim ensCorr(MaxBins,4) As Long '25 bins and 4 beams max Correlation Data
@@ -1344,6 +1361,11 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     Average (1,VMtempC,FP2,False)
     Average (1,VMpitch,FP2,False)
     Average (1,VMroll,FP2,False)
+    Average (1,VM_PSDepthFt,FP2,False)
+    Average (1,AvgSwathRSSI,FP2,False)
+    #If VMHasVertical = True Then
+      Average(1,VertAvgSwathRSSI,FP2,False)
+    #EndIf
   #EndIf 'if we have a VM or pressure sensors
   #If WqSonde = "WQ_SERIAL_BURST" Then 'if there's a sonde performing burst methods
     Sample (1,MedBurstDate,IEEE4) 'Do we need this in the AQ table or is it sufficient in the Burst Table?
@@ -3538,6 +3560,12 @@ EndSub
     'Get variable leader offset
     VarLeadOffset = Offsets(2)
     'Now decode the fixed leader
+    'Get lag length
+    If IsCM = False Then
+    LagLen = LongArray(FixedLeadOffset + 7)
+    Else
+      LagLen = BadDataIndicator 'placeholder until clarification for ChannelMasters
+    EndIf
     'get number of Beams
     NumBeams = LongArray(FixedLeadOffset + 8)
     'Get number of Bins
@@ -3560,6 +3588,7 @@ EndSub
     LSB = LongArray(FixedLeadOffset + 14)
     MSB = LongArray(FixedLeadOffset + 15)
     BlankDist = LSB + (MSB * 256)
+    'Get coordinate transformation
     EX = LongArray(FixedLeadOffset + 25)
     If EX <= 7 Then
       Coord = "BEAM"
@@ -3627,6 +3656,20 @@ EndSub
         Decode = "System could not be decoded"
       End Select
     EndIf
+    'get bin 1 center
+    LSB = LongArray(FixedLeadOffset + 32)
+    MSB = LongArray(FixedLeadOffset + 33)
+    Bin1Center = LSB + (MSB * 256)
+    'get transmit pulse length
+    If IsCM = False Then
+    LSB = LongArray(FixedLeadOffset + 34)
+    MSB = LongArray(FixedLeadOffset + 35)
+    XmitPulseLen = LSB + (MSB * 256)
+    Else
+      LSB = LongArray(FixedLeadOffset + 40)
+      MSB = LongArray(FixedLeadOffset + 41)
+      XmitPulseLen = LSB + (MSB * 256)
+    EndIf
     'get instrument s/n
     ADCPSN01 = LongArray(FixedLeadOffset + 57)
     ADCPSN02 = LongArray(FixedLeadOffset + 56)
@@ -3634,6 +3677,11 @@ EndSub
     ADCPSN04 = LongArray(FixedLeadOffset + 54)
     AdcpSN = ADCPSN04 + (ADCPSN03*256) + (ADCPSN02*65536) +(ADCPSN01*16777216)
     '  TestADCPSN = ADCPSN04 + (ADCPSN03*256) + (ADCPSN02*65536) +(ADCPSN01*16777216)
+    If IsCM = False Then
+      Bin1CenterChk = BlankDist + (0.5*(BinSize + XmitPulseLen + LagLen))
+    Else
+      Bin1CenterChk = BadDataIndicator 'placeholder until confirmation for ChannelMasters
+    EndIf
 
     'get Variable Header Data
     Call VarLeadDecode
@@ -3902,6 +3950,7 @@ EndSub
         AvgRSSI(Bin) = 0
       EndSelect
     Next Bin
+    If UseAutoRange = False Then 'if using auto range, we should let the logger calulate end bin then do this
     'calculate average RSSI from Swath of data (User Selected Bins)
     For Bin = AvgRSSIStartBin To AvgRSSIEndBin
       If AvgRSSI(Bin) <> 0 Then 'average the bins
@@ -3913,6 +3962,7 @@ EndSub
       AvgSwathRSSI = AvgRSSIAccum/AvgRSSIcounter
     Else
       AvgSwathRSSI = BadDataIndicator
+    EndIf
     EndIf
   EndSub
 
@@ -4083,6 +4133,13 @@ EndSub
       LSB = LongArray(tempLeadOffset + 9)
       MSB = LongArray(tempLeadOffset + 10)
       VerticalBin1Center = (MSB * 256) + LSB
+      LSB = LongArray(tempLeadOffset + 13)
+      MSB = LongArray(tempLeadOffset + 14)
+      VertXmitPulseLen = LSB + (MSB * 256)
+      LSB = LongArray(tempLeadOffset + 15)
+      MSB = LongArray(tempLeadOffset + 16)
+      VertLagLen = LSB + (MSB * 256)
+      VerticalBin1CenterChk = VertBlankDist + (0.5*(VertBinSize + VertXmitPulseLen + VertLagLen))
     EndSub
 
     Sub VertVelocityDecode
@@ -4129,6 +4186,21 @@ EndSub
       For Vertbin = 1 To VertNumBins
         VerticalRSSI(Vertbin) = LongArray(tempRSSIOffset + Vertbin)
       Next Vertbin
+      If UseAutoRange = False Then
+      VertRSSIAccum = 0 'make sure accumulator is 0 before loop
+      VertRSSICnt = 0
+      For Bin = VertStartBin To VertEndBin
+        If VerticalRSSI(Bin) <> 0 Then
+        VertRSSIAccum = VertRSSIAccum + VerticalRSSI(Bin)
+        VertRSSICnt = VertRSSICnt + 1
+        EndIf
+      Next Bin
+      If VertRSSIAccum <> 0 AND VertRSSICnt <> 0 Then
+        VertAvgSwathRSSI = VertRSSIAccum/VertRSSICnt
+        Else
+          VertAvgSwathRSSI = BadDataIndicator
+      EndIf
+      EndIf
     EndSub
 
     Sub VertCorrDecode
@@ -4215,7 +4287,7 @@ EndSub
       Case UPbeam
         Sensordepth = VMupBeam
       Case VMpress
-        Sensordepth = VMpress
+        Sensordepth = VM_PSDepthFt 'use feet as all other sensors report in feet
       Case PSpress
         Sensordepth = PsPress1Stg(1)
       Case PSpress2
@@ -4226,14 +4298,47 @@ EndSub
         #EndIf
       End Select
       DucerDepth = Sensordepth + DucerDepthOffset
-      DucerDepthCM = DucerDepth * 30.48
-      RangedBin = (FIX((DucerDepthCM - BlankDist)/BinSize))-CutOffBins 'remove user selected number of bins (based on beamchecks)
+      DucerDepthCM = DucerDepth * 30.48 'convert to cm
+      If IsSentinelV = True Then 'calculate range and account for sidelobe interference for Sentinel
+        BeamAngle = 25
+      EndIf
+      UseableRange = DucerDepthCM * (COS(BeamAngle))'account for sidelobe interference on slant beams
+      Bin1Start = Bin1Center - (BinSize/2) 'get actual start location for bin 1
+      RangedBin = (FIX((UseableRange - Bin1Start/BinSize))-CutOffBins) 'account for sidelobe interference (assumes level instrument) CutOffBins should be used to address unlevel instruments
+      'RangedBin = (FIX((DucerDepthCM - BlankDist)/BinSize))-CutOffBins 'remove user selected number of bins (based on beamchecks)
       EndBin = RangedBin 'Set end bin to the ranged bin for Index calcs
-      #If VMHasVertical = True Then
-        VertBlankDist = VerticalBin1Center - VertBinSize
-        VertRangedBin = (FIX((DucerDepthCM - VertBlankDist)/VertBinSize))-VertCutOffBins
+      #If VMHasVertical = True Then 
+        VertBin1Start = VerticalBin1Center - (VertBinSize/2)
+        VertRangedBin = (FIX((DucerDepthCM - VertBin1Start)/VertBinSize))-VertCutOffBins 'no sidelobe interference to account for (assumes level instrument) VertCutOffBins should be used to address unlevel instruments
         VertEndBin = VertRangedBin
       #EndIf
+      AvgRSSIAccum = 0 'make sure accumulator is 0 before the loop
+      For Bin = AvgRSSIStartBin To EndBin
+      If AvgRSSI(Bin) <> 0 Then 'average the bins
+        AvgRSSIAccum = AvgRSSIAccum + AvgRSSI(Bin)
+        AvgRSSIcounter = AvgRSSIcounter + 1
+      EndIf
+    Next Bin
+    If (AvgRSSIAccum <> 0) AND (AvgRSSIcounter <> 0) Then 'if either the accumulator is zero or the counter is zero then set avgrssi to bad
+      AvgSwathRSSI = AvgRSSIAccum/AvgRSSIcounter
+    Else
+      AvgSwathRSSI = BadDataIndicator
+    EndIf
+    #If VMHasVertical = True Then
+      VertRSSIAccum = 0 'make sure accumulator is 0 before loop
+      VertRSSICnt = 0
+      For Bin = AvgRSSIStartBin To VertEndBin
+        If VerticalRSSI(Bin) <> 0 Then
+        VertRSSIAccum = VertRSSIAccum + VerticalRSSI(Bin)
+        VertRSSICnt = VertRSSICnt + 1
+        EndIf
+      Next Bin
+      If VertRSSIAccum <> 0 AND VertRSSICnt <> 0 Then
+        VertAvgSwathRSSI = VertRSSIAccum/VertRSSICnt
+        Else
+          VertAvgSwathRSSI = BadDataIndicator
+      EndIf
+    #EndIf
       CalcRangeEnd = Timer(DebugTimer,msec,4)
       CalcRangeEnd = CalcRangeEnd/1000
       CalcRangeTotTime = CalcRangeEnd - CalcRangeStart
