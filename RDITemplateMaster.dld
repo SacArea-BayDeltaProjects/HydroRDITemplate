@@ -42,6 +42,8 @@ Const ProgramVersion = "5.20"
 ' 20201110 - TAV 5.13 Fixed "IsWorkhorse" recognition; adjusting timing necessary for WH to respond to a "+++"; added "PBRoutes" to Debugger to help identify excess connectivity with servers/computers.
 ' 20201116 - TAV 5.14 Added external voltage check for uses with WorkHorses. ReadExtPwr must be true. 10:1 voltage divider is used to read voltage from the 12 to 48V converter and output as VMVolts. (Workhorses don't output voltage in PD0).
 ' 20201211 - TAV 5.20 Sentinel V working. Added code to store Raw PD0 ensemble to card. Can then use file in native RDI software. Tested SerialOut for flow data for Freeport.
+' 20210316 - TAV 5.30 Added code for vertical "index" velocity for 5th beam, added Vertical RSSI Swath Average, Decoded LagLen and XmitPulse len to check bin center, changed decoder for VM pressure sensor (decoding depth now, not pressure), Adjusted PD0 storage to fix file length bug,
+'                     Adjusted data tables for special studies. Adjusted when VM comport gets flushed. Need to address random Sentinel misses. Works for days, then misses 20min (even though BBTalk picked up the data).
 
 SequentialMode 'We need to use Sequential mode
 
@@ -53,13 +55,13 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = True  'Is there a second EXO in the system
+Const TopBottom = False  'Is there a second EXO in the system
 'value = True
 'value = False
 Const HasIridium = False
 'value = True
 'value = False
-Const HasSuna = True 'THIS WILL ONLY COMPILE ON A CR6!
+Const HasSuna = False 'THIS WILL ONLY COMPILE ON A CR6!
 'value = True
 'value = False
 Const MaxSunaBurst = 40 'Increased to account for bad data and DarkFrames so we don't get variables out of bounds.
@@ -92,10 +94,10 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = True
+Const IsSpecStudy = False
 'value = True
 'value = False
-Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
 Const HasModem = True
@@ -113,7 +115,7 @@ Const HasVM = True
 Const StorePD0 = True
 'value = True
 'value = False
-Const MaxBins = 50
+Const MaxBins = 27
 'Min = 1
 'Max = 100
 'Inc = 1
@@ -141,7 +143,7 @@ Const IsMaster = False 'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
-Const VMHasVertical = True
+Const VMHasVertical = False
 'value = True
 'value = False
 Const VMHasBottomTrack = False
@@ -207,7 +209,7 @@ EndConstTable
   #EndIf 'if using iridium
 #ElseIf LoggerType = CR6 Then
   #If HasVM = True Then 'if we have a VM or Pressure sensors
-    Const AdcpPort = ComC1
+    Const AdcpPort = ComU1
     Const VMSwitchPort = U4
     Const PS1Com3 = U3
     Const PS1Com5 = U5
@@ -2063,11 +2065,11 @@ EndTable
       'Sample (1,ExtWHConvertVolt,IEEE4) commented out for now, discuss if we need it
     EndTable
   #EndIf 'if we want noise floor
-  DataTable(StoreLongArray,True,11)
-    OpenInterval
-    TableFile("CRD:" + Status.StationName + "_LongArray_",64,-1,1440,0,Day,0,0)
-    Sample(2000,LongArray,String)
-  EndTable
+'  DataTable(StoreLongArray,True,11)
+'    OpenInterval
+'    TableFile("CRD:" + Status.StationName + "_LongArray_",64,-1,1440,0,Day,0,0)
+'    Sample(2000,LongArray,String)
+'  EndTable
 #EndIf 'If HasVM = True
 
 #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -3448,8 +3450,8 @@ EndSub
       EndIf
       Delay (1,1000,mSec) 'Wait a bit for incoming ensemble, but not more than 2 seconds
     Next
-    Call StoreRaw
-    CallTable StoreLongArray
+    'Call StoreRaw
+    'CallTable StoreLongArray
     SerialFlush(AdcpPort)
     If HeaderMismatch > 0 Then
       VMdataIn = False 'header not found in the right spot
@@ -3577,7 +3579,9 @@ EndSub
     If IsCM = False Then
     LagLen = LongArray(FixedLeadOffset + 7)
     Else
-      LagLen = BadDataIndicator 'placeholder until clarification for ChannelMasters
+      LSB = LongArray(FixedLeadOffset + 40)
+      MSB = LongArray(FixedLeadOffset + 41)
+      LagLen = LSB + (MSB * 256)
     EndIf
     'get number of Beams
     NumBeams = LongArray(FixedLeadOffset + 8)
@@ -3674,15 +3678,9 @@ EndSub
     MSB = LongArray(FixedLeadOffset + 33)
     Bin1Center = LSB + (MSB * 256)
     'get transmit pulse length
-    If IsCM = False Then
     LSB = LongArray(FixedLeadOffset + 34)
     MSB = LongArray(FixedLeadOffset + 35)
     XmitPulseLen = LSB + (MSB * 256)
-    Else
-      LSB = LongArray(FixedLeadOffset + 40)
-      MSB = LongArray(FixedLeadOffset + 41)
-      XmitPulseLen = LSB + (MSB * 256)
-    EndIf
     'get instrument s/n
     ADCPSN01 = LongArray(FixedLeadOffset + 57)
     ADCPSN02 = LongArray(FixedLeadOffset + 56)
@@ -3690,12 +3688,7 @@ EndSub
     ADCPSN04 = LongArray(FixedLeadOffset + 54)
     AdcpSN = ADCPSN04 + (ADCPSN03*256) + (ADCPSN02*65536) +(ADCPSN01*16777216)
     '  TestADCPSN = ADCPSN04 + (ADCPSN03*256) + (ADCPSN02*65536) +(ADCPSN01*16777216)
-    If IsCM = False Then
       Bin1CenterChk = BlankDist + (0.5*(BinSize + XmitPulseLen + LagLen))
-    Else
-      Bin1CenterChk = BadDataIndicator 'placeholder until confirmation for ChannelMasters
-    EndIf
-
     'get Variable Header Data
     Call VarLeadDecode
     'Loop through remaining data types, verify thier profile IDs and assign proper offsets'  Other data can be accomodated here if need be IE percent good etc
@@ -5212,11 +5205,11 @@ EndSub
   #If StorePD0 = True Then
     Sub StorePD0File
       Dim i
-      Public PD0TimeStamp As String * 25
-    Public PD0DateTime As String * 50
+    Dim PD0TimeStamp As String * 25
+    Dim PD0DateTime As String * 50
     Public CreatePD0 As Boolean
-    Public PD0MinCnt
-    Public PD0Thresh
+    Dim PD0MinCnt
+    Dim PD0Thresh
 '    Public PD0Days
     
    PD0Thresh = PD0Days * 1440 '1440 minutes per day
@@ -5243,33 +5236,33 @@ EndSub
    EndIf
     EndSub
     
-    Sub StoreRaw
-            Dim i
-'    Public PD0Days
-    
-   PD0Thresh = PD0Days * 1440 '1440 minutes per day
-   If PD0MinCnt >= PD0Thresh Then
-     CreatePD0 = True
-   EndIf
-   For i = 1 To NumBytes
-     MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2) 'move the CHR code (based on LongArray() decimal (ex. &H7F = 127) to VM_Binary string
-   Next i
-   If CreatePD0 = True Then
-     PD0TimeStamp = Status.TimeStamp(1,1)
-     PD0DateTime = Mid(PD0TimeStamp,7,4) + Left(PD0TimeStamp,2) + Mid(PD0TimeStamp,4,2) + "-" + Mid(PD0TimeStamp,12,2) + Mid(PD0TimeStamp,15,2) + Mid(PD0TimeStamp,18,2)
-     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1) 'Open file in name format "SID_yyyymmdd-hhmmss_VMData.PD0", start time of file
-     FileWrite(PD0Handle,VM_Binary,NumBytes)
-     FileClose(PD0Handle)
-     PD0MinCnt = 1 'make counter = 1 as there is 1 ensemble stored in the new file.
-     CreatePD0 = False
-   Else
-     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1)
-     FileWrite(PD0Handle,VM_Binary,NumBytes)
-     FileClose(PD0Handle)
-     PD0MinCnt = PD0MinCnt + 1
-     CreatePD0 = False
-   EndIf
-   EndSub
+'    Sub StoreRaw
+'            Dim i
+''    Public PD0Days
+'    
+'   PD0Thresh = PD0Days * 1440 '1440 minutes per day
+'   If PD0MinCnt >= PD0Thresh Then
+'     CreatePD0 = True
+'   EndIf
+'   For i = 1 To NumBytes
+'     MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2) 'move the CHR code (based on LongArray() decimal (ex. &H7F = 127) to VM_Binary string
+'   Next i
+'   If CreatePD0 = True Then
+'     PD0TimeStamp = Status.TimeStamp(1,1)
+'     PD0DateTime = Mid(PD0TimeStamp,7,4) + Left(PD0TimeStamp,2) + Mid(PD0TimeStamp,4,2) + "-" + Mid(PD0TimeStamp,12,2) + Mid(PD0TimeStamp,15,2) + Mid(PD0TimeStamp,18,2)
+'     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1) 'Open file in name format "SID_yyyymmdd-hhmmss_VMData.PD0", start time of file
+'     FileWrite(PD0Handle,VM_Binary,NumBytes)
+'     FileClose(PD0Handle)
+'     PD0MinCnt = 1 'make counter = 1 as there is 1 ensemble stored in the new file.
+'     CreatePD0 = False
+'   Else
+'     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1)
+'     FileWrite(PD0Handle,VM_Binary,NumBytes)
+'     FileClose(PD0Handle)
+'     PD0MinCnt = PD0MinCnt + 1
+'     CreatePD0 = False
+'   EndIf
+'   EndSub
   #EndIf 'If StorePD0
 #EndIf 'If HasVM or Pressure Sensors
 
