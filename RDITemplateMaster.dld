@@ -1834,6 +1834,11 @@ DataTable(Debugger,True,-1)
   TableFile("CRD:" + Status.StationName + "_Debugger_",64,-1,10080,0,Day,0,0)
   Sample(3,ProcTimer,FP2)
   #If HasVM = True Then 'If has VM
+    Sample(1,EnsembleLen,FP2)
+    Sample(1,EnsBytes,FP2)
+    Sample(1,NumBytes,FP2)
+    Sample(1,EnsCheckSum,IEEE4)
+    Sample(1,CalcCheckSum,IEEE4)
     Sample(3,VMProcTimer,FP2)
     Sample(3,VMLoopTimer,FP2)
     Sample(3,ZeroVMTimer,FP2)
@@ -2058,6 +2063,11 @@ EndTable
       'Sample (1,ExtWHConvertVolt,IEEE4) commented out for now, discuss if we need it
     EndTable
   #EndIf 'if we want noise floor
+  DataTable(StoreLongArray,True,11)
+    OpenInterval
+    TableFile("CRD:" + Status.StationName + "_LongArray_",64,-1,1440,0,Day,0,0)
+    Sample(2000,LongArray,String)
+  EndTable
 #EndIf 'If HasVM = True
 
 #If WqSonde = "WQ_SERIAL_BURST" Then
@@ -3421,7 +3431,7 @@ EndSub
           EnsBytes = LSB + (MSB*256)
         EndIf
         If NumBytes > 4 AND EnsBytes = NumBytes - 2 Then 'we have all the bytes, let's get out of both loops
-          SerialFlush(AdcpPort) 'We've stored all the bytes in the LongArray and rearranged them
+          'SerialFlush(AdcpPort) 'We've stored all the bytes in the LongArray and rearranged them
           ADCPDone = True 'We're done
           ExitDo 'get out of the loop once we've gotten everything
         EndIf
@@ -3438,6 +3448,9 @@ EndSub
       EndIf
       Delay (1,1000,mSec) 'Wait a bit for incoming ensemble, but not more than 2 seconds
     Next
+    Call StoreRaw
+    CallTable StoreLongArray
+    SerialFlush(AdcpPort)
     If HeaderMismatch > 0 Then
       VMdataIn = False 'header not found in the right spot
     EndIf
@@ -4583,6 +4596,7 @@ EndSub
     BadBinCount = (((EndBin+1)-StartBin)- VelCount)
     #If VMHasVertical = True Then 'calculate "index" for vertical velocity for AQ table
       VertVelCnt = 0
+      VertVelSum = 0
       VertIndexVel = 0
       For Cnt = VertStartBin To VertEndBin
         If VerticalVelocity(Cnt) <> BadDataIndicator Then
@@ -5228,6 +5242,34 @@ EndSub
      CreatePD0 = False
    EndIf
     EndSub
+    
+    Sub StoreRaw
+            Dim i
+'    Public PD0Days
+    
+   PD0Thresh = PD0Days * 1440 '1440 minutes per day
+   If PD0MinCnt >= PD0Thresh Then
+     CreatePD0 = True
+   EndIf
+   For i = 1 To NumBytes
+     MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2) 'move the CHR code (based on LongArray() decimal (ex. &H7F = 127) to VM_Binary string
+   Next i
+   If CreatePD0 = True Then
+     PD0TimeStamp = Status.TimeStamp(1,1)
+     PD0DateTime = Mid(PD0TimeStamp,7,4) + Left(PD0TimeStamp,2) + Mid(PD0TimeStamp,4,2) + "-" + Mid(PD0TimeStamp,12,2) + Mid(PD0TimeStamp,15,2) + Mid(PD0TimeStamp,18,2)
+     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1) 'Open file in name format "SID_yyyymmdd-hhmmss_VMData.PD0", start time of file
+     FileWrite(PD0Handle,VM_Binary,NumBytes)
+     FileClose(PD0Handle)
+     PD0MinCnt = 1 'make counter = 1 as there is 1 ensemble stored in the new file.
+     CreatePD0 = False
+   Else
+     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1)
+     FileWrite(PD0Handle,VM_Binary,NumBytes)
+     FileClose(PD0Handle)
+     PD0MinCnt = PD0MinCnt + 1
+     CreatePD0 = False
+   EndIf
+   EndSub
   #EndIf 'If StorePD0
 #EndIf 'If HasVM or Pressure Sensors
 
