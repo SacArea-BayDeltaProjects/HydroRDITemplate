@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20210316
-Const ProgramVersion = "5.30"
+Const ProgramVersionDate = 202103122
+Const ProgramVersion = "5.31"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -44,6 +44,7 @@ Const ProgramVersion = "5.30"
 ' 20201211 - TAV 5.20 Sentinel V working. Added code to store Raw PD0 ensemble to card. Can then use file in native RDI software. Tested SerialOut for flow data for Freeport.
 ' 20210316 - TAV 5.30 Added code for vertical "index" velocity for 5th beam, added Vertical RSSI Swath Average, Decoded LagLen and XmitPulse len to check bin center, changed decoder for VM pressure sensor (decoding depth now, not pressure), Adjusted PD0 storage to fix file length bug,
 '                     Adjusted data tables for special studies. Adjusted when VM comport gets flushed. Need to address random Sentinel misses. Works for days, then misses 20min (even though BBTalk picked up the data).
+' 20210322 - TAV 5.31 Fixed VM Voltage bug.
 
 SequentialMode 'We need to use Sequential mode
 
@@ -647,7 +648,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   #EndIf
   Public MeanVel As Float 'average channel velocity based on user bin distribution and rating equation
   Public Qcfs As Float 'total discharge
-  Public VMVolts As String * 5 'final product
+  Public VMVolts As Float 'final product
   Public VMVoltsTemp As Float 'temporary placeholder
   Public VMVoltsDec As Float 'decimal place holder for CM voltages
   Public VMtempC As Float
@@ -1359,15 +1360,17 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     #If VMHasVertical = True Then
     Average (1,VertIndexVel,IEEE4,False)
     #EndIf
-    Minimum (1,VMVolts,String,False,False)
+    Minimum (1,VMVolts,FP2,False,False)
     Average (1,VMtempC,FP2,False)
     Average (1,VMpitch,FP2,False)
     Average (1,VMroll,FP2,False)
     Average (1,VM_PSDepthFt,FP2,False)
+    #If IsSpecStudy Then
     Average (1,AvgSwathRSSI,FP2,False)
     #If VMHasVertical = True Then
       Average(1,VertAvgSwathRSSI,FP2,False)
     #EndIf
+    #EndIf 'if "Special Study" or we want RSSI in AQ Table
   #EndIf 'if we have a VM or pressure sensors
   #If WqSonde = "WQ_SERIAL_BURST" Then 'if there's a sonde performing burst methods
     Sample (1,MedBurstDate,IEEE4) 'Do we need this in the AQ table or is it sufficient in the Burst Table?
@@ -1487,7 +1490,7 @@ DataTable(DataOut,Rec15MinFlag,-1)
       Average(1,SondeStg,IEEE4,False)
     #EndIf 'If we have WQ
     Sample (1,StgSelect,String)
-    Minimum (1,VMVolts,String,False,False)
+    Minimum (1,VMVolts,FP2,False,False)
     Average (1,VMtempC,FP2,False)
     Average (1,VM_PSDepthFt,IEEE4,BadVMPressFlg)
     Average (1,VM_PSDepthM,IEEE4,BadVMPressFlg)
@@ -1617,8 +1620,8 @@ DataTable(QAQCInfo,Rec24HrFlag,-1)
       Sample (1,SondeOffset,IEEE4)
     #EndIf
     Sample (1,StgSelect,String)
-    Maximum(1,VMVolts,String,False,False)
-    Minimum(1,VMVolts,String,False,False)
+    Maximum(1,VMVolts,FP2,False,False)
+    Minimum(1,VMVolts,FP2,False,False)
     Maximum(1,VMtempC,FP2,False,False)
     Minimum(1,VMtempC,FP2,False,False)
     Maximum(1,VMpitch,FP2,False,False)
@@ -1814,7 +1817,7 @@ DataTable(SVMaq,True,1)
     Sample (1,VMpitch,FP2)
     Sample (1,VMroll,FP2)
     Sample (1,VMtempC,FP2)
-    Sample (1,VMVolts,String)
+    Sample (1,VMVolts,FP2)
     Sample (4,StgOffsets(),IEEE4)
     #If WqSonde <> "NONE" Then
       Sample (1,SondeOffset,IEEE4)
@@ -1931,8 +1934,8 @@ EndTable
     Average (1,VMupBeam,IEEE4,BadUpbeamFlg)
     Sample (1,VMtempC,IEEE4)
     Average (1,VMtempC,IEEE4,False)
-    Sample (1,VMVolts,String)
-    Average (1,VMVolts,String,False)
+    Sample (1,VMVolts,FP2)
+    Average (1,VMVolts,FP2,False)
     'Sample (1,ExtWHConvertVolt,IEEE4)    Commented for now, do we think these are necessary? Maybe could read the higher voltage into Arduino, then sample that?
     'Average (1,ExtWHConvertVolt,IEEE4,False)
   EndTable
@@ -2061,7 +2064,7 @@ EndTable
       Sample (4,NoiseLGainN(),FP2)
       'Sample (1,NoiseLGainN(2),FP2)
       Sample (1,VMtempC,IEEE4)
-      Sample (1,VMVolts,String)
+      Sample (1,VMVolts,FP2)
       'Sample (1,ExtWHConvertVolt,IEEE4) commented out for now, discuss if we need it
     EndTable
   #EndIf 'if we want noise floor
@@ -2682,10 +2685,10 @@ Sub Initialize
     AvgRSSIEndBin  = EndBin
     VMPower = True
     IsSubmersed = False
-    IsCM = False 'These are auto set if ensembles are actively coming in.
+    IsCM = True 'These are auto set if ensembles are actively coming in.
     IsVADCP = False
     IsWorkHorse = False
-    IsSentinelV = True
+    IsSentinelV = False
     TrueUpBeamStg = BadDataIndicator
     TrueVMPressStg = BadDataIndicator
     TruePS1Stg = BadDataIndicator
@@ -3857,8 +3860,9 @@ EndSub
     VMVoltsTemp = LongArray(VarLeadOffset + 36)
     If IsCM Then
     VMVoltsDec = LongArray(VarLeadOffset + 35) 'tenths and hundreds place for CM
+    VMVoltsDec = VMVoltsDec / 100 'get decimal place 
     VMVoltsDec = VMVoltsDec + 0.6 'Per manual, reported value is 0.6V less than battery voltage
-    VMVolts = VMVoltsTemp + "." + VMVoltsDec 'concatenate voltage to produce higher resolution
+    VMVolts = VMVoltsTemp + VMVoltsDec 'add temp to decimal to create final product
     EndIf
     If IsSentinelV = True Then
       VMVolts = VMVoltsTemp * 0.1 '0.1V precision
