@@ -165,6 +165,9 @@ Const HasHMS = True 'ONLY COMPILES ON CR6!
 Const ReadExtPwr = False
 'Value = True
 'Value = False
+Const HasWx = True
+'Value = True
+'Value = False
 'End of Constants Customization Section
 
 ConstTable (DLDSettings,1)
@@ -248,6 +251,11 @@ EndConstTable
   #If ReadExtPwr = True Then 'if needing to read high external voltage
     Const ExtPwrCom = U9
   #EndIf 'if external voltage
+  #If HasWx = True Then
+    Const WxPort5 = U5
+    Const WxPort7 = U7 'if running constant power, we could use U7 as data port
+    Const WxSwitchPort = U7
+  #EndIf
 #EndIf 'Logger type determination
 
 'Constants for selecting different scan rates, if wanted. Standard is 1min scans
@@ -1338,6 +1346,32 @@ Alias SendRadVars(17) = SendRadNetID
   Public HMS_BadThresh 'small thresholds to notify something's wrong
   Public VM_Thresh, WQ_Thresh, BtmWqThresh, Mod_Thresh '"big" thresholds to cycle HMS
 #EndIf
+
+#If HasWx = True Then
+  Public WxPort 'Data port for Wx sensor
+  Public WxAddr 'SDI12 Address for Wx sensor
+  Public WxTime 'To center readings within a given minute
+  
+  'Declare Wx Variables
+  Public SensorMetaData As String * 40
+  Public SlrTF_MJ 'Solar total flux, megajouls/m^2
+  Public WSprev 'Previous wind speed
+  Public WindDirPrev 'Previous wind direction
+  Public MaxWSPrev 'Previous Max wind speed
+  Public CardDir As String * 10 'Cardinal direction
+  Public WS_15m 'Wind speed rolling average
+  Public WindDir15m '15m rolling average for wind direction
+  Public CardDir15m As String * 10'15m rolling average for Cardinal Direction
+  Public BadWind As Long
+  Public WxArray(14): Alias WxArray = SlrFD_kW, Rain_mm, Strikes, Dist_km, WS_ms, WindDir, MaxWS_ms, AirTempC, VP_hPa, BP_Pa, RH, RHTempC, TiltNS, TiltEW
+  'Variable meanings: Flux Density in kilowatts <- comes in as Watts, convert in program, Rain in mm, # of lightning strikes, Lightning distance, WindSpeed m/s,
+  '                   Wind Direction, Max WindSpeed m/s, AirTemp, Vapor pressure hectopascals, barometric press pascals <- comes in as kilopascals then converted,
+  '                   Relative humidity as decimal (0 to 1) convert to %, RH sensor temp, North/South Tilt in degrees, East/West tilt in degrees
+  Public Rain_in 'Variables for English unit conversions
+  Public WS_mph
+  Public AirTempF
+  Public BP_inHg
+
 
 Public UsrCase
 
