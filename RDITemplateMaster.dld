@@ -1371,7 +1371,7 @@ Alias SendRadVars(17) = SendRadNetID
   Public WS_mph
   Public AirTempF
   Public BP_inHg
-
+#EndIf 'If weather station present
 
 Public UsrCase
 
