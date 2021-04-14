@@ -4,7 +4,7 @@
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
 Const ProgramVersionDate = 20210324
-Const ProgramVersion = "5.31.10"
+Const ProgramVersion = "5.40"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -45,7 +45,7 @@ Const ProgramVersion = "5.31.10"
 ' 20210316 - TAV 5.30 Added code for vertical "index" velocity for 5th beam, added Vertical RSSI Swath Average, Decoded LagLen and XmitPulse len to check bin center, changed decoder for VM pressure sensor (decoding depth now, not pressure), Adjusted PD0 storage to fix file length bug,
 '                     Adjusted data tables for special studies. Adjusted when VM comport gets flushed. Need to address random Sentinel misses. Works for days, then misses 20min (even though BBTalk picked up the data).
 ' 20210322 - TAV 5.31 Fixed VM Voltage bug.
-' 20210324 - TAV 5.31.10 Temp Version number until testing complete. Added weather station ability. Need to add power cycle ability based on NANs or BadWind
+' 20210324 - TAV 5.40 Added weather station ability. Need to add power cycle ability based on NANs or BadWind
 SequentialMode 'We need to use Sequential mode
 
 'Start of Constants Customization Section
@@ -56,7 +56,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = True  'Is there a second EXO in the system
+Const TopBottom = False  'Is there a second EXO in the system
 'value = True
 'value = False
 Const HasIridium = False
@@ -95,7 +95,7 @@ Const MinBurstVals = 4
 Const IsVmMax232 = False
 'value = True
 'value = False
-Const IsSpecStudy = True
+Const IsSpecStudy = False
 'value = True
 'value = False
 Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
@@ -124,7 +124,7 @@ Const MaxBins = 50
 ''Min = 0
 ''Max = 59
 ''Inc = 1
-Const UseAutoRange = True
+Const UseAutoRange = False
 'value = True
 'value = False
 Const WQDeadCntMax = 20
@@ -144,7 +144,7 @@ Const IsMaster = False 'Is the datalogger the Master in a radio network?
 Const StoreAllToCard = False 'set to true if you want VM spike data
 'value = True
 'value = False
-Const VMHasVertical = True
+Const VMHasVertical = False
 'value = True
 'value = False
 Const VMHasBottomTrack = False
@@ -165,7 +165,7 @@ Const HasHMS = True 'ONLY COMPILES ON CR6!
 Const ReadExtPwr = False
 'Value = True
 'Value = False
-Const HasWx = True
+Const HasWx = False
 'Value = True
 'Value = False
 'End of Constants Customization Section
@@ -213,7 +213,7 @@ EndConstTable
   #EndIf 'if using iridium
 #ElseIf LoggerType = CR6 Then
   #If HasVM = True Then 'if we have a VM or Pressure sensors
-    Const AdcpPort = ComC1
+    Const AdcpPort = ComU1
     Const VMSwitchPort = U4
     Const PS1Com3 = U3
     Const PS1Com5 = U5
@@ -230,7 +230,7 @@ EndConstTable
     #EndIf 'Sonde determination
   #EndIf 'If sonde present
   #If HasSuna = True Then 'if SUNA present
-    Const SunaPort = ComU1
+    Const SunaPort = ComC1
     Const SunaWipeSwitch = U9
     Const SunaSwitch = U10
   #EndIf 'if suna present
