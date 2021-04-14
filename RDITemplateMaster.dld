@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 202103122
-Const ProgramVersion = "5.31"
+Const ProgramVersionDate = 20210324
+Const ProgramVersion = "5.40"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -45,7 +45,7 @@ Const ProgramVersion = "5.31"
 ' 20210316 - TAV 5.30 Added code for vertical "index" velocity for 5th beam, added Vertical RSSI Swath Average, Decoded LagLen and XmitPulse len to check bin center, changed decoder for VM pressure sensor (decoding depth now, not pressure), Adjusted PD0 storage to fix file length bug,
 '                     Adjusted data tables for special studies. Adjusted when VM comport gets flushed. Need to address random Sentinel misses. Works for days, then misses 20min (even though BBTalk picked up the data).
 ' 20210322 - TAV 5.31 Fixed VM Voltage bug.
-
+' 20210324 - TAV 5.40 Added weather station ability. Need to add power cycle ability based on NANs or BadWind
 SequentialMode 'We need to use Sequential mode
 
 'Start of Constants Customization Section
@@ -116,7 +116,7 @@ Const HasVM = True
 Const StorePD0 = True
 'value = True
 'value = False
-Const MaxBins = 27
+Const MaxBins = 50
 'Min = 1
 'Max = 100
 'Inc = 1
@@ -131,7 +131,7 @@ Const WQDeadCntMax = 20
 'Min = 5
 'Max = 120
 'Inc = 5
-Const VMDeadCntMax = 20
+Const VMDeadCntMax = 5
 'Min = 5
 'Max = 120
 'Inc = 5
@@ -163,6 +163,9 @@ Const HasHMS = True 'ONLY COMPILES ON CR6!
 'Value = True
 'Value = False
 Const ReadExtPwr = False
+'Value = True
+'Value = False
+Const HasWx = False
 'Value = True
 'Value = False
 'End of Constants Customization Section
@@ -227,7 +230,7 @@ EndConstTable
     #EndIf 'Sonde determination
   #EndIf 'If sonde present
   #If HasSuna = True Then 'if SUNA present
-    Const SunaPort = ComU1
+    Const SunaPort = ComC1
     Const SunaWipeSwitch = U9
     Const SunaSwitch = U10
   #EndIf 'if suna present
@@ -248,6 +251,11 @@ EndConstTable
   #If ReadExtPwr = True Then 'if needing to read high external voltage
     Const ExtPwrCom = U9
   #EndIf 'if external voltage
+  #If HasWx = True Then
+    Const WxPort5 = U5
+    Const WxPort7 = U7 'if running constant power, we could use U7 as data port
+    Const WxSwitchPort = U7
+  #EndIf
 #EndIf 'Logger type determination
 
 'Constants for selecting different scan rates, if wanted. Standard is 1min scans
@@ -377,7 +385,7 @@ Public SerNum As Long 'Logger serial number, can we sample this from Status tabl
 Public OSVers As String * 18 'This is available in Status table, explore sampling Status.OSVersion to QAQC table directly rather than separate variable
 Public Program As String * 25 'Program version
 Public ProgVersDate As String * 8 'date of the program version, based on the constant "ProgramVersionDate"
-Public ProgVersion As String * 5 'program version number, based on constant "ProgramVersion"
+Public ProgVersion As String * 7 'program version number, based on constant "ProgramVersion"
 Public LastRecompile As String * 25 'hold last recompile date/time from status table
 Public ProgErrors As Long 'from "Status" table, The number of compile or runtime errors for the current program.
 Public Tech As String * 3 'user initials so we know who was there for a visit
@@ -1338,6 +1346,31 @@ Alias SendRadVars(17) = SendRadNetID
   Public HMS_BadThresh 'small thresholds to notify something's wrong
   Public VM_Thresh, WQ_Thresh, BtmWqThresh, Mod_Thresh '"big" thresholds to cycle HMS
 #EndIf
+
+#If HasWx = True Then
+  Public WxPort 'Data port for Wx sensor
+  Public WxAddr 'SDI12 Address for Wx sensor
+  
+  'Declare Wx Variables
+  Public SensorMetaData As String * 40
+  Public SlrTF_MJ 'Solar total flux, megajouls/m^2
+  Public WSprev 'Previous wind speed
+  Public WindDirPrev 'Previous wind direction
+  Public MaxWSPrev 'Previous Max wind speed
+  Public CardDir As String * 10 'Cardinal direction
+  Public WS_15m 'Wind speed rolling average
+  Public WindDir15m '15m rolling average for wind direction
+  Public CardDir15m As String * 10'15m rolling average for Cardinal Direction
+  Public BadWind As Long
+  Public WxArray(14): Alias WxArray = SlrFD_kW, Rain_mm, Strikes, Dist_km, WS_ms, WindDir, MaxWS_ms, AirTempC, VP_hPa, BP_Pa, RH, RHTempC, TiltNS, TiltEW
+  'Variable meanings: Flux Density in kilowatts <- comes in as Watts, convert in program, Rain in mm, # of lightning strikes, Lightning distance, WindSpeed m/s,
+  '                   Wind Direction, Max WindSpeed m/s, AirTemp, Vapor pressure hectopascals, barometric press pascals <- comes in as kilopascals then converted,
+  '                   Relative humidity as decimal (0 to 1) convert to %, RH sensor temp, North/South Tilt in degrees, East/West tilt in degrees
+  Public Rain_in 'Variables for English unit conversions
+  Public WS_mph
+  Public AirTempF
+  Public BP_inHg
+#EndIf 'If weather station present
 
 Public UsrCase
 
@@ -2488,6 +2521,92 @@ EndTable
     Sample(1,LastRecompile,String)
   EndTable
 #EndIf
+
+#If HasWx = True Then
+  
+DataTable(Wx15m,Rec15MinFlag,60)
+ TableFile("CRD:" + Status.StationName + "_Wx15m_",64,-1,35040,0,Day,0,0)
+ Sample(1,TimeStamp15Min,String)
+ Sample(1,SiteID,String)
+ Sample(1,SiteNum,String)
+ Minimum(1,StationVolts,FP2,False,False)
+ Totalize(1,Rain_mm,FP2,False)
+ Average(1,SlrFD_kW,FP2,False)
+ Totalize(1,SlrTF_MJ,IEEE4,False)
+ Totalize(1,Strikes,FP2,False)
+ Average(1,Dist_km,FP2,False)
+ Minimum(1,Dist_km,FP2,False,False)
+ WindVector(1,WS_ms,WindDir,FP2,False,0,0,1)
+ FieldNames("Avg_WS_ms,Avg_WindDir,Std_WindDir")
+ Totalize(1,BadWind,FP2,False)
+ Maximum(1,MaxWS_ms,FP2,False,False)
+ Average(1,AirTempC,FP2,False)
+ Maximum(1,AirTempC,FP2,False,False)
+ Minimum(1,AirTempC,FP2,False,False)
+ Average(1,VP_hPa,IEEE4,False)
+ Average(1,BP_Pa,IEEE4,False)
+ Maximum(1,BP_Pa,IEEE4,False,False)
+ Minimum(1,BP_Pa,IEEE4,False,False)
+ Average(1,RH,FP2,False)
+ Maximum(1,RH,FP2,False,False)
+ Minimum(1,RH,FP2,False,False)
+ Maximum(1,RHTempC,FP2,False,False)
+ Minimum(1,RHTempC,FP2,False,False)
+ Average(1,TiltNS,FP2,False)
+ Average(1,TiltEW,FP2,False)
+ Totalize(1,Rain_in,FP2,False)
+ Average(1,AirTempF,FP2,False)
+ Maximum(1,AirTempF,FP2,False,False)
+ Minimum(1,AirTempF,FP2,False,False)
+ WindVector(1,WS_mph,WindDir,FP2,False,0,0,1)
+ FieldNames("AvgWS_mph,AvgWindDir,StdWindDir")
+ Average(1,BP_inHg,FP2,False)
+ Maximum(1,BP_inHg,FP2,False,False)
+ Minimum(1,BP_inHg,FP2,False,False)
+EndTable
+
+DataTable(WxDaily,Rec24HrFlag,60)
+ TableFile("CRD:" + Status.StationName + "_WxDaily_",64,-1,365,0,Day,0,0)
+ Sample(1,SiteID,String)
+ Sample(1,SiteNum,String)
+ Minimum(1,StationVolts,FP2,False,False)
+ Totalize(1,Rain_mm,FP2,False)
+ Average(1,SlrFD_kW,FP2,False)
+ Totalize(1,SlrTF_MJ,IEEE4,False)
+ Totalize(1,Strikes,FP2,False)
+ Average(1,Dist_km,FP2,False)
+ Minimum(1,Dist_km,FP2,False,False)
+ WindVector(1,WS_ms,WindDir,FP2,False,0,0,1)
+ FieldNames("Avg_WS_ms,Avg_WindDir,Std_WindDir")
+ Totalize(1,BadWind,FP2,False)
+ Maximum(1,MaxWS_ms,FP2,False,False)
+ Average(1,AirTempC,FP2,False)
+ Maximum(1,AirTempC,FP2,False,False)
+ Minimum(1,AirTempC,FP2,False,False)
+ Average(1,VP_hPa,IEEE4,False)
+ Average(1,BP_Pa,IEEE4,False)
+ Maximum(1,BP_Pa,IEEE4,False,False)
+ Minimum(1,BP_Pa,IEEE4,False,False)
+ Average(1,RH,FP2,False)
+ Maximum(1,RH,FP2,False,False)
+ Minimum(1,RH,FP2,False,False)
+ Maximum(1,RHTempC,FP2,False,False)
+ Minimum(1,RHTempC,FP2,False,False)
+ Average(1,TiltNS,FP2,False)
+ Average(1,TiltEW,FP2,False)
+ Totalize(1,Rain_in,FP2,False)
+ Average(1,AirTempF,FP2,False)
+ Maximum(1,AirTempF,FP2,False,False)
+ Minimum(1,AirTempF,FP2,False,False)
+ WindVector(1,WS_mph,WindDir,FP2,False,0,0,1)
+ FieldNames("AvgWS_mph,AvgWindDir,StdWindDir")
+ Average(1,BP_inHg,FP2,False)
+ Maximum(1,BP_inHg,FP2,False,False)
+ Minimum(1,BP_inHg,FP2,False,False)
+ Sample(1,SensorMetaData,String)
+EndTable
+#EndIf 'if HasWx = True
+
 '=========== FUNCTION TO FORMAT TIMES FOR DIFFERENT PURPOSES ==================
 Function FTime(TimeIn As String * 25) As String *25 'converts datalogger time string into appropriate formatting for different instruments
   SplitStr (FSplitTime(),TimeIn," ",6,0)
@@ -2656,6 +2775,13 @@ Sub UserDefaults
       IsBtmWqNClosed = True 'Standard NC relay
     #EndIf
   #EndIf
+  #If HasWx = True Then
+    WSprev = 0
+    MaxWSPrev = 0
+    BadWind = False
+    WxPort = 5
+    WxAddr = 0
+  #EndIf
 EndSub
 
 '=========================== PROGRAM INITIALIZATION, SET VARIABLES TO STARTING STATE ==============
@@ -2685,10 +2811,10 @@ Sub Initialize
     AvgRSSIEndBin  = EndBin
     VMPower = True
     IsSubmersed = False
-    IsCM = True 'These are auto set if ensembles are actively coming in.
+    IsCM = False 'These are auto set if ensembles are actively coming in.
     IsVADCP = False
     IsWorkHorse = False
-    IsSentinelV = False
+    IsSentinelV = True
     TrueUpBeamStg = BadDataIndicator
     TrueVMPressStg = BadDataIndicator
     TruePS1Stg = BadDataIndicator
@@ -7402,6 +7528,105 @@ EndSub
     EndIf
   EndSub
 #EndIf
+#If HasWx = True Then
+  Sub GetWxData
+  Select Case WxPort
+    Case 5
+      SDI12Recorder(WxArray(),WxPort5,WxAddr,"R7!",1.0,0)
+    Case 7
+      SDI12Recorder(WxArray(),WxPort7,WxAddr,"R7!",1.0,0)
+    EndSelect
+EndSub
+
+Sub GetWxMeta
+    Select Case WxPort
+    Case 5
+      SDI12Recorder(SensorMetaData,WxPort5,WxAddr,"I!",1.0,0)
+    Case 7
+      SDI12Recorder(SensorMetaData,WxPort7,WxAddr,"I!",1.0,0)
+    EndSelect
+EndSub
+
+Sub CardDirection
+  If WindDir >= 337.5 OR WindDir < 22.5 Then
+    CardDir = "North"
+  EndIf
+  If WindDir >= 292.5 AND WindDir < 337.5 Then
+    CardDir = "Northwest"
+  EndIf
+  If WindDir >= 247.5 AND WindDir < 292.5 Then
+    CardDir = "West"
+  EndIf
+  If WindDir >= 202.5 AND WindDir < 247.5 Then
+    CardDir = "Southwest"
+  EndIf
+  If WindDir >= 157.5 AND WindDir < 202.5 Then
+    CardDir = "South"
+  EndIf
+  If WindDir >= 112.5 AND WindDir < 157.5 Then
+    CardDir = "Southeast"
+  EndIf
+  If WindDir >= 67.5 AND WindDir < 112.5 Then
+    CardDir = "East"
+  EndIf
+  If WindDir >= 22.5 AND WindDir < 67.5 Then
+    CardDir = "Northeast"
+  EndIf
+EndSub
+
+Sub Wind15mAvg
+  AvgRun (WindDir15m,1,WindDir,15)
+  AvgRun (WS_15m,1,WS_ms,15)
+  If WindDir15m >= 337.5 OR WindDir15m < 22.5 Then
+    CardDir15m = "North"
+  EndIf
+  If WindDir15m >= 292.5 AND WindDir15m < 337.5 Then
+    CardDir15m = "Northwest"
+  EndIf
+  If WindDir15m >= 247.5 AND WindDir15m < 292.5 Then
+    CardDir15m = "West"
+  EndIf
+  If WindDir15m >= 202.5 AND WindDir15m < 247.5 Then
+    CardDir15m = "Southwest"
+  EndIf
+  If WindDir15m >= 157.5 AND WindDir15m < 202.5 Then
+    CardDir15m = "South"
+  EndIf
+  If WindDir15m >= 112.5 AND WindDir15m < 157.5 Then
+    CardDir15m = "Southeast"
+  EndIf
+  If WindDir15m >= 67.5 AND WindDir15m < 112.5 Then
+    CardDir15m = "East"
+  EndIf
+  If WindDir15m >= 22.5 AND WindDir15m < 67.5 Then
+    CardDir15m = "Northeast"
+  EndIf
+EndSub
+
+Sub WxConversions
+  If WS_ms < 0 Then 'if negative value in wind speed, use previous good data values
+    WS_ms = WSprev
+    WindDir = WindDirPrev
+    MaxWS_ms = MaxWSPrev
+    BadWind = 1 'mark bad wind
+  Else 'good data in windspeed
+    WSprev = WS_ms 'make "previous" variables = the real, new data
+    WindDirPrev = WindDir
+    MaxWSPrev = MaxWS_ms
+    BadWind = 0 'mark bad data to 0
+  EndIf
+  BP_Pa = BP_Pa * 1000 'convert kilopascals to pascals
+  RH = RH * 100 'Convert "fractional" to percentage
+  SlrTF_MJ = SlrFD_kW * 6E-05 'Calculate total solar flux. Calculation assumes 60s scan interval
+  SlrFD_kW = SlrFD_kW / 1000 'convert watts to kilowatts
+  
+'English conversions
+  WS_mph = WS_ms*2.237
+  AirTempF = (AirTempC*1.8) + 32
+  BP_inHg = BP_Pa/3386
+  Rain_in = Rain_mm/25.4
+EndSub
+#EndIf 'If Wx = True
 '========================================================================================
 '------------------------------- MAIN PROGRAM -------------------------------------------
 '========================================================================================
@@ -7620,7 +7845,7 @@ BeginProg
     '==================================================================================
     '------------------END OF VM SPECIFIC SUB CALLS -----------------------------------
     '==================================================================================
-
+    
     '==================================================================================
     '------------------ START OF WQ SPECIFIC SUB CALLS --------------------------------
     '==================================================================================
@@ -7957,6 +8182,12 @@ BeginProg
         EndIf 'start wipe = true
       EndIf 'wipe suna = true
     #EndIf 'has suna
+    #If HasWx = True Then
+      Call GetWxData
+      Call WxConversions
+      Call Wind15mAvg
+      Call CardDirection
+    #EndIf
     DataTabsStart = Timer(DebugTimer,mSec,4)
     DataTabsStart = DataTabsStart/1000
     AQTabStart = Timer(DebugTimer,msec,4) 'read timer for start time of the AQ table
@@ -7985,6 +8216,13 @@ BeginProg
         CallTable BtmTrack1Min
       #EndIf
     #EndIf 'If we have VM
+    #If HasWx = True Then
+      If Rec24HrFlag = True Then
+        Call GetWxMeta
+      EndIf
+      CallTable Wx15m
+      CallTable WxDaily
+    #EndIf
     CallTable QAQCInfo
     CallTable Data1m
     CallTable SVMaq
