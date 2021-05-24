@@ -66,6 +66,7 @@ vd111000000
 vp3
 #vr500
 #vc 0 0 25
+wq1
 ck
 $D1
 $p NOW ENTER CM SETUP COMMANDS...  
