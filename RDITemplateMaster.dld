@@ -98,7 +98,7 @@ Const IsVmMax232 = False
 Const IsSpecStudy = False
 'value = True
 'value = False
-Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
 Const HasModem = True
@@ -213,7 +213,7 @@ EndConstTable
   #EndIf 'if using iridium
 #ElseIf LoggerType = CR6 Then
   #If HasVM = True Then 'if we have a VM or Pressure sensors
-    Const AdcpPort = ComU1
+    Const AdcpPort = ComC1
     Const VMSwitchPort = U4
     Const PS1Com3 = U3
     Const PS1Com5 = U5
@@ -230,7 +230,7 @@ EndConstTable
     #EndIf 'Sonde determination
   #EndIf 'If sonde present
   #If HasSuna = True Then 'if SUNA present
-    Const SunaPort = ComC1
+    Const SunaPort = ComU1
     Const SunaWipeSwitch = U9
     Const SunaSwitch = U10
   #EndIf 'if suna present
@@ -398,6 +398,7 @@ Public OneMinCounterReset As Boolean 'Redundant flag to force the 1min counter t
 Public OneMinConsistent As Boolean 'Flag to store 1min data for prolonged periods. Needs manual shut-off
 #If WqSonde = "WQ_SERIAL" OR WqSonde = "WQ_SERIAL_BURST" Then
   Public SetEXOTimeFlg As Boolean 'Trigger to set EXO clock if we have Serial communication
+  Public GetWqSN As Boolean 'Manual Trigger to get serial numbers from sonde
   #If WqSonde = "WQ_SERIAL_BURST" Then
     Public BurstPeriod As Float 'time between samples for EXO Burst routine
   #EndIf 'if burst
@@ -906,6 +907,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   '---------------- Build Arrays and "In-Strings" ----------------------------------------
   ' Change to Dim after Testing
   Public WqIn As String * 256 'raw EXO String
+  Public WqSN As String * 100 'Serial Numbers
   Public WqDelay As Long 'Placerholder for response from twipeb
   Public WipeTime As String * 25 'Time/Date wiper wipes (from datalogger timestamp)
   Public WipeFlag As Boolean 'flag to initiate wipe
@@ -925,6 +927,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public WqBytes As Long
   #If TopBottom = True Then
     Public BtmWqIn As String * 256 'Raw string for bottom exo
+    Public BtmWqSN As String * 100 'Serial Numbers
     Public BtmWqDelay As Long 'Placeholder for response from bottom's twipeb
     Public BtmWipeTime As String * 25 'Bottom wipe date/time from logger
     Public BtmWipeFlag As Boolean 'flag to initiate bottom wipe
@@ -1680,6 +1683,7 @@ DataTable(QAQCInfo,Rec24HrFlag,-1)
     Sample (1,RecErased,Boolean)
   #EndIf 'If we have VM
   #If WqSonde <> "NONE" Then
+    Sample (1,WqSN,String)
     Maximum (1,WqBatt,FP2,False,False)
     Minimum (1,WqBatt,FP2,False,False)
     Sample (1,WqElevation,FP2)
@@ -1687,6 +1691,7 @@ DataTable(QAQCInfo,Rec24HrFlag,-1)
     Sample (1,WqTotErrs,FP2)
     Sample (1,WqPwrCycleTries,FP2)
     #If TopBottom = True Then 'if we have top bottom
+      Sample (1,BtmWqSN,String)
       Maximum (1,BtmWqBatt,FP2,False,False)
       Minimum (1,BtmWqBatt,FP2,False,False)
       Sample (1,BtmWqElevation,FP2)
@@ -1858,9 +1863,11 @@ DataTable(SVMaq,True,1)
     Sample (1,VMElevation,FP2)
   #EndIf 'If Has VM
   #If WqSonde <> "NONE" Then
+    Sample (1,WqSN,String)
     Sample(24,WqDataArray,IEEE4)
     Sample (1,WqElevation,FP2)
     #If TopBottom = True Then
+      Sample (1,BtmWqSN,String)
       Sample(24,BtmWqDataArray,IEEE4)
       Sample(1,BtmWqElevation,FP2)
     #EndIf
@@ -2698,9 +2705,9 @@ End Function
 
 '============================ USER DEFINED START UP VARIABLES ================================
 Sub UserDefaults
-  Tech = "TEC"
-  StationName = XXX 'no quotations around name
-  SiteNum = "12345678"
+  Tech = "TAV"
+  StationName = CFL 'no quotations around name
+  SiteNum = "11455508"
   VisitReason = "Program update"
   'Default Flow setup values
   'Note if using bi-rating start and end must include all EBB and FLOOD bins
@@ -5903,7 +5910,23 @@ EndSub
       #EndIf 'Top/bottom
     #EndIf 'If Logger determination
   EndSub
-
+  
+Sub GetWqSNs
+    SerialOut(WqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (WqSerialPort,"ssn" + CHR(13) + CHR(10),"",1,0)
+    SerialIn (WqSN,WqSerialPort,100,&H0D0A,200)
+    SerialFlush (WqSerialPort)
+    #If TopBottom = True Then
+          SerialOut(BtmWqSerialPort,"0" + CHR(13),"?Command",3,10)
+    Delay (1,10,mSec)
+    SerialOut (BtmWqSerialPort,"ssn" + CHR(13) + CHR(10),"",1,0)
+    SerialIn (BtmWqSN,BtmWqSerialPort,100,&H0D0A,200)
+    SerialFlush (BtmWqSerialPort)
+    #EndIf
+    GetWqSN = False
+ EndSub
+ 
   #If WqSonde = "WQ_SERIAL_BURST" Then
     Sub SetBurst
       SetBurstStart = Timer(DebugTimer,mSec,4)
@@ -8222,6 +8245,11 @@ BeginProg
       EndIf
       CallTable Wx15m
       CallTable WxDaily
+    #EndIf
+    #If WqSonde <> "NONE" Then
+      If ModDay = 86100 OR (GetWqSN = True AND Mod15Minutes <> 0) Then 'If 2355 or manual SN retrieval, don't try in 15th minute in case bursts ran long
+        Call GetWqSNs
+      EndIf
     #EndIf
     CallTable QAQCInfo
     CallTable Data1m
