@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20210324
-Const ProgramVersion = "5.40"
+Const ProgramVersionDate = 20210621
+Const ProgramVersion = "5.41"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -46,6 +46,7 @@ Const ProgramVersion = "5.40"
 '                     Adjusted data tables for special studies. Adjusted when VM comport gets flushed. Need to address random Sentinel misses. Works for days, then misses 20min (even though BBTalk picked up the data).
 ' 20210322 - TAV 5.31 Fixed VM Voltage bug.
 ' 20210324 - TAV 5.40 Added weather station ability. Need to add power cycle ability based on NANs or BadWind
+' 20210621 - TAV 5.41 Fixed Autorange calculation bug. Had parentheses in wrong spot causing improper calc. Made ToggleVMPower remain in Sub, if VMPower = False and then back to True, it wouldn't remain in Sub to adjust its signal wire.
 SequentialMode 'We need to use Sequential mode
 
 'Start of Constants Customization Section
@@ -56,7 +57,7 @@ Const WqSonde = "WQ_SERIAL_BURST"
 Const DWRSonde = False
 'value = True
 'value = False
-Const TopBottom = False  'Is there a second EXO in the system
+Const TopBottom = False 'Is there a second EXO in the system
 'value = True
 'value = False
 Const HasIridium = False
@@ -2811,10 +2812,10 @@ Sub Initialize
     AvgRSSIEndBin  = EndBin
     VMPower = True
     IsSubmersed = False
-    IsCM = False 'These are auto set if ensembles are actively coming in.
+    IsCM = True 'These are auto set if ensembles are actively coming in.
     IsVADCP = False
     IsWorkHorse = False
-    IsSentinelV = True
+    IsSentinelV = False
     TrueUpBeamStg = BadDataIndicator
     TrueVMPressStg = BadDataIndicator
     TruePS1Stg = BadDataIndicator
@@ -3135,7 +3136,11 @@ EndSub
     Select Case IsSubmersed
     Case False
       If VMPower = True Then
-        ExitSub
+        If IsVMNClosed = True Then
+          PortSet(VMSwitchPort,0) 'Normally closed relay, don't send signal
+        Else
+          PortSet(VMSwitchPort,1) 'Normally open relay, send signal to close circuit
+        EndIf
       EndIf
       If VMPower = False Then 'If user instrument OFF
         SerialFlush (AdcpPort)
@@ -4440,7 +4445,7 @@ EndSub
       EndIf
       UseableRange = DucerDepthCM * (COS(BeamAngle))'account for sidelobe interference on slant beams
       Bin1Start = Bin1Center - (BinSize/2) 'get actual start location for bin 1
-      RangedBin = (FIX((UseableRange - Bin1Start/BinSize))-CutOffBins) 'account for sidelobe interference (assumes level instrument) CutOffBins should be used to address unlevel instruments
+      RangedBin = (FIX((UseableRange - Bin1Start)/BinSize))-CutOffBins 'account for sidelobe interference (assumes level instrument) CutOffBins should be used to address unlevel instruments
       'RangedBin = (FIX((DucerDepthCM - BlankDist)/BinSize))-CutOffBins 'remove user selected number of bins (based on beamchecks)
       EndBin = RangedBin 'Set end bin to the ranged bin for Index calcs
       #If VMHasVertical = True Then 
