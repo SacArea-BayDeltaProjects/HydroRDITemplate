@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20210621
-Const ProgramVersion = "5.41"
+Const ProgramVersionDate = 20211115
+Const ProgramVersion = "5.42"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -47,6 +47,8 @@ Const ProgramVersion = "5.41"
 ' 20210322 - TAV 5.31 Fixed VM Voltage bug.
 ' 20210324 - TAV 5.40 Added weather station ability. Need to add power cycle ability based on NANs or BadWind
 ' 20210621 - TAV 5.41 Fixed Autorange calculation bug. Had parentheses in wrong spot causing improper calc. Made ToggleVMPower remain in Sub, if VMPower = False and then back to True, it wouldn't remain in Sub to adjust its signal wire.
+' 20211115 - TAV 5.42 Added Meters to Feet calculation for Sonde depth if sonde isn't outputting Feet. Fixed SiteVisit Table from writing every minute. Adjusted when SondeStg is calculated. Was done before sample came in, making it 1min behind.
+
 SequentialMode 'We need to use Sequential mode
 
 'Start of Constants Customization Section
@@ -4832,9 +4834,6 @@ EndSub
     VMPressStg = VM_PSDepthFt + VMPressOffset
     PS1Stg = PsPress1Stg(1) + PS1Offset
     PS2Stg = PSpress2Stg(1) + PS2Offset
-    #If WqSonde <> "NONE" Then
-      SondeStg = WqDepthFt + SondeOffset
-    #EndIf
     Select Case SelStgPrime
     Case UPbeam 'User selected Upbeam to be used as Primar Stage
       If VMdataIn = True AND VMupBeam <> NAN Then 'If there are data coming in and they are valid
@@ -5507,6 +5506,8 @@ EndSub
     If Redeploy = True OR WqParamOrder(1) = BadDataIndicator OR NoSondeFlag = True Then 'If standard sonde needs to be set up
       RedeployStart = Timer(DebugTimer,mSec,4)
       RedeployStart = RedeployStart/1000
+      WqLocs() = BadDataIndicator 'Force all Locations to NANs
+      WqParamOrder() = BadDataIndicator 'Force all ParamOrder values to NAN
       SerialFlush(WqSerialPort)
       SerialOut (WqSerialPort,"0" + CHR(13),"?Command",3,10) 'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
       Delay (1,10,mSec)
@@ -5575,6 +5576,8 @@ EndSub
       If BtmRedeploy = True OR BtmWqParamOrder(1) = BadDataIndicator OR BtmNoSondeFlag = True Then
         BtmRedeployStart = Timer(DebugTimer,mSec,4)
         BtmRedeployStart = BtmRedeployStart/1000
+        BtmWqLocs() = BadDataIndicator 'Force all locations to NAN
+        BtmWqParamOrder() = BadDataIndicator 'force all parameter order values to NAN
         SerialFlush(BtmWqSerialPort)
         SerialOut (BtmWqSerialPort,"0" + CHR(13),"?Command",3,10) 'a zero is required to wake up the sonde for other commands to be recieved. if not sonde will respond with"command?"
         Delay (1,10,mSec)
@@ -5730,8 +5733,17 @@ EndSub
     If WqLocTurbFNU > 0 Then WqTurbFNU = WqData(WqLocTurbFNU)
     If WqLocDOSat > 0 Then WqDOSat = WqData(WqLocDOSat)
     If WqLocDOmgL > 0 Then WqDOmgL = WqData(WqLocDOmgL)
-    If WqLocDepthFt > 0 Then WqDepthFt = WqData(WqLocDepthFt)
     If WqLocDepthM > 0 Then WqDepthM = WqData(WqLocDepthM)
+    If WqLocDepthFt > 0 Then 
+       WqDepthFt = WqData(WqLocDepthFt) 'if sonde has depth in feet being output, use that value
+       Else
+       If WqLocDepthM > 0 Then 'if it doesn't have depth in feet but has depth in M
+         WqDepthFt = WqData(WqLocDepthM) * Meters_to_Feet 'convert depth in M to feet
+       EndIf
+    EndIf
+    #If HasVM = True Then
+      SondeStg = WqDepthFt + SondeOffset
+    #EndIf
     If WqLocBatt > 0 Then WqBatt = WqData(WqLocBatt)
     If WqLocpH > 0 Then WqpH = WqData(WqLocpH)
     If WqLocpHmV > 0 Then WqpHmV = WqData(WqLocpHmV)
@@ -5790,8 +5802,14 @@ EndSub
       If BtmWqLocTurbFNU > 0 Then BtmWqTurbFNU = BtmWqData(BtmWqLocTurbFNU)
       If BtmWqLocDOSat > 0 Then BtmWqDOSat = BtmWqData(BtmWqLocDOSat)
       If BtmWqLocDOmgL > 0 Then BtmWqDOmgL = BtmWqData(BtmWqLocDOmgL)
-      If BtmWqLocDepthFt > 0 Then BtmWqDepthFt = BtmWqData(BtmWqLocDepthFt)
       If BtmWqLocDepthM > 0 Then BtmWqDepthM = BtmWqData(BtmWqLocDepthM)
+      If BtmWqLocDepthFt > 0 Then 
+       BtmWqDepthFt = BtmWqData(BtmWqLocDepthFt) 'if sonde has depth in feet being output, use that value
+       Else
+       If BtmWqLocDepthM > 0 Then 'if it doesn't have depth in feet but has depth in M
+         BtmWqDepthFt = BtmWqData(BtmWqLocDepthM) * Meters_to_Feet 'convert depth in M to feet
+       EndIf
+    EndIf
       If BtmWqLocBatt > 0 Then BtmWqBatt = BtmWqData(BtmWqLocBatt)
       If BtmWqLocpH > 0 Then BtmWqpH = BtmWqData(BtmWqLocpH)
       If BtmWqLocpHmV > 0 Then BtmWqpHmV = BtmWqData(BtmWqLocpHmV)
@@ -8246,10 +8264,12 @@ BeginProg
         EndIf 'end sonde stg check
       #EndIf
     #EndIf
+    If SiteVisTrig = True Then 'only call the table if trigger is true.
     CallTable SiteVisit 'Call sitevisit
     Tech = "" 'set tech back to null value
     VisitReason = ""
     SiteVisTrig = False
+    EndIf
     #If HasVM = True Then
       'now set TrueStg values back to BadDataIndicator
       TrueUpBeamStg = BadDataIndicator
