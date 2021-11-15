@@ -101,7 +101,7 @@ Const IsVmMax232 = False
 Const IsSpecStudy = False
 'value = True
 'value = False
-Const HasGPS = False '***THIS WILL ONLY COMPILE ON CR6!***
+Const HasGPS = True '***THIS WILL ONLY COMPILE ON CR6!***
 'value = True
 'value = False
 Const HasModem = True
@@ -113,10 +113,10 @@ Const GetNoiseFloor = False
 Const SendFlowData = False
 'value = True
 'value = False
-Const HasVM = False
+Const HasVM = True
 'value = True
 'value = False
-Const StorePD0 = False
+Const StorePD0 = True
 'value = True
 'value = False
 Const MaxBins = 50
@@ -224,7 +224,7 @@ EndConstTable
     Const PS2Com5 = U5
   #EndIf 'if VM or pressure sensors present
   #If WqSonde <> "NONE" Then 'If sonde present
-    Const WqSerialPort = ComC1 'WQ must use a C port
+    Const WqSerialPort = ComC3 'WQ must use a C port
     Const WqSwitchPort = U6 'establish switch ports
     Const UseSW12_2_forWQ = False
     #If TopBottom = True Then 'if redundant, top/bottom setup
@@ -2701,9 +2701,9 @@ End Function
 
 '============================ USER DEFINED START UP VARIABLES ================================
 Sub UserDefaults
-  Tech = "TAV"
-  StationName = CM12 'no quotations around name
-  SiteNum = "11455495"
+  Tech = "TEC"
+  StationName = XXX 'no quotations around name
+  SiteNum = "12345678"
   VisitReason = "Program update"
   'Default Flow setup values
   'Note if using bi-rating start and end must include all EBB and FLOOD bins
