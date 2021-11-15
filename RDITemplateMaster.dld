@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20210621
-Const ProgramVersion = "5.41"
+Const ProgramVersionDate = 20211115
+Const ProgramVersion = "5.42"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -47,6 +47,8 @@ Const ProgramVersion = "5.41"
 ' 20210322 - TAV 5.31 Fixed VM Voltage bug.
 ' 20210324 - TAV 5.40 Added weather station ability. Need to add power cycle ability based on NANs or BadWind
 ' 20210621 - TAV 5.41 Fixed Autorange calculation bug. Had parentheses in wrong spot causing improper calc. Made ToggleVMPower remain in Sub, if VMPower = False and then back to True, it wouldn't remain in Sub to adjust its signal wire.
+' 20211115 - TAV 5.42 Added Meters to Feet calculation for Sonde depth if sonde isn't outputting Feet. Fixed SiteVisit Table from writing every minute. Adjusted when SondeStg is calculated. Was done before sample came in, making it 1min behind.
+
 SequentialMode 'We need to use Sequential mode
 
 'Start of Constants Customization Section
