@@ -7782,6 +7782,7 @@ BeginProg
       RecCalibData = True 'Verify RecCalibData gets turned back on in case we reset directly at 24hr
       Rec1MinFlag = True 'we want 1min data
       OneMinCount = 0 'reset the counter
+      OneMinCounterReset = False 'turn off the reset
     EndIf
     If Rec1MinFlag = True Then 'if 1min flag is set to true
       OneMinCount = OneMinCount + 1 'increase counter
