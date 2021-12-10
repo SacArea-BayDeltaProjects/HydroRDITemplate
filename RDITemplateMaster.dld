@@ -224,7 +224,7 @@ EndConstTable
     Const PS2Com5 = U5
   #EndIf 'if VM or pressure sensors present
   #If WqSonde <> "NONE" Then 'If sonde present
-    Const WqSerialPort = ComC3 'WQ must use a C port
+    Const WqSerialPort = ComC1 'WQ must use a C port
     Const WqSwitchPort = U6 'establish switch ports
     Const UseSW12_2_forWQ = False
     #If TopBottom = True Then 'if redundant, top/bottom setup
@@ -233,7 +233,7 @@ EndConstTable
     #EndIf 'Sonde determination
   #EndIf 'If sonde present
   #If HasSuna = True Then 'if SUNA present
-    Const SunaPort = ComC1
+    Const SunaPort = ComC3
     Const SunaWipeSwitch = U9
     Const SunaSwitch = U10
   #EndIf 'if suna present
