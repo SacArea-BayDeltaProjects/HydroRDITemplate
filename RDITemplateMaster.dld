@@ -6452,7 +6452,7 @@ EndSub
     #If HasVM = True Then
       #If WqSonde = "NONE" Then
         #If UseAutoRange = False Then
-          Const NumVars = 34
+          Const NumVars = 35
           UsrCase = 1
         #Else
           Const NumVars = 37
@@ -6461,7 +6461,7 @@ EndSub
         #EndIf
       #ElseIf WqSonde = "WQ_SERIAL" Then
         #If UseAutoRange = False Then
-          Const NumVars = 36
+          Const NumVars = 37
           UsrCase = 3
         #Else
           Const NumVars = 39
@@ -6469,7 +6469,7 @@ EndSub
         #EndIf
       #ElseIf WqSonde = "WQ_SERIAL_BURST" Then
         #If UseAutoRange = False Then
-          Const NumVars = 37
+          Const NumVars = 38
           UsrCase = 5
         #Else
           Const NumVars = 40
@@ -6537,6 +6537,7 @@ EndSub
         IsVMNClosed = InVar(32)
         FlowSign = InVar(33)
         OneMinConsistent= InVar(34) 'if you want constant 1min data this will keep it on in case of power cycle
+        UseDir =InVar(35) 'Save UseDir flag to usr drive
 
       Case 2
         StartBin = InVar(1)
@@ -6576,8 +6577,8 @@ EndSub
         #If UseAutoRange = True Then
           RangeSource = InVar(35)
           DucerDepthOffset = InVar(36)
-          UseDir =InVar(37) 'if we are using an uplooker, we are likely to use autorange. Save UseDir flag to usr drive
         #EndIf
+        UseDir =InVar(37) 'Save UseDir flag to usr drive
       #EndIf
     Case 3
       #If HasVM = True Then
@@ -6622,6 +6623,7 @@ EndSub
         #EndIf
         IsWqNClosed = InVar(36)
       #EndIf
+      UseDir =InVar(37) 'Save UseDir flag to usr drive
 
     Case 4
       #If HasVM = True Then
@@ -6664,7 +6666,6 @@ EndSub
         #If UseAutoRange = True Then
           RangeSource = InVar(35)
           DucerDepthOffset = InVar(36)
-          UseDir =InVar(39) 'if we are using an uplooker, we are likely to use autorange. Save UseDir flag to usr drive
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -6673,6 +6674,7 @@ EndSub
         #EndIf
         IsWqNClosed = InVar(38)
       #EndIf
+      UseDir =InVar(39) 'Save UseDir flag to usr drive
 
     Case 5
       #If HasVM = True Then
@@ -6720,6 +6722,7 @@ EndSub
           BurstPeriod = InVar(37)
         #EndIf
       #EndIf
+      UseDir =InVar(38) 'Save UseDir flag to usr drive
 
     Case 6
       #If HasVM = True Then
@@ -6762,7 +6765,6 @@ EndSub
         #If UseAutoRange = True Then
           RangeSource = InVar(35)
           DucerDepthOffset = InVar(36)
-          UseDir =InVar(40) 'if we are using an uplooker, we are likely to use autorange. Save UseDir flag to usr drive
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -6774,6 +6776,7 @@ EndSub
           BurstPeriod = InVar(39)
         #EndIf
       #EndIf
+      UseDir =InVar(40) 'Save UseDir flag to usr drive
 
     Case 7
       OneMinConsistent = InVar(1)
@@ -6842,6 +6845,7 @@ EndSub
         Var(32) = IsVMNClosed
         Var(33) = FlowSign
         Var(34) = OneMinConsistent
+        Var(35) = UseDir
 
       Case 2
         Var(1) = StartBin
@@ -6881,9 +6885,9 @@ EndSub
         #If UseAutoRange = True Then
           Var(35) = RangeSource
           Var(36) = DucerDepthOffset
-          Var(37) = UseDir
         #EndIf
       #EndIf
+       Var(37) = UseDir
     Case 3
       #If HasVM = True Then
         Var(1) = StartBin
@@ -6927,6 +6931,7 @@ EndSub
         #EndIf
         Var(36) = IsWqNClosed
       #EndIf
+      Var(37) = UseDir
 
     Case 4
       #If HasVM = True Then
@@ -6969,7 +6974,6 @@ EndSub
         #If UseAutoRange = True Then
           Var(35) = RangeSource
           Var(36) = DucerDepthOffset
-          Var(39) = UseDir
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -6978,6 +6982,7 @@ EndSub
         #EndIf
         Var(38) = IsWqNClosed
       #EndIf
+      Var(39) = UseDir
 
     Case 5
       #If HasVM = True Then
@@ -7025,6 +7030,7 @@ EndSub
           Var(37) = BurstPeriod
         #EndIf
       #EndIf
+      Var(38) = UseDir
 
     Case 6
       #If HasVM = True Then
@@ -7067,7 +7073,6 @@ EndSub
         #If UseAutoRange = True Then
           Var(35) = RangeSource
           Var(36) = DucerDepthOffset
-          Var(40) = UseDir
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -7079,6 +7084,7 @@ EndSub
           Var(39) = BurstPeriod
         #EndIf
       #EndIf
+      Var(40) = UseDir
 
     Case 7
       Var(1) = OneMinConsistent
