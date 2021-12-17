@@ -48,6 +48,7 @@ Const ProgramVersion = "5.42"
 ' 20210324 - TAV 5.40 Added weather station ability. Need to add power cycle ability based on NANs or BadWind
 ' 20210621 - TAV 5.41 Fixed Autorange calculation bug. Had parentheses in wrong spot causing improper calc. Made ToggleVMPower remain in Sub, if VMPower = False and then back to True, it wouldn't remain in Sub to adjust its signal wire.
 ' 20211115 - TAV 5.42 Added Meters to Feet calculation for Sonde depth if sonde isn't outputting Feet. Fixed SiteVisit Table from writing every minute. Adjusted when SondeStg is calculated. Was done before sample came in, making it 1min behind.
+' 20211217 - MRI 5.43 Added UseDir to USR drive in case of logger shutdown. Removed bug that replaced BTMburst medians with NAN when top sonde was not functional.
 
 SequentialMode 'We need to use Sequential mode
 
@@ -2263,30 +2264,30 @@ EndTable
       Sample (1,BurstPeriod, IEEE4)
       '    Sample (1,BurstMedDate,IEEE4)
       '    Sample (1,BurstMedTime,IEEE4)
-      Median (1,BtmBurstDate,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstTime,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstTempC,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstTempF,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstSpCond,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstTurbFNU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstDOSat, MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstDOmgL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstORPmV,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstDepthFt,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstDepthM,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstBatt,MaxBurstCnt,FP2,BurstMissed)
-      Median (1,BtmBurstpH,MaxBurstCnt,FP2,BurstMissed)
-      Median (1,BtmBurstpHmV,MaxBurstCnt,FP2,BurstMissed)
-      Median (1,BtmBurstChlugL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstChlRFU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstBGApcRFU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstBGApcugL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstFDomRFU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstFDomQSU,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstNH4mgL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstNO3mgL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstCLmgL,MaxBurstCnt,IEEE4,BurstMissed)
-      Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BurstMissed)
+      Median (1,BtmBurstDate,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstTime,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstTempC,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstTempF,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstSpCond,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstTurbFNU,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstDOSat, MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstDOmgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstORPmV,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstDepthFt,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstDepthM,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstBatt,MaxBurstCnt,FP2,BtmBurstMissed)
+      Median (1,BtmBurstpH,MaxBurstCnt,FP2,BtmBurstMissed)
+      Median (1,BtmBurstpHmV,MaxBurstCnt,FP2,BtmBurstMissed)
+      Median (1,BtmBurstChlugL,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstChlRFU,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstBGApcRFU,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstBGApcugL,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstFDomRFU,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstFDomQSU,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstNH4mgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstNO3mgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstCLmgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
+      Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BTMBurstMissed)
       StdDev (1,BtmBurstTempC,IEEE4,False)
       Minimum (1,BtmBurstTempC,IEEE4,False,0)
       Maximum (1,BtmBurstTempC,IEEE4,False,0)
@@ -6454,7 +6455,7 @@ EndSub
           Const NumVars = 34
           UsrCase = 1
         #Else
-          Const NumVars = 36
+          Const NumVars = 37
           ' Dim InVar(NumVars)
           UsrCase = 2
         #EndIf
@@ -6463,7 +6464,7 @@ EndSub
           Const NumVars = 36
           UsrCase = 3
         #Else
-          Const NumVars = 38
+          Const NumVars = 39
           UsrCase = 4
         #EndIf
       #ElseIf WqSonde = "WQ_SERIAL_BURST" Then
@@ -6471,7 +6472,7 @@ EndSub
           Const NumVars = 37
           UsrCase = 5
         #Else
-          Const NumVars = 39
+          Const NumVars = 40
           UsrCase = 6
         #EndIf
       #EndIf
@@ -6575,6 +6576,7 @@ EndSub
         #If UseAutoRange = True Then
           RangeSource = InVar(35)
           DucerDepthOffset = InVar(36)
+          UseDir =InVar(37) 'if we are using an uplooker, we are likely to use autorange. Save UseDir flag to usr drive
         #EndIf
       #EndIf
     Case 3
@@ -6662,6 +6664,7 @@ EndSub
         #If UseAutoRange = True Then
           RangeSource = InVar(35)
           DucerDepthOffset = InVar(36)
+          UseDir =InVar(39) 'if we are using an uplooker, we are likely to use autorange. Save UseDir flag to usr drive
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -6759,6 +6762,7 @@ EndSub
         #If UseAutoRange = True Then
           RangeSource = InVar(35)
           DucerDepthOffset = InVar(36)
+          UseDir =InVar(40) 'if we are using an uplooker, we are likely to use autorange. Save UseDir flag to usr drive
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -6877,6 +6881,7 @@ EndSub
         #If UseAutoRange = True Then
           Var(35) = RangeSource
           Var(36) = DucerDepthOffset
+          Var(37) = UseDir
         #EndIf
       #EndIf
     Case 3
@@ -6964,6 +6969,7 @@ EndSub
         #If UseAutoRange = True Then
           Var(35) = RangeSource
           Var(36) = DucerDepthOffset
+          Var(39) = UseDir
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
@@ -7061,6 +7067,7 @@ EndSub
         #If UseAutoRange = True Then
           Var(35) = RangeSource
           Var(36) = DucerDepthOffset
+          Var(40) = UseDir
         #EndIf
       #EndIf
       #If WqSonde <> "NONE" Then
