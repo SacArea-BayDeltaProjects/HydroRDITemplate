@@ -2721,7 +2721,7 @@ Sub UserDefaults
     MaxExpStg = 30
     MinExpVel = -5
     MaxExpVel = 6
-    FlowSign = 1
+    FlowSign = 1 'Station on river left (ADVM directed towards river right) has a flow sign of -1. Station on river right has a flow sign of 1.
     SelStgPrime = PSpress
     SelStgSecnd = UPbeam
     UpBeamOffset = 0
