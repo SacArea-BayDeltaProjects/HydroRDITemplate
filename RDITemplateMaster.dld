@@ -3,9 +3,9 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20211217
-Const ProgramVersion = "5.43"
-'Last Modified by: Mark Inc
+Const ProgramVersionDate = 20220106
+Const ProgramVersion = "5.44"
+'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
 
@@ -49,6 +49,7 @@ Const ProgramVersion = "5.43"
 ' 20210621 - TAV 5.41 Fixed Autorange calculation bug. Had parentheses in wrong spot causing improper calc. Made ToggleVMPower remain in Sub, if VMPower = False and then back to True, it wouldn't remain in Sub to adjust its signal wire.
 ' 20211115 - TAV 5.42 Added Meters to Feet calculation for Sonde depth if sonde isn't outputting Feet. Fixed SiteVisit Table from writing every minute. Adjusted when SondeStg is calculated. Was done before sample came in, making it 1min behind.
 ' 20211217 - MRI 5.43 Added UseDir to USR drive in case of logger shutdown. Removed bug that replaced BTMburst medians with NAN when top sonde was not functional.
+' 20220106 - TAV 5.44 Removed VM_PressFt from Aquarius table for standard sites to keep consistent tables. It will only be present if VMHasVertical or IsSpecStudy
 
 SequentialMode 'We need to use Sequential mode
 
@@ -1401,7 +1402,9 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     Average (1,VMtempC,FP2,False)
     Average (1,VMpitch,FP2,False)
     Average (1,VMroll,FP2,False)
+    #If VMHasVertical OR IsSpecStudy Then
     Average (1,VM_PSDepthFt,FP2,False)
+    #EndIf
     #If IsSpecStudy Then
     Average (1,AvgSwathRSSI,FP2,False)
     #If VMHasVertical = True Then
