@@ -93,7 +93,7 @@ Const MaxBurstCnt = 30
 'Min = 1
 'Max = 30
 'Inc = 1
-Const MinBurstVals = 4
+Const MinBurstVals = 10
 'Min = 1
 'Max = 30
 'Inc = 1
@@ -520,6 +520,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public HeaderMismatch
   Public BadEnsemble As Float
   Public BadEnsembleTot As Float
+  Public GoodEnsCnt As Float
   Public BadQCount As Long 'how many times has the datalogger been unable to calculate discharge? (either bad stage value or bad velocity value)
   Public MinExpVel As Long 'minimum velocity expected at site
   Public MaxExpVel As Long 'maximum velocity expected at site
@@ -626,6 +627,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
   Public Area As Float 'calculated channel area based on stage-area rating
   Public StageFlags(6) As Boolean: Alias StageFlags = BadStgFlag, BadStg2Flag, BadPS1Flg, BadPS2Flg, BadUpbeamFlg, BadVMPressFlg
   Public BadStageCounters(12) As Float: Alias BadStageCounters = BadStgCount, BadStg2Cnt, BadPS1Cnt, BadPS2Cnt, BadUpbeamCnt, BadVMPressCnt, BadStgCountTot, BadStg2CntTot, BadPS1CntTot, BadPS2CntTot, BadUpbeamCntTot, BadVMPressCntTot
+  Public GoodStgCnt, GoodStg2Cnt As Float
   Public StgOutOfBndCnt, StgOutOfBndCntTot, Stg2OutOfBndCnt, Stg2OutOfBndCntTot
   Public MaxExpStg As Long 'maximum expected stage <---- GET RID OF THIS, ONLY FILTER IN AQ
   Public MinExpStg As Long 'minimum expected stage <---- GET RID OF THIS, ONLY FILTER IN AQ
@@ -957,7 +959,7 @@ Dim SiteVisTrig As Boolean 'Trigger for SiteVisit table
     Public BtmWqDataArray(WqNParams): Alias BtmWqDataArray = BtmWqDate, BtmWqTime, BtmWqTempC, BtmWqTempF, BtmWqSpCond, BtmWqTurbFNU, BtmWqBatt, BtmWqDOSat, BtmWqDOmgL, BtmWqDepthFt, BtmWqDepthM, BtmWqpH, BtmWqpHmV, BtmWqChlugL, BtmWqChlRFU, BtmWqBGApcRFU, BtmWqBGApcugL, BtmWqFDomRFU, BtmWqFDomQSU, BtmWqORPmV, BtmWqNH4mgL, BtmWqNO3mgL, BtmWqCLmgL, BtmWqWiperPos
   #EndIf
   #If WqSonde = "WQ_SERIAL_BURST" Then
-    Public BurstMaxErrCnt = 4 '<-----------ESTABLISH FIXED VALUE FOR THIS
+    Public BurstMaxErrCnt = 20 'Max number of errors in the burst loop before exiting. Currently setting 10 as min. number of vals for median calcs
     Public BurstIn As String * 200
     Public BurstCount As Long
     Public RecBurstFlag As Boolean
@@ -1378,8 +1380,30 @@ Alias SendRadVars(17) = SendRadNetID
 #EndIf 'If weather station present
 
 Public UsrCase
+Public DiagTickler As Float = 0
 
+#If HasVM = True Then
+  Public AdcpTick(3) = 0: Alias AdcpTick = AdcpLowAlarm, AdcpMedAlarm, AdcpHighAlarm
+  Public AdcpWarnStr As String * 55
+  Public StgPrimeTick(3) = 0: Alias StgPrimeTick = StgPrimeLowAlarm, StgPrimeMedAlarm, StgPrimeHighAlarm
+  Public StgPrimeWarnStr As String * 55
+  Public StgScndTick(3) = 0: Alias StgScndTick = StgScndLowAlarm, StgScndMedAlarm, StgScndHighAlarm
+  Public StgScndWarnStr As String * 55
+#EndIf
 
+#If WqSonde <> "NONE" Then
+  Public WQSondeTick(3) = 0: Alias WQSondeTick = SondeLowAlarm, SondeMedAlarm, SondeHighAlarm
+  Public WQSondeWarnStr As String * 60
+  #If TopBottom = True Then
+    Public BtmWqSondeTick(3) = 0: Alias BtmWqSondeTick = BtmSondeLowAlarm, BtmSondeMedAlarm, BtmSondeHighAlarm
+    Public BtmWqSondeWarnStr As String * 65
+  #EndIf
+#EndIf
+
+#If HasSuna = True Then
+  Public SUNATick(3) = 0: Alias SUNATick = SunaLowAlarm, SunaMedAlarm, SunaHighAlarm
+  Public SUNAWarnStr As String * 65
+#EndIf
 '============================================================================================================
 '--------------------------------------- DATA TABLES SECTION ------------------------------------------------
 '============================================================================================================
@@ -2290,7 +2314,7 @@ EndTable
       Median (1,BtmBurstNH4mgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
       Median (1,BtmBurstNO3mgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
       Median (1,BtmBurstCLmgL,MaxBurstCnt,IEEE4,BtmBurstMissed)
-      Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BTMBurstMissed)
+      Median (1,BtmBurstWiperPos,MaxBurstCnt,FP2,BtmBurstMissed)
       StdDev (1,BtmBurstTempC,IEEE4,False)
       Minimum (1,BtmBurstTempC,IEEE4,False,0)
       Maximum (1,BtmBurstTempC,IEEE4,False,0)
@@ -5373,35 +5397,64 @@ EndSub
      CreatePD0 = False
    EndIf
     EndSub
-    
-'    Sub StoreRaw
-'            Dim i
-''    Public PD0Days
-'    
-'   PD0Thresh = PD0Days * 1440 '1440 minutes per day
-'   If PD0MinCnt >= PD0Thresh Then
-'     CreatePD0 = True
-'   EndIf
-'   For i = 1 To NumBytes
-'     MoveBytes(VM_Binary(1,1,i),0,CHR(LongArray(i)),0,2) 'move the CHR code (based on LongArray() decimal (ex. &H7F = 127) to VM_Binary string
-'   Next i
-'   If CreatePD0 = True Then
-'     PD0TimeStamp = Status.TimeStamp(1,1)
-'     PD0DateTime = Mid(PD0TimeStamp,7,4) + Left(PD0TimeStamp,2) + Mid(PD0TimeStamp,4,2) + "-" + Mid(PD0TimeStamp,12,2) + Mid(PD0TimeStamp,15,2) + Mid(PD0TimeStamp,18,2)
-'     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1) 'Open file in name format "SID_yyyymmdd-hhmmss_VMData.PD0", start time of file
-'     FileWrite(PD0Handle,VM_Binary,NumBytes)
-'     FileClose(PD0Handle)
-'     PD0MinCnt = 1 'make counter = 1 as there is 1 ensemble stored in the new file.
-'     CreatePD0 = False
-'   Else
-'     PD0Handle = FileOpen("CRD:"+SiteID+"_"+PD0DateTime+"_VMData_RAW.PD0","ab",-1)
-'     FileWrite(PD0Handle,VM_Binary,NumBytes)
-'     FileClose(PD0Handle)
-'     PD0MinCnt = PD0MinCnt + 1
-'     CreatePD0 = False
-'   EndIf
-'   EndSub
   #EndIf 'If StorePD0
+  
+'----------------------------------------------------------
+'--------VM and PS Tickler Counter Sub --------------------
+'----------------------------------------------------------
+
+  Sub VM_Stg_Tickler
+  ADCPTick() = 0
+  GoodEnsCnt = 15 - BadEnsemble
+  If GoodEnsCnt = 15 Then
+    AdcpTick() = 0
+    AdcpWarnStr = ""
+  ElseIf GoodEnsCnt >= 12 AND GoodEnsCnt < 15 Then
+    AdcpTick(1) = 1
+    AdcpWarnStr = GoodEnsCnt + "/15 ensembles collected!"
+  ElseIf GoodEnsCnt >= 8 AND GoodEnsCnt < 12 Then
+    ADCPTick(1) = 1
+    AdcpTick(2) = 1
+    AdcpWarnStr = GoodEnsCnt + "/15 ensembles collected!"
+  ElseIf GoodEnsCnt < 8 Then
+    AdcpTick() = 1
+    AdcpWarnStr = GoodEnsCnt + "/15 ensembles collected!"
+  EndIf
+
+  StgPrimeTick() = 0
+  GoodStgCnt = 15 - BadStgCount
+  If GoodStgCnt = 15 Then
+    StgPrimeTick() = 0
+    StgPrimeWarnStr = ""
+  ElseIf GoodStgCnt >= 12 AND GoodStgCnt < 15 Then
+    StgPrimeTick(1) = 1
+    StgPrimeWarnStr = GoodStgCnt + "/15 GH values collected!"
+  ElseIf GoodStgCnt >= 8 AND GoodStgCnt < 12 Then
+    StgPrimeTick(1) = 1
+    StgPrimeTick(2) = 1
+    StgPrimeWarnStr = GoodStgCnt + "/15 GH values collected!"
+  ElseIf GoodStgCnt < 8 Then
+    StgPrimeTick() = 1
+    StgPrimeWarnStr = GoodStgCnt + "/15 GH values collected!"
+  EndIf
+
+  StgScndTick() = 0
+  GoodStg2Cnt = 15 - BadStg2Cnt
+  If GoodStg2Cnt = 15 Then
+    StgScndTick() = 0
+    StgScndWarnStr = ""
+  ElseIf GoodStg2Cnt >= 12 AND GoodStg2Cnt < 15 Then
+    StgScndTick(1) = 1
+    StgScndWarnStr = GoodStg2Cnt + "/15 backup GH values collected!"
+  ElseIf GoodStg2Cnt >= 8 AND GoodStg2Cnt < 12 Then
+    StgScndTick(1) = 1
+    StgScndTick(2) = 1
+    StgScndWarnStr = GoodStg2Cnt + "/15 backup GH values collected!"
+  ElseIf GoodStg2Cnt < 8 Then
+    StgScndTick() = 1
+    StgScndWarnStr = GoodStg2Cnt + "/15 backup GH values collected!"
+  EndIf
+EndSub
 #EndIf 'If HasVM or Pressure Sensors
 
 #If ReadExtPwr = True Then
@@ -5969,10 +6022,14 @@ EndSub
       Dim i
       FillBurstStart = Timer(DebugTimer,mSec,4)
       FillBurstStart = FillBurstStart/1000
+      WQSondeTick() = 0
+      WQSondeWarnStr = ""
       For i = 1 To MaxBurstCnt
         SerialInRecord(WqSerialPort,BurstIn,&H0023,0,&H0D0A,WqBytes,11)
         If BurstIn = "" Then
           WqError = True
+          WQSondeTick() = 1
+          WQSondeWarnStr = "No data in WQ Port!"
           ExitFor
         EndIf
         BurstIn = Replace(BurstIn,"-nan","-9999")
@@ -5985,10 +6042,14 @@ EndSub
       #If TopBottom = True Then
         BtmFillBurstStart = Timer(DebugTimer,mSec,4)
         BtmFillBurstStart = BtmFillBurstStart/1000
+        BtmWqSondeTick() = 0
+        BtmWqSondeWarnStr = ""
         For i = 1 To MaxBurstCnt
           SerialInRecord(BtmWqSerialPort,BurstIn,&H0023,0,&H0D0A,BtmWqBytes,11)
           If BurstIn = "" Then
             BtmWqError = True
+            BtmWqSondeTick() = 1
+            BtmWqSondeWarnStr = "No data in Btm WQ Port!"
             ExitFor
           EndIf
           BurstIn = Replace(BurstIn,"-nan","-9999")
@@ -6044,7 +6105,7 @@ EndSub
           CallTable Burst 'Need to call table to store the values in the table memory until the output flag (RecBurstFlag) is true
         EndIf
       Next jCount 'restart the loop until we reach max burst count
-      If BurstCount < MaxBurstCnt Then 'didn't reach our burst threshold, so let's Call and output SecBurst and Burst Tables
+      If BurstCount > MinBurstVals Then 'didn't reach our burst threshold, so let's Call and output SecBurst and Burst Tables
         BurstMissed = True 'Disable processing of Median values in burst table
         RecBurstFlag = True 'set the output flag to true
         CallTable SecBurst 'store the final value in the SecBurst table
@@ -8227,6 +8288,14 @@ BeginProg
       Call WxConversions
       Call Wind15mAvg
       Call CardDirection
+    #EndIf
+    If Rec15MinFlag = True Then
+      #If HasVM = True Then
+        Call VM_Stg_Tickler
+      #EndIf
+    EndIf
+    #If HasVM = True Then
+    DiagTickler = AdcpTick() + StgPrimeTick() + StgScndTick()
     #EndIf
     DataTabsStart = Timer(DebugTimer,mSec,4)
     DataTabsStart = DataTabsStart/1000
