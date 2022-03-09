@@ -1531,6 +1531,7 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     Sample (1,AvgSunaVoltMain,IEEE4)
     Sample (1,AvgSunaVoltLamp,IEEE4)
   #EndIf 'If we're running a SUNA
+  Sample (1,DiagTickler,FP2)
 EndTable
 
 DataTable(DataOut,Rec15MinFlag,-1)
@@ -1976,6 +1977,17 @@ DataTable(Debugger,True,-1)
   Sample(1,PBRoutes,String)
 EndTable
 
+DataTable (TicklerTable,Rec15MinFlag,-1)
+  OpenInterval
+  #If HasVM = True Then
+  Sample(3,AdcpTick(),FP2)
+  Sample(1,AdcpWarnStr,String)
+  Sample(3,StgPrimeTick(),FP2)
+  Sample(1,StgPrimeWarnStr,String)
+  Sample(3,StgScndTick(),FP2)
+  Sample(1,StgScndWarnStr,String)
+  #EndIf
+EndTable
 
 '============== VM ONLY TABLES =======================
 #If HasVM = True Then
@@ -8319,6 +8331,7 @@ BeginProg
     AQTabEnd = AQTabEnd/1000 'convert
     AQTabTotTime = AQTabEnd - AQTabStart   'total time to write to AQ
     CallTable DataOut
+    CallTable TicklerTable
     #If HasVM = True Then
       CallBmChkStart = Timer(DebugTimer,msec,4)
       CallBmChkStart = CallBmChkStart/1000
