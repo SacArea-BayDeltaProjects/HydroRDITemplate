@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20220106
-Const ProgramVersion = "5.44"
+Const ProgramVersionDate = 20220309
+Const ProgramVersion = "5.50"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -50,6 +50,8 @@ Const ProgramVersion = "5.44"
 ' 20211115 - TAV 5.42 Added Meters to Feet calculation for Sonde depth if sonde isn't outputting Feet. Fixed SiteVisit Table from writing every minute. Adjusted when SondeStg is calculated. Was done before sample came in, making it 1min behind.
 ' 20211217 - MRI 5.43 Added UseDir to USR drive in case of logger shutdown. Removed bug that replaced BTMburst medians with NAN when top sonde was not functional.
 ' 20220106 - TAV 5.44 Removed VM_PressFt from Aquarius table for standard sites to keep consistent tables. It will only be present if VMHasVertical or IsSpecStudy
+' 20220309 - TAV 5.50 Added ability to have IP Camera on station. Currently not ingesting images into datalogger, simply turning camera on and off based on user thresholds.
+'                     Plan to add Day/Night capability based on sunrise-sunset.org/api and pulling those times using HTTPGet
 
 SequentialMode 'We need to use Sequential mode
 
@@ -173,6 +175,9 @@ Const ReadExtPwr = False
 Const HasWx = False
 'Value = True
 'Value = False
+Const HasIPCam = True
+'Value = True
+'Value = False
 'End of Constants Customization Section
 
 ConstTable (DLDSettings,1)
@@ -260,6 +265,9 @@ EndConstTable
     Const WxPort5 = U5
     Const WxPort7 = U7 'if running constant power, we could use U7 as data port
     Const WxSwitchPort = U7
+  #EndIf
+  #If HasIPCam = True Then
+    Const CamSwitchPort = U8
   #EndIf
 #EndIf 'Logger type determination
 
@@ -1378,6 +1386,22 @@ Alias SendRadVars(17) = SendRadNetID
 #EndIf 'If weather station present
 
 Public UsrCase
+
+#If HasIPCam = True Then
+  Public UseSW12_2_forCam As Boolean = True
+  Public IsCamNClosed As Boolean = False
+  Public ManualCamOn As Boolean
+  Public DisableCam As Boolean
+  Public CamOn As Boolean
+  Public CamStartTime = 13
+  Public CamOnTime = 5
+  Public CamModTime
+  Public CamTimeCounter
+'  Public Sunrise_SunsetStr As String * 375
+'  Public Sunrise As String * 30
+'  Public Sunset As String * 30
+'  Public UTCOffset = 8*3600
+#EndIf
 
 
 '============================================================================================================
@@ -7666,6 +7690,59 @@ Sub WxConversions
   Rain_in = Rain_mm/25.4
 EndSub
 #EndIf 'If Wx = True
+
+#If HasIPCam Then
+  Sub PowerCamera
+    CamModTime = CamStartTime * 60
+    CamModTime = CamModTime MOD 900
+    If DisableCam = True Then
+      If UseSW12_2_forCam = True Then
+        SW12(SW12_2,0)
+      ElseIf UseSW12_2_forCam = False AND IsCamNClosed = True Then
+        PortSet(CamSwitchPort,1)
+      Else
+        PortSet(CamSwitchPort,0)
+      EndIf
+      ExitSub
+   Else
+     If ManualCamOn = True Then
+       If UseSW12_2_forCam = True Then
+         SW12(SW12_2,1)
+       ElseIf UseSW12_2_forCam = False AND IsCamNClosed = True Then
+         PortSet(CamSwitchPort,0)
+         Else
+         PortSet(CamSwitchPort,1)
+       EndIf
+     Else
+      If Mod15Minutes = CamModTime Then
+        If UseSW12_2_forCam = True Then
+         SW12(SW12_2,1)
+       ElseIf UseSW12_2_forCam = False AND IsCamNClosed = True Then
+         PortSet(CamSwitchPort,0)
+         Else
+         PortSet(CamSwitchPort,1)
+       EndIf
+        CamTimeCounter = 0
+        CamTimeCounter = CamTimeCounter + 1
+        CamOn = True
+      ElseIf Mod15Minutes <> CamModTime AND CamOn = True Then
+        CamTimeCounter = CamTimeCounter + 1
+      EndIf
+      If CamTimeCounter > CamOnTime Then
+       If UseSW12_2_forCam = True Then
+         SW12(SW12_2,0)
+       ElseIf UseSW12_2_forCam = False AND IsCamNClosed = True Then
+         PortSet(CamSwitchPort,1)
+         Else
+         PortSet(CamSwitchPort,0)
+       EndIf
+       CamOn = False
+       CamTimeCounter = 0
+     EndIf
+   EndIf
+   EndIf
+   EndSub
+#EndIf
 '========================================================================================
 '------------------------------- MAIN PROGRAM -------------------------------------------
 '========================================================================================
@@ -7705,6 +7782,8 @@ BeginProg
   '=========================================================================
   Scan(ScanRate,ScanUnit,5,0) 'Start scan, default = 60sec scan rate
     Call GetSysInfo 'Get our system vitals and start timer for debugging
+    RealTime(rTime) 'get time for start of scan. Note, this produces the timestamp at START of scan, no matter where it's placed within scan
+    Call CalcMods 'calculate "Mod" times for timing intervals
     #If ReadExtPwr = True Then
       Call ReadExtVolt
     #EndIf
@@ -7714,14 +7793,15 @@ BeginProg
         GetVariablesFlg = False
       EndIf
     #EndIf
+    #If HasIPCam = True Then
+      Call PowerCamera
+    #EndIf
     #If HasVM = True Then 'if we have a VM make sure it's powered first thing
       Call ToggleVMPower 'Turn power on or off, based on user input
     #EndIf 'if we have VM
     #If WqSonde <> "NONE" Then
       Call WqPwrOn
     #EndIf
-    RealTime(rTime) 'get time for start of scan. Note, this produces the timestamp at START of scan, no matter where it's placed within scan
-    Call CalcMods 'calculate "Mod" times for timing intervals
     #If HasGPS Then
       Call CycleGPSPower
     #EndIf
