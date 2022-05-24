@@ -1468,6 +1468,8 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
     Sample (1,WqChlRFU,IEEE4)
     Sample (1,WqFDomRFU,IEEE4)
     Sample (1,WqFDomQSU,IEEE4)
+    Sample (1,WqBGApcRFU,IEEE4)
+    Sample (1,WqBGApcugL,IEEE4)
     #If TopBottom Then 'If second sonde present <- need to address this for SDI12
       Sample (1,BtmWqDate,IEEE4)
       Sample (1,BtmWqTime,IEEE4)
@@ -1485,6 +1487,8 @@ DataTable(Aquarius,Rec15MinFlag,-1) 'Data table for data published to Aquarius/N
       Sample (1,BtmWqChlRFU,IEEE4)
       Sample (1,BtmWqFDomRFU,IEEE4)
       Sample (1,BtmWqFDomQSU,IEEE4)
+      Sample (1,BtmWqBGApcRFU,IEEE4)
+      Sample (1,BtmWqBGApcugL,IEEE4)
     #EndIf 'if second sonde present
   #EndIf 'If WqSonde = Serial or SDI12
   #If HasSuna = True Then 'If we're running a SUNA
