@@ -3,8 +3,8 @@
 'Michael R. Simpson, HydroInterface
 'Trevor Violette, Mark Inc, and Jim DeRose, USGS
 'Program Version Date
-Const ProgramVersionDate = 20220309
-Const ProgramVersion = "5.50"
+Const ProgramVersionDate = 20220615
+Const ProgramVersion = "5.60"
 'Last Modified by: Trevor Violette
 
 'UNIVERSAL PROGRAM -- May need some trimming!!! NOTE! THIS PROGRAM WILL NOT COMPILE ON CR1000 OS 28 or EARLIER!
@@ -52,6 +52,7 @@ Const ProgramVersion = "5.50"
 ' 20220106 - TAV 5.44 Removed VM_PressFt from Aquarius table for standard sites to keep consistent tables. It will only be present if VMHasVertical or IsSpecStudy
 ' 20220309 - TAV 5.50 Added ability to have IP Camera on station. Currently not ingesting images into datalogger, simply turning camera on and off based on user thresholds.
 '                     Plan to add Day/Night capability based on sunrise-sunset.org/api and pulling those times using HTTPGet
+' 20220615 - TAV 5.60 Added control for external PocketPC running a Python script to operate Javad GNSS units.
 
 SequentialMode 'We need to use Sequential mode
 
@@ -268,6 +269,10 @@ EndConstTable
   #EndIf
   #If HasIPCam = True Then
     Const CamSwitchPort = U8
+  #EndIf
+  #If HasGPS = True Then
+    Const PCSwitch = U7
+    Const PCComPort = ComU9
   #EndIf
 #EndIf 'Logger type determination
 
@@ -1401,6 +1406,20 @@ Public UsrCase
 '  Public Sunrise As String * 30
 '  Public Sunset As String * 30
 '  Public UTCOffset = 8*3600
+#EndIf
+
+#If HasGPS = True Then
+  Public GNSSSampleDur, PCOnTime = 60, PCOnThresh, ShutdownCnt, GNSSUserTime = 90
+  Public PCSig As String * 20
+  Public PCSendStr As String * 50
+  Public SampleGNSS As Boolean = False
+  Public AutoSampleGNSS As Boolean = False
+  Public PowerPC As Boolean = False
+  Public RunCompleteFlag As Boolean = False
+  Public ManualPCPwr As Boolean = False
+  Public ManualGPSPwr As Boolean = False
+  Public ShutdownBool As Boolean = False
+  Public ForcePCShutdown As Boolean = False
 #EndIf
 
 
@@ -7520,13 +7539,88 @@ EndSub
 #EndIf
 
 #If HasGPS = True Then
-  Sub CycleGPSPower
-    If DOW = 2 AND ModDay >= 0 AND ModDay < 46800 Then 'if Day of Week is Monday and time of day is between 00:00 and 13:00
-      SW12(SW12_2,1) 'Power the GNSS receiver on
-    Else
-      SW12(SW12_2,0) 'Otherwise keep it off
-    EndIf
-  EndSub
+'  Sub CycleGPSPower
+'    If DOW = 2 AND ModDay >= 0 AND ModDay < 46800 Then 'if Day of Week is Monday and time of day is between 00:00 and 13:00
+'      SW12(SW12_2,1) 'Power the GNSS receiver on
+'    Else
+'      SW12(SW12_2,0) 'Otherwise keep it off
+'    EndIf
+'  EndSub
+  Sub RunGNSS
+    If IfTime(0,3,Hr) AND ManualPCPwr = False Then
+	    AutoSampleGNSS = True
+	    PowerPC = True
+	    ManualPCPwr = False
+	    SW12(2,1)
+	    PortSet(PCSwitch,1)
+	  EndIf
+	  If ManualPCPwr = True Then
+	    PortSet(PCSwitch,1)
+	    PCOnTime = PCOnTime + 1
+	    If ManualGPSPwr = True Then
+	      SW12(2,1)
+	    EndIf
+	  EndIf
+	  If ShutdownBool = True Then
+	    PCSendStr = "Shutdown"
+	    SerialOut(PCComPort,PCSendStr,"",1,0)
+	    ShutdownCnt = ShutdownCnt + 1
+	    If ShutdownCnt >= 5 Then
+	      PortSet(PCSwitch,0)
+	      SW12(2,0)
+	      PowerPC = False
+	      ManualPCPwr = False
+	      ManualGPSPwr = False
+	      ShutdownBool = False
+	      PowerPC = False
+	      ForcePCShutdown = False
+	      AutoSampleGNSS = False
+	      SampleGNSS = False
+	      RunCompleteFlag = False
+	      PCSig = ""
+	      PCSendStr = ""
+	      PCOnTime = 0
+	      ShutdownCnt = 0
+	    EndIf
+	  EndIf
+	  GNSSSampleDur = GNSSUserTime * 60 
+	  SerialIn(PCSig,PCComPort,50,13,20)
+	  SerialFlush(PCComPort)
+	  Trim(PCSig)
+	  If PCSig = "Ready" Then
+	    If SampleGNSS = True OR AutoSampleGNSS = True Then
+	    PCSendStr = "SID:" + SiteID + "," + SiteNum + "," + GNSSUserTime + CHR(10)
+	    SerialOut(PCComPort,PCSendStr,"",1,0)
+	    PCSig = ""
+	    PCSendStr = ""
+	    Else
+	    PCSendStr = "No Sample"
+	    SerialOut(PCComPort,PCSendStr,"",1,0)
+	    EndIf
+	  EndIf
+	  If PCSig = "Run Complete" AND AutoSampleGNSS = True Then
+	    PCSendStr = "Shutdown"
+	    SerialOut(PCComPort,PCSendStr,"",1,0)
+	    ShutdownBool = True
+	    ShutdownCnt = 0
+	    SampleGNSS = False
+	    AutoSampleGNSS = False
+	    RunCompleteFlag = True
+	    PCSig = ""
+	    PCSendStr = ""
+	  ElseIf PCSig = "Run Complete" AND AutoSampleGNSS = False Then
+	    RunCompleteFlag = True
+	    SampleGNSS = False
+	  EndIf
+	  If (PCOnTime >= PCOnThresh AND ManualPCPwr = True AND RunCompleteFlag = True) OR ForcePCShutdown  = True Then
+	    If ShutdownBool = False Then
+	      ShutdownBool = True
+	      ShutdownCnt = 0
+	      PCSig = ""
+	      PCSendStr = ""
+	    EndIf
+	  EndIf
+	EndSub
 #EndIf
 
 #If HasHMS = True Then
@@ -7776,6 +7870,9 @@ BeginProg
     NextTryCnt = MaxNextTryCnt 'set nexttry to maxnexttry so we can reset the radio without waiting the first time.
     CallTable RadioStatus
   #EndIf
+  #If HasGPS = True Then
+    SerialOpen(PCComPort,115200,0,0,100)
+  #EndIf
 
   '=========================================================================
   '---------------- SCAN STARTS HERE ---------------------------------------
@@ -7803,7 +7900,7 @@ BeginProg
       Call WqPwrOn
     #EndIf
     #If HasGPS Then
-      Call CycleGPSPower
+      Call RunGNSS
     #EndIf
     #If HasSuna = True Then
       If ManualSunaOn = True Then 'if user wants suna powered
